@@ -95,7 +95,163 @@
     </style>
 </head>
 <body>
+<style>
+  :root {
+    --cozy-bg: #fffcf5;       /* Warm cream */
+    --cozy-text: #5d4a44;     /* Soft brown */
+    --cozy-accent: #d97757;   /* Muted terracotta */
+    --cozy-shadow: 0 8px 30px rgba(93, 74, 68, 0.15);
+    --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
 
+  .nav-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 1000px;
+    background-color: var(--cozy-bg);
+    padding: 12px 30px;
+    border-radius: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--cozy-shadow);
+    z-index: 9999;
+    font-family: 'Quicksand', 'Segoe UI', sans-serif;
+    transition: var(--transition);
+  }
+
+  .nav-container.shrunk {
+    top: 10px;
+    padding: 8px 25px;
+    width: 85%;
+    background-color: #ffffff;
+  }
+
+  .logo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--cozy-accent);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Specific styling for your .ico file */
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    border-radius: 4px; /* Optional: adds a tiny roundness to the icon */
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 25px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    color: var(--cozy-text);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 8px 15px;
+    border-radius: 20px;
+    transition: var(--transition);
+  }
+
+  .nav-links a:hover {
+    background-color: #f3ece4;
+    color: var(--cozy-accent);
+    transform: translateY(-2px);
+  }
+
+  .cozy-burger {
+    display: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 5px;
+  }
+
+  .cozy-burger div {
+    width: 22px;
+    height: 3px;
+    background: var(--cozy-text);
+    margin: 4px;
+    border-radius: 3px;
+    transition: 0.3s;
+  }
+
+  @media (max-width: 768px) {
+    .cozy-burger { display: block; }
+    .nav-links {
+      position: absolute;
+      top: 70px;
+      right: 0;
+      background: var(--cozy-bg);
+      flex-direction: column;
+      width: 200px;
+      padding: 20px;
+      border-radius: 25px;
+      box-shadow: var(--cozy-shadow);
+      transform: scale(0);
+      transform-origin: top right;
+      transition: var(--transition);
+    }
+    .nav-links.active {
+      transform: scale(1);
+    }
+  }
+</style>
+
+<nav class="nav-container" id="main-nav">
+  <a href="#" class="logo">
+    <img src="icon.ico" alt="Logo" class="logo-icon"> 
+    BeepSmol
+  </a>
+  
+  <ul class="nav-links" id="nav-list">
+    <li><a href="https://beepsmol.com">Home</a></li>
+    <li><a href="https://beepsmol.com/games">Games</a></li>
+    <li><a href="https://beepsmol.com/music">Music</a></li>
+    <li><a href="https://beepsmol.com/links">Links</a></li>
+  </ul>
+
+  <button class="cozy-burger" id="menu-btn">
+    <div></div>
+    <div></div>
+    <div></div>
+  </button>
+</nav>
+
+<script>
+  const nav = document.getElementById('main-nav');
+  const btn = document.getElementById('menu-btn');
+  const list = document.getElementById('nav-list');
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 40) {
+      nav.classList.add('shrunk');
+    } else {
+      nav.classList.remove('shrunk');
+    }
+  });
+
+  btn.addEventListener('click', () => {
+    list.classList.toggle('active');
+  });
+
+  document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', () => list.classList.remove('active'));
+  });
+</script>
     <div class="scanlines"></div>
 
     <div class="content">
@@ -113,3 +269,4 @@
 </body>
 
 </html>
+
