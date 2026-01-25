@@ -303,9 +303,9 @@
         ];
 
         const SHOP = [
-            { id: 'gears', name: 'RUSTY GEARS', desc: '+0.5 sec/s', cost: 1, mult: 1.5, power: 0.5 },
-            { id: 'chrono', name: 'DIGITAL WATCH', desc: '+2.0 sec/s', cost: 10, mult: 1.6, power: 2.0 },
-            { id: 'machine', name: 'FLUX CAPACITOR', desc: '+10.0 sec/s', cost: 50, mult: 1.7, power: 10.0 }
+            { id: 'gears', name: 'RUSTY GEARS', desc: '+0.5 sec/s', cost: 1, power: 0.5 },
+            { id: 'chrono', name: 'DIGITAL WATCH', desc: '+2.0 sec/s', cost: 10, power: 2.0 },
+            { id: 'machine', name: 'FLUX CAPACITOR', desc: '+10.0 sec/s', cost: 50, power: 10.0 }
         ];
 
         // Currency: 'c' = clocks, 'k' = chronotons
@@ -464,7 +464,10 @@
             SHOP.forEach(item => {
                 const btn = document.getElementById(`btn-${item.id}`);
                 if (btn) {
-                    const price = Math.floor(item.cost * Math.pow(item.mult, state.shopCounts[item.id] || 0));
+                    // ADDITIVE COST LOGIC: Price = Base + (Count * Base)
+                    const count = state.shopCounts[item.id] || 0;
+                    const price = item.cost + (count * item.cost);
+                    
                     btn.disabled = state.clocks < price;
                     btn.querySelector('.price').innerText = price;
                 }
@@ -506,7 +509,9 @@
         window.buy = function(id) {
             const item = SHOP.find(i => i.id === id);
             const count = state.shopCounts[id] || 0;
-            const price = Math.floor(item.cost * Math.pow(item.mult, count));
+            
+            // ADDITIVE COST LOGIC: Price = Base + (Count * Base)
+            const price = item.cost + (count * item.cost);
 
             if (state.clocks >= price) {
                 state.clocks -= price;
@@ -741,7 +746,8 @@
             els.shop.innerHTML = '';
             SHOP.forEach(item => {
                 const count = state.shopCounts[item.id] || 0;
-                const cost = Math.floor(item.cost * Math.pow(item.mult, count));
+                // ADDITIVE COST LOGIC
+                const cost = item.cost + (count * item.cost);
                 
                 const div = document.createElement('div');
                 div.className = "box flex justify-between items-center p-2 mb-0";
