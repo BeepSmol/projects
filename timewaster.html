@@ -358,6 +358,7 @@
             // Calc Rate
             let baseRate = 1;
             SHOP.forEach(item => {
+                // Ensure additive logic: base + (count * power)
                 baseRate += (state.shopCounts[item.id] || 0) * item.power;
             });
             
@@ -395,6 +396,23 @@
 
         // --- Logic ---
 
+        function formatNum(num) {
+            if (num === null || num === undefined) return "0";
+            if (num < 1000) return Math.floor(num * 10) / 10; // Show 1 decimal place for small numbers
+            
+            const suffixes = ["", "k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc"];
+            const suffixNum = Math.floor(Math.log10(num) / 3);
+            
+            // Handle edge case where number is huge but log10 is weird or out of bounds
+            if (suffixNum === 0) return Math.floor(num * 10) / 10; 
+            
+            if (suffixNum >= suffixes.length) return num.toExponential(2);
+            
+            const shortValue = num / Math.pow(1000, suffixNum);
+            // Show 2 decimal places for abbreviated numbers (e.g. 1.25M)
+            return shortValue.toFixed(2) + suffixes[suffixNum];
+        }
+
         function getRealWorldMult() {
             const h = new Date().getHours();
             if (h >= 1 && h < 4) return 2.0; // Night
@@ -402,7 +420,13 @@
         }
 
         function getConversionCost() {
-            return Math.floor(CONFIG.BASE_CONVERSION * Math.pow(CONFIG.CONVERSION_SCALE, state.conversions));
+            // Base cost increases by 10x per prestige level
+            // Level 0: 1x (100)
+            // Level 1: 10x (1000)
+            // Level 2: 100x (10000)
+            const prestigePenalty = Math.pow(10, state.prestigeCount);
+            // Cost scales with conversions made this run
+            return Math.floor((CONFIG.BASE_CONVERSION * prestigePenalty) * Math.pow(CONFIG.CONVERSION_SCALE, state.conversions));
         }
 
         function getNextChronoCost() {
@@ -410,15 +434,15 @@
         }
 
         function updateUI(rate, pMult) {
-            els.sec.innerText = state.seconds.toFixed(1);
-            els.clk.innerText = state.clocks;
-            els.rate.innerText = `+${rate.toFixed(1)}/s`;
+            els.sec.innerText = formatNum(state.seconds);
+            els.clk.innerText = formatNum(state.clocks);
+            els.rate.innerText = `+${formatNum(rate)}/s`;
             
-            els.chronoTotal.innerText = state.totalSecondsWasted.toFixed(1);
-            els.runTotal.innerText = state.runSecondsWasted.toFixed(1);
+            els.chronoTotal.innerText = formatNum(state.totalSecondsWasted);
+            els.runTotal.innerText = formatNum(state.runSecondsWasted);
 
-            els.chrono.innerText = state.chronotons;
-            els.chronoMult.innerText = `+${Math.round((pMult - 1) * 100)}% BONUS`;
+            els.chrono.innerText = formatNum(state.chronotons);
+            els.chronoMult.innerText = `+${formatNum((pMult - 1) * 100)}% BONUS`;
 
             // Chronoton Visibility
             if (state.prestigeCount > 0) {
@@ -435,7 +459,7 @@
 
             // Convert Button
             const cost = getConversionCost();
-            els.costConv.innerText = cost;
+            els.costConv.innerText = formatNum(cost);
             els.btnConv.disabled = state.seconds < cost;
 
             // Unlock Shop & Zones
@@ -451,7 +475,7 @@
             
             // Update Requirement Text
             const reqDisplay = document.getElementById('nextChronoReq');
-            if(reqDisplay) reqDisplay.innerText = nextCost.toLocaleString();
+            if(reqDisplay) reqDisplay.innerText = formatNum(nextCost);
 
             if (canPrestige) {
                 els.prestige.classList.remove('hidden');
@@ -469,7 +493,7 @@
                     const price = item.cost + (count * item.cost);
                     
                     btn.disabled = state.clocks < price;
-                    btn.querySelector('.price').innerText = price;
+                    btn.querySelector('.price').innerText = formatNum(price);
                 }
             });
             
@@ -496,7 +520,7 @@
                 state.seconds -= cost;
                 state.clocks++;
                 state.conversions++;
-                log(`CONVERTED. RATE INCREASED. NEW COST: ${getConversionCost()}`);
+                log(`CONVERTED. RATE INCREASED. NEW COST: ${formatNum(getConversionCost())}`);
                 renderShop();
                 renderDistractions();
             } else {
@@ -572,7 +596,8 @@
                 return;
             }
 
-            if (!confirm(`RESET RUN? YOU WILL GAIN 1 CHRONOTON.`)) return;
+            // Clarify the penalty in the confirmation
+            if (!confirm(`RESET RUN? YOU WILL GAIN 1 CHRONOTON. \nWARNING: Base conversion cost will increase by 10x!`)) return;
             
             state.chronotons += 1;
             state.prestigeCount++;
@@ -758,7 +783,7 @@
                         <div>OWNED: ${count}</div>
                     </div>
                     <button id="btn-${item.id}" onclick="buy('${item.id}')" class="btn text-xs text-right">
-                        BUY <br>(<span class="price">${cost}</span>)
+                        BUY <br>(<span class="price">${formatNum(cost)}</span>)
                     </button>
                 `;
                 els.shop.appendChild(div);
@@ -776,7 +801,7 @@
             div.className = `box flex flex-col items-center justify-center p-2 text-center ${borderClass} transition-all`;
             div.id = `dist-btn-${d.id}-${suffix}`;
             
-            const costLabel = d.curr === 'k' ? `${d.cost} CHRONO` : `${d.cost} CLOCKS`;
+            const costLabel = d.curr === 'k' ? `${formatNum(d.cost)} CHRONO` : `${formatNum(d.cost)} CLOCKS`;
             const costColor = d.curr === 'k' ? 'text-purple-400' : 'text-yellow-200';
 
             if (unlocked) {
@@ -860,8 +885,8 @@
                         state.runSecondsWasted += gain;
                         
                         els.offline.classList.remove('hidden');
-                        document.getElementById('offlineGain').innerText = gain;
-                        log(`OFFLINE FOR ${diffMins} MINS. GAINED ${gain}s.`);
+                        document.getElementById('offlineGain').innerText = formatNum(gain);
+                        log(`OFFLINE FOR ${diffMins} MINS. GAINED ${formatNum(gain)}s.`);
                     }
                 } catch(e) {
                     console.error("Save Error", e);
@@ -936,5 +961,4 @@
 
     </script>
 </body>
-
 </html>
