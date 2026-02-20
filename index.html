@@ -1,247 +1,314 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/x-icon" href="icon.ico">
+    <link rel="icon" type="image/x-icon" href="icon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeepSmol (Games)</title>
+    <title>BeepSmol | Games</title> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Quicksand:wght@400;700&display=swap');
         
+        :root {
+            --bg-dark: #1a1a2e;
+            --panel-bg: #2d3436;
+            --text-main: #f1f5f9;
+            --purple-accent: #a29bfe;
+            --yellow-accent: #facc15;
+            --indie-border: 4px solid #000000;
+        }
+
         body {
             font-family: 'Quicksand', sans-serif;
-            background-color: #0f172a; 
-            background: radial-gradient(circle at top left, #e46f108f, #cabc008a), #0f172a;
-            color: #f1f5f9;
-            min-height: 100vh;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- Minesweeper Background Layer --- */
+        #minesweeper-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: grid;
+            opacity: 0.3;
+            pointer-events: auto;
+            justify-content: center;
+            align-content: start;
+        }
+
+        .mine-cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(162, 155, 254, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s;
+            box-sizing: border-box;
+        }
+
+        .mine-cell:hover {
+            background: rgba(250, 204, 21, 0.2);
+        }
+
+        .mine-cell.revealed {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: default;
+        }
+
+        .mine-cell.mine {
+            background: #ff7675;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        /* --- Main Layout --- */
+        .site-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 10;
+            pointer-events: none; 
+        }
+
+        .site-container > * {
+            pointer-events: auto;
+        }
+
+        .content-box {
+            background: var(--panel-bg);
+            border: var(--indie-border);
+            margin-bottom: 30px;
+            box-shadow: 8px 8px 0px var(--purple-accent);
+            position: relative;
+        }
+
+        .box-title {
+            background: var(--purple-accent);
+            color: #1a1a2e;
+            padding: 2px 15px;
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            display: inline-block;
+            margin-top: -18px;
+            margin-left: 15px;
+            border: var(--indie-border);
+            font-weight: bold;
+        }
+
+        .box-body { padding: 25px; }
+
+        /* Game Cards */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
         }
 
         .game-card {
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            background: rgba(30, 41, 59, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
+            background: #1a1a2e;
+            border: 3px solid #000;
+            padding: 15px;
+            box-shadow: 4px 4px 0px var(--yellow-accent);
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         .game-card:hover {
-            transform: scale(1.02);
-            background: rgba(66, 51, 85, 0.8);
-            border-color: rgba(172, 42, 247, 0.4);
-            box-shadow: 0 25px 50px -12px rgba(105, 55, 9, 0.5);
+            transform: translate(-3px, -3px);
+            box-shadow: 7px 7px 0px var(--purple-accent);
+        }
+
+        .game-thumb-container {
+            width: 100%;
+            height: 180px;
+            background: #000;
+            border: 2px solid #000;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
         }
 
         .game-thumb {
-            aspect-ratio: 16 / 9;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 20px;
+            transition: transform 0.5s;
         }
 
-        .platform-tag {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            backdrop-filter: blur(4px);
+        .game-card:hover .game-thumb {
+            transform: scale(1.05);
         }
 
-        /* Custom Scrollbar for a cleaner look */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .os-tag {
+            background: rgba(255,255,255,0.1);
+            color: var(--yellow-accent);
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #000;
         }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
+
+        .platform-icon {
+            font-size: 14px;
+            color: var(--purple-accent);
+            margin-right: 8px;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
+
+        .btn-play {
+            margin-top: auto;
+            background: var(--yellow-accent);
+            color: #000;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+            text-transform: uppercase;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            transition: all 0.1s;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+
+        .game-card:hover .btn-play {
+            background: white;
         }
+
+        footer {
+            margin: 50px 0;
+            text-align: center;
+            font-family: 'VT323', monospace;
+            color: var(--yellow-accent);
+            background: #000;
+            padding: 10px 20px;
+            border: 2px solid var(--purple-accent);
+            display: block;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h3 { color: white; font-weight: bold; font-size: 1.25rem; margin-bottom: 4px; }
     </style>
 </head>
-<body class="p-6 md:p-12">
-   <style>
-  :root {
-    --cozy-bg: #fffcf5;       /* Warm cream */
-    --cozy-text: #5d4a44;     /* Soft brown */
-    --cozy-accent: #d97757;   /* Muted terracotta */
-    --cozy-shadow: 0 8px 30px rgba(93, 74, 68, 0.15);
-    --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
+<body>
 
-  .nav-container {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 1000px;
-    background-color: var(--cozy-bg);
-    padding: 12px 30px;
-    border-radius: 50px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--cozy-shadow);
-    z-index: 9999;
-    font-family: 'Quicksand', 'Segoe UI', sans-serif;
-    transition: var(--transition);
-  }
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=VT323&family=Quicksand:wght@400;700&display=swap');
+    
+    :root {
+        --bg-dark: #1a1a2e;
+        --panel-dark: #2d3436;
+        --purple-accent: #a29bfe;
+        --yellow-accent: #facc15;
+        --indie-border: 4px solid #000000;
+    }
 
-  .nav-container.shrunk {
-    top: 10px;
-    padding: 8px 25px;
-    width: 85%;
-    background-color: #ffffff;
-  }
+    .nav-wrapper {
+        background: var(--bg-dark);
+        border-bottom: var(--indie-border);
+        padding: 15px 10px;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        text-align: center;
+        box-shadow: 0 6px 0px var(--purple-accent);
+    }
 
-  .logo {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--cozy-accent);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+    .nav-title {
+        font-family: 'VT323', monospace;
+        font-size: 2.8rem;
+        color: var(--yellow-accent);
+        text-shadow: 3px 3px 0px #000;
+        margin-bottom: 12px;
+        display: block;
+        text-decoration: none;
+        letter-spacing: 2px;
+    }
 
-  /* Specific styling for your .ico file */
-  .logo-icon {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    border-radius: 4px; /* Optional: adds a tiny roundness to the icon */
-  }
-
-  .nav-links {
-    display: flex;
-    gap: 25px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .nav-links a {
-    text-decoration: none;
-    color: var(--cozy-text);
-    font-weight: 600;
-    font-size: 0.95rem;
-    padding: 8px 15px;
-    border-radius: 20px;
-    transition: var(--transition);
-  }
-
-  .nav-links a:hover {
-    background-color: #f3ece4;
-    color: var(--cozy-accent);
-    transform: translateY(-2px);
-  }
-
-  .cozy-burger {
-    display: none;
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 5px;
-  }
-
-  .cozy-burger div {
-    width: 22px;
-    height: 3px;
-    background: var(--cozy-text);
-    margin: 4px;
-    border-radius: 3px;
-    transition: 0.3s;
-  }
-
-  @media (max-width: 768px) {
-    .cozy-burger { display: block; }
     .nav-links {
-      position: absolute;
-      top: 70px;
-      right: 0;
-      background: var(--cozy-bg);
-      flex-direction: column;
-      width: 200px;
-      padding: 20px;
-      border-radius: 25px;
-      box-shadow: var(--cozy-shadow);
-      transform: scale(0);
-      transform-origin: top right;
-      transition: var(--transition);
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
-    .nav-links.active {
-      transform: scale(1);
+
+    .nav-links a {
+        background: var(--purple-accent);
+        color: #1a1a2e;
+        border: 2px solid #000;
+        padding: 6px 16px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 0.9rem;
+        font-family: 'Quicksand', sans-serif;
+        box-shadow: 3px 3px 0px #000;
+        transition: all 0.1s;
+        text-transform: uppercase;
     }
-  }
+
+    .nav-links a:hover {
+        background: var(--yellow-accent);
+        transform: translate(-2px, -2px);
+        box-shadow: 5px 5px 0px #000;
+    }
+
+    .nav-links a:active {
+        transform: translate(1px, 1px);
+        box-shadow: 1px 1px 0px #000;
+    }
 </style>
 
-<nav class="nav-container" id="main-nav">
-  <a href="https://beepsmol.com" class="logo">
-    <img src="icon.ico" alt="Logo" class="logo-icon"> 
-    BeepSmol
-  </a>
-  
-  <ul class="nav-links" id="nav-list">
-    <li><a href="https://beepsmol.com">Home</a></li>
-    <li><a href="https://beepsmol.com/games">Games</a></li>
-    <li><a href="https://beepsmol.com/music">Music</a></li>
-    <li><a href="https://beepsmol.com/links">Links</a></li>
-    <li><a href="https://beepsmol.com/blog">Blog</a></li>
-  </ul>
+<div class="nav-wrapper">
+    <a href="index.html" class="nav-title">BEEPSMOL.COM</a>
+    <div class="nav-links">
+        <a href="index.html">HOME</a>
+        <a href="games.html">GAMES</a>
+        <a href="music.html">MUSIC</a>
+        <a href="links.html">LINKS</a>
+        <a href="blog.html">BLOG</a>
+    </div>
+</div>
 
-  <button class="cozy-burger" id="menu-btn">
-    <div></div>
-    <div></div>
-    <div></div>
-  </button>
-</nav>
-
-<script>
-  const nav = document.getElementById('main-nav');
-  const btn = document.getElementById('menu-btn');
-  const list = document.getElementById('nav-list');
-
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 40) {
-      nav.classList.add('shrunk');
-    } else {
-      nav.classList.remove('shrunk');
-    }
-  });
-
-  btn.addEventListener('click', () => {
-    list.classList.toggle('active');
-  });
-
-  document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', () => list.classList.remove('active'));
-  });
-</script>
-
-    <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto">
-        <!-- Relaxed Hero Section -->
-        <div class="mb-12 mt-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">My Games</h1>
-            <p class="text-slate-400 text-lg">A place for all my games.</p>
+    <div id="minesweeper-bg"></div>
+    
+    <div class="site-container">
+        <div class="content-box">
+            <span class="box-title">GAMES_ARCHIVE</span>
+            <div class="box-body">
+                <p class="mb-8 text-gray-300 italic font-medium">Click on a project to view details or play in-browser.</p>
+                
+                <div id="game-grid" class="game-grid">
+                    <!-- Games injected here -->
+                </div>
+            </div>
         </div>
 
-        <div id="games-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- Games will be injected here -->
-        </div>
-    </main>
+        <footer>
+            <p>BEEPSMOL &copy; 2026</p>
+        </footer>
+    </div>
 
     <script>
-        /**
-         * EASY EDIT SECTION
-         * Just update this list to add or remove games!
-         */
-        const GAMES_DATA = [
+        // --- Updated Game Data Structure ---
+        const games = [
             {
                 title: "Beep Clicker",
                 image: "clickerbeeplogo.png",
@@ -263,7 +330,7 @@
             {
                 title: "Take Me To A Random Website",
                 image: "randomwebsite.png",
-                url: "https://beepsmol.com/games/takemetoarandomwebsite.html",
+                url: "https://beepsmol.com/games/takemetoarandomwebsite.html/",
                 isMobile: true,
                 isPC: true,
                 needsDownload: false,
@@ -281,63 +348,103 @@
         ];
 
         function renderGames() {
-            const grid = document.getElementById('games-grid');
-            grid.innerHTML = '';
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = games.map(game => {
+                // Determine icon logic based on properties
+                let platformIcons = "";
+                if(game.isMobile) platformIcons += `<i class="fas fa-mobile-alt platform-icon" title="Mobile Support"></i>`;
+                if(game.isPC) platformIcons += `<i class="fas fa-desktop platform-icon" title="PC Support"></i>`;
+                if(game.needsDownload) platformIcons += `<i class="fas fa-download platform-icon text-yellow-400" title="Download Required"></i>`;
 
-            GAMES_DATA.forEach(game => {
-                const card = document.createElement('div');
-                card.className = 'game-card p-4 flex flex-col cursor-pointer group';
-                
-                // Platform Badges
-                let platforms = '';
-                if(game.isPC) platforms += `<span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 platform-tag mr-2"><i class="fas fa-laptop mr-1"></i>PC</span>`;
-                if(game.isMobile) platforms += `<span class="bg-pink-500/20 text-pink-300 border border-pink-500/30 platform-tag"><i class="fas fa-mobile-alt mr-1"></i>Mobile</span>`;
-
-                // Status Text
-                const statusIcon = game.needsDownload ? 'fa-download' : 'fa-play-circle';
-                const statusText = game.needsDownload ? 'Download' : 'Web Play';
-                const statusColor = game.needsDownload ? 'text-orange-300' : 'text-cyan-300';
-
-                card.innerHTML = `
-                    <div class="relative mb-4">
-                        <img src="${game.image}" alt="${game.title}" class="game-thumb w-full shadow-lg" onerror="this.src='https://via.placeholder.com/400x225/1e293b/ffffff?text=Game+Image'">
-                        <div class="absolute bottom-3 left-3 flex">
-                            ${platforms}
+                return `
+                    <div class="game-card" onclick="if('${game.url}' !== '#') window.open('${game.url}', '_blank')">
+                        <div class="game-thumb-container">
+                            <img src="${game.image}" 
+                                 onerror="this.src='https://via.placeholder.com/600/400/000/facc15?text=${game.title}'" 
+                                 alt="${game.title}" class="game-thumb">
                         </div>
-                    </div>
-                    
-                    <div class="flex flex-col flex-grow">
-                        <h3 class="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors mb-1">${game.title}</h3>
-                        <p class="text-slate-400 text-sm mb-4">${game.os.join(' • ')}</p>
-                        
-                        <div class="mt-auto flex items-center justify-between">
-                            <span class="${statusColor} text-xs font-semibold flex items-center gap-1">
-                                <i class="fas ${statusIcon}"></i> ${statusText}
-                            </span>
-                            <button onclick="window.open('${game.url}', '_blank')" class="bg-white/10 hover:bg-white text-white hover:text-indigo-900 px-4 py-2 rounded-xl transition-all duration-300 text-sm font-bold">
-                                Open Game
-                            </button>
+                        <div class="flex items-center mb-3">
+                            ${platformIcons}
+                            <div class="flex flex-wrap gap-1">
+                                ${game.os.map(os => `<span class="os-tag">${os}</span>`).join('')}
+                            </div>
                         </div>
+                        <h3>${game.title}</h3>
+                        <div class="btn-play">${game.needsDownload ? 'Download' : 'Open Game'}</div>
                     </div>
                 `;
-                
-                // Make whole card clickable but prevent button conflict
-                card.onclick = (e) => {
-                    if(e.target.tagName !== 'BUTTON') {
-                        window.open(game.url, '_blank');
-                    }
-                };
-
-                grid.appendChild(card);
-            });
+            }).join('');
         }
 
-        window.onload = renderGames;
+        // --- Minesweeper Logic ---
+        const bg = document.getElementById('minesweeper-bg');
+        const cellSize = 40;
+        const mineProbability = 0.12;
+        let rows, cols;
+
+        function initGame() {
+            bg.innerHTML = '';
+            cols = Math.ceil(window.innerWidth / cellSize);
+            rows = Math.ceil(window.innerHeight / cellSize);
+            bg.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+            const grid = [];
+            for (let r = 0; r < rows; r++) {
+                grid[r] = [];
+                for (let c = 0; c < cols; c++) {
+                    const isMine = Math.random() < mineProbability;
+                    const cell = document.createElement('div');
+                    cell.className = 'mine-cell';
+                    grid[r][c] = { isMine, revealed: false, element: cell };
+                    cell.addEventListener('click', (e) => {
+                        e.stopPropagation(); 
+                        reveal(r, c, grid);
+                    });
+                    bg.appendChild(cell);
+                }
+            }
+        }
+
+        function reveal(r, c, grid) {
+            const cell = grid[r][c];
+            if (cell.revealed) return;
+            cell.revealed = true;
+            cell.element.classList.add('revealed');
+            if (cell.isMine) {
+                cell.element.innerHTML = '💣';
+                cell.element.classList.add('mine');
+                setTimeout(initGame, 2000);
+            } else {
+                const count = countMines(r, c, grid);
+                if (count > 0) {
+                    cell.element.innerHTML = count;
+                    cell.element.style.color = ['','#74b9ff','#55efc4','#ff7675','#a29bfe','#fdcb6e','#81ecec','#ffeaa7','#dfe6e9'][count];
+                } else {
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            const nr = r + i, nc = c + j;
+                            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) reveal(nr, nc, grid);
+                        }
+                    }
+                }
+            }
+        }
+
+        function countMines(r, c, grid) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const nr = r + i, nc = c + j;
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc].isMine) count++;
+                }
+            }
+            return count;
+        }
+
+        window.addEventListener('resize', initGame);
+        window.onload = () => {
+            initGame();
+            renderGames();
+        };
     </script>
 </body>
 </html>
-
-
-
-
-
