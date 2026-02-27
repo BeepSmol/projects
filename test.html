@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn to Type</title>
-    <!-- Tailwind CSS -->
+    <title>Learn to Type Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts for Cozy Aesthetic -->
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Chart.js for Historical Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
         tailwind.config = {
@@ -18,880 +17,940 @@
                 extend: {
                     colors: {
                         cozy: {
-                            bg: '#FDFBF7',
-                            card: '#F4EFE6',
-                            border: '#E8DED1',
-                            text: '#4A3F35',
-                            darkBg: '#1A1A1A',
-                            darkCard: '#242424',
-                            darkBorder: '#3A3A3A',
-                            darkText: '#EAEAEA',
-                            accent: '#D97757', // Warm rust
-                            accentHover: '#C26547',
-                            green: '#6B8E23', // Olive green
-                            red: '#C05A5A',
-                            yellow: '#D4A373',
-                            ghost: '#8FA5B1' // Soft blue/grey for ghost caret
+                            bg: '#FDFBF7', card: '#F4EFE6', border: '#E8DED1', text: '#4A3F35',
+                            darkBg: '#1A1A1A', darkCard: '#242424', darkBorder: '#3A3A3A', darkText: '#EAEAEA',
+                            accent: '#D97757', accentHover: '#C26547', green: '#6B8E23', red: '#C05A5A',
+                            ghost: '#8A8A8A'
                         }
                     },
                     fontFamily: {
-                        serif: ['Lora', 'serif'],
-                        mono: ['"Fira Code"', 'monospace']
+                        sans: ['Lora', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
                     }
                 }
             }
-        }
-        
-        // Initialize Theme from LocalStorage to prevent flash
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
         }
     </script>
     <style>
-        body { font-family: 'Lora', serif; }
-        .typing-area { font-family: '"Fira Code"', monospace; }
-        
-        /* Active Caret: Solid block on the letter */
-        .caret-active {
-            background-color: #D97757 !important;
-            color: #FDFBF7 !important;
-            border-radius: 4px;
-            animation: pulse-caret 1s infinite alternate;
-        }
-
-        /* Ghost Caret: Bottom border */
-        .ghost-active {
-            border-bottom: 4px solid #8FA5B1 !important;
-            background-color: rgba(143, 165, 177, 0.1);
-        }
-
-        /* Typing States */
-        .char-untyped { color: #A89F91; }
-        .dark .char-untyped { color: #6B7280; }
-        
-        .char-correct { color: #6B8E23; }
-        .dark .char-correct { color: #84A931; }
-        
-        .char-error { background-color: #C05A5A; color: #FDFBF7; border-radius: 4px; }
-        
-        .char-corrected { color: #D4A373; }
-        .dark .char-corrected { color: #E5B484; }
-        
-        /* Level 4 Memory Effect */
-        .memory-hidden { opacity: 0; transition: opacity 0.2s ease; }
-
-        @keyframes pulse-caret {
-            0% { opacity: 1; }
-            100% { opacity: 0.8; }
-        }
-
-        /* Graph Canvas */
-        #velocityCanvas { width: 100%; height: 60px; }
-
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E8DED1; border-radius: 4px; }
-        .dark ::-webkit-scrollbar-thumb { background: #3A3A3A; }
-        ::-webkit-scrollbar-thumb:hover { background: #D4A373; }
+        ::-webkit-scrollbar-thumb { background: #D97757; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C26547; }
+
+        /* Typing cursor animation */
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .cursor-blink { animation: blink 1s infinite; border-left: 2px solid #D97757; margin-left: -2px; }
+
+        /* Ghost Racing Cursor */
+        .ghost-cursor { border-bottom: 4px solid #8A8A8A; background-color: rgba(138, 138, 138, 0.2); border-radius: 2px; }
+
+        /* Modes */
+        .zen-mode #navbar, .zen-mode #footer, .zen-mode .non-zen { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+        .blind-mode span.pending { filter: blur(5px); opacity: 0.5; transition: filter 0.2s; }
+        .blind-mode span.pending:hover { filter: blur(0px); opacity: 1; }
+
+        /* Syntax Highlighting Base */
+        .syntax-keyword { color: #D97757; font-weight: 600; }
+        .syntax-string { color: #6B8E23; }
+        .syntax-symbol { color: #8A8A8A; }
+        .dark .syntax-keyword { color: #E89E86; }
+        .dark .syntax-string { color: #A4C639; }
+
+        /* Heatmap Key */
+        .key-box { transition: all 0.2s; }
+        .key-box:hover { transform: scale(1.1); z-index: 10; }
     </style>
+    <!-- Dynamic Custom CSS Block -->
+    <style id="custom-theme-style"></style>
 </head>
-<body class="bg-cozy-bg text-cozy-text dark:bg-cozy-darkBg dark:text-cozy-darkText min-h-screen selection:bg-cozy-yellow selection:text-white transition-colors duration-300 antialiased flex flex-col">
+<body class="bg-cozy-bg text-cozy-text dark:bg-cozy-darkBg dark:text-cozy-darkText transition-colors duration-300 min-h-screen flex flex-col">
 
-    <!-- Top Navigation -->
-    <nav class="w-full bg-cozy-card dark:bg-cozy-darkCard border-b border-cozy-border dark:border-cozy-darkBorder py-4 px-6 md:px-12 flex justify-between items-center shadow-sm z-10 transition-colors duration-300">
-        <div class="flex items-center space-x-3 cursor-pointer" onclick="navigate('dashboard')">
-            <i class="fa-solid fa-seedling text-cozy-accent text-2xl"></i>
-            <h1 class="font-semibold text-2xl tracking-tight">Learn to Type</h1>
+    <!-- Navbar -->
+    <header id="navbar" class="p-4 border-b border-cozy-border dark:border-cozy-darkBorder flex justify-between items-center bg-cozy-card dark:bg-cozy-darkCard shadow-sm transition-opacity duration-500 z-50 relative">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold italic tracking-tight cursor-pointer" onclick="navigate('dashboard')">
+                <i class="fa-solid fa-keyboard text-cozy-accent mr-2"></i>TypePro <span class="text-xs ml-1 uppercase opacity-50 font-sans font-bold">Ultimate</span>
+            </h1>
+            <div class="hidden md:flex items-center ml-6 px-4 py-1 bg-cozy-bg dark:bg-cozy-darkBg rounded-full border border-cozy-border dark:border-cozy-darkBorder">
+                <span class="text-sm font-bold text-cozy-accent mr-3" id="levelDisplay">Lvl 1</span>
+                <div class="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div id="expBar" class="h-full bg-cozy-accent transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <span class="text-xs ml-3 opacity-60" id="expText">0/100</span>
+            </div>
         </div>
-        <div class="flex items-center space-x-4">
-            <button id="themeToggleBtn" class="p-2 rounded-lg hover:bg-cozy-border dark:hover:bg-cozy-darkBorder transition" onclick="toggleTheme()">
+        <div class="flex gap-3 items-center">
+            <label class="px-3 py-1 bg-cozy-border dark:bg-cozy-darkBorder hover:bg-cozy-ghost hover:text-white rounded text-sm font-bold cursor-pointer transition flex items-center">
+                <i class="fa-solid fa-ghost mr-2"></i> Load Ghost
+                <input type="file" class="hidden" accept=".json" onchange="handleGhostUpload(event)">
+            </label>
+            <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-full hover:bg-cozy-border dark:hover:bg-cozy-darkBorder transition">
                 <i class="fa-solid fa-moon dark:hidden"></i>
-                <i class="fa-solid fa-sun hidden dark:block text-cozy-yellow"></i>
+                <i class="fa-solid fa-sun hidden dark:block text-yellow-400"></i>
             </button>
-            <button id="soundToggleBtn" class="p-2 rounded-lg hover:bg-cozy-border dark:hover:bg-cozy-darkBorder transition" onclick="toggleSoundMenu()">
-                <i class="fa-solid fa-volume-high"></i>
+            <button onclick="navigate('settings')" class="p-2 rounded-full hover:bg-cozy-border dark:hover:bg-cozy-darkBorder transition">
+                <i class="fa-solid fa-gear"></i>
             </button>
         </div>
-    </nav>
-
-    <!-- Sound Menu Dropdown -->
-    <div id="soundMenu" class="hidden absolute top-16 right-6 md:right-12 bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder rounded-xl shadow-lg p-4 z-20 w-64 transition-colors duration-300">
-        <h3 class="font-semibold mb-3 border-b border-cozy-border dark:border-cozy-darkBorder pb-2">Keyboard Sound</h3>
-        <select id="soundSelect" class="w-full bg-cozy-bg dark:bg-cozy-darkBg text-cozy-text dark:text-cozy-darkText border border-cozy-border dark:border-cozy-darkBorder rounded-lg p-2 mb-4 focus:outline-none" onchange="changeSoundProfile(this.value)">
-            <option value="brown">Tactile (Brown Switch)</option>
-            <option value="blue">Clicky (Blue Switch)</option>
-            <option value="custom">Custom Upload...</option>
-            <option value="none">Muted</option>
-        </select>
-        <div id="customAudioContainer" class="hidden">
-            <label class="block text-sm mb-1 opacity-70">Upload .wav or .mp3</label>
-            <input type="file" id="customAudioInput" accept="audio/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cozy-accent file:text-white hover:file:bg-cozy-accentHover">
-        </div>
-    </div>
-
-    <!-- Custom Modal -->
-    <div id="customModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-6 rounded-2xl shadow-xl max-w-sm w-full animate-fade-in">
-            <h3 id="modalTitle" class="text-xl font-bold mb-2">Notice</h3>
-            <p id="modalMessage" class="opacity-80 mb-6"></p>
-            <div class="flex justify-end space-x-3" id="modalButtons">
-                <!-- Buttons injected via JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- AI Prompt Generator Modal -->
-    <div id="aiPromptModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-6 md:p-8 rounded-3xl shadow-xl max-w-2xl w-full">
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="text-2xl font-bold"><i class="fa-solid fa-wand-magic-sparkles text-cozy-accent mr-2"></i>Turn Notes into Typing Drills</h3>
-                <button onclick="closeAiModal()" class="opacity-50 hover:opacity-100 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <p class="opacity-80 mb-6 text-sm">Attach your study guide, essay, or notes to an AI model (like ChatGPT, Claude, or Gemini) along with this prompt to get perfect, type-ready text.</p>
-            
-            <div class="relative">
-                <textarea id="aiPromptText" readonly class="w-full h-40 bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-4 text-sm font-mono focus:outline-none resize-none">I am using a typing application to memorize my study notes and build muscle memory. Please read the attached document and extract the most important facts, core concepts, or key code snippets. 
-
-Convert them into clear, concise, self-contained sentences. Remove any complex formatting, bullet points, asterisks, or Markdown elements. 
-
-The final output should be plain, readable text separated by spaces or newlines, perfectly formatted for a continuous typing practice session.</textarea>
-                <button onclick="copyAiPrompt()" class="absolute bottom-4 right-4 bg-cozy-accent hover:bg-cozy-accentHover text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
-                    <i class="fa-solid fa-copy mr-1"></i> Copy Prompt
-                </button>
-            </div>
-            <p id="copySuccessMsg" class="text-cozy-green text-sm mt-3 opacity-0 transition-opacity font-bold">Copied to clipboard!</p>
-        </div>
-    </div>
+    </header>
 
     <!-- Main Content Area -->
-    <main id="app-container" class="flex-grow flex flex-col items-center p-6 md:p-12 w-full max-w-5xl mx-auto transition-colors duration-300"></main>
+    <main id="app-content" class="flex-grow max-w-6xl mx-auto w-full p-6 flex flex-col justify-center relative"></main>
 
-    <!-- Vanilla JS Application Logic -->
+    <!-- Modals Container -->
+    <div id="modal-container"></div>
+
     <script>
-        // --- STATE MANAGEMENT ---
-        let appState = 'dashboard';
-        let saveSlots = JSON.parse(localStorage.getItem('learnToType_slots')) || [];
-        
-        let currentSession = {
-            id: null,
-            title: '',
-            fullText: '',
-            level: 1,
-            strictMode: false,
-            charStates: [],
-            currentIndex: 0,
-            startTime: null,
-            endTime: null,
-            timestamps: [],
-            velocityLog: [],
-            combo: 0,
-            multiplier: 1
+        // --- DATA & STATE MANAGEMENT ---
+        const defaultSettings = {
+            layout: 'qwerty', zenMode: false, blindMode: false, 
+            metronome: false, targetWpm: 60,
+            suddenDeath: false, soundscape: 'none', customCSS: ''
         };
 
-        let ghostData = null;
-        let activeKeydownListener = null;
-        let velocityInterval = null;
-        let ghostInterval = null;
-        let modalConfirmCallback = null;
+        const defaultStats = { 
+            level: 1, exp: 0, totalErrors: 0, heatmap: {}, 
+            history: [], // { date, wpm, acc }
+            badges: { speedDemon: false, perfection: false, veteran: false, survivor: false, ghostHunter: false }
+        };
 
-        // --- UI UTILS (THEME & MODAL) ---
-        function toggleTheme() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.theme = 'light';
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.theme = 'dark';
-            }
-        }
+        let appData = JSON.parse(localStorage.getItem('typeProData')) || {
+            slots: [], settings: { ...defaultSettings }, stats: { ...defaultStats }
+        };
 
-        function showModal(title, message, type = 'alert', onConfirm = null) {
-            document.getElementById('modalTitle').innerText = title;
-            document.getElementById('modalMessage').innerText = message;
-            const btnContainer = document.getElementById('modalButtons');
-            btnContainer.innerHTML = '';
+        appData.settings = { ...defaultSettings, ...appData.settings };
+        appData.stats = { ...defaultStats, ...appData.stats };
+        appData.stats.history = appData.stats.history || [];
+        appData.stats.badges = appData.stats.badges || defaultStats.badges;
 
-            if (type === 'confirm') {
-                modalConfirmCallback = onConfirm;
-                btnContainer.innerHTML = `
-                    <button onclick="closeModal()" class="px-4 py-2 font-semibold opacity-70 hover:opacity-100 transition">Cancel</button>
-                    <button onclick="executeModalConfirm()" class="px-4 py-2 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-lg shadow-sm transition font-bold">Confirm</button>
-                `;
-            } else {
-                btnContainer.innerHTML = `
-                    <button onclick="closeModal()" class="px-4 py-2 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-lg shadow-sm transition font-bold">OK</button>
-                `;
-            }
-            document.getElementById('customModal').classList.remove('hidden');
-        }
-
-        function closeModal() { document.getElementById('customModal').classList.add('hidden'); modalConfirmCallback = null; }
-        function executeModalConfirm() { if(modalConfirmCallback) modalConfirmCallback(); closeModal(); }
-
-        function openAiModal() { document.getElementById('aiPromptModal').classList.remove('hidden'); }
-        function closeAiModal() { document.getElementById('aiPromptModal').classList.add('hidden'); }
-        function copyAiPrompt() {
-            const text = document.getElementById('aiPromptText');
-            text.select();
-            document.execCommand('copy');
-            const msg = document.getElementById('copySuccessMsg');
-            msg.style.opacity = '1';
-            setTimeout(() => msg.style.opacity = '0', 2000);
-        }
-
-        // --- AUDIO ENGINE ---
+        let currentSession = null;
+        let metronomeInterval = null;
+        let ghostAnimationReq = null;
         let audioCtx = null;
-        let currentSoundProfile = 'brown';
-        let customAudioBuffer = null;
+        let rainNode = null;
+        let historyChartInstance = null;
 
+        function saveData() {
+            localStorage.setItem('typeProData', JSON.stringify(appData));
+            updateNavbarStats();
+            applyCustomCSS();
+        }
+
+        function applyCustomCSS() {
+            document.getElementById('custom-theme-style').textContent = appData.settings.customCSS;
+        }
+        applyCustomCSS(); // Run on load
+
+        const layouts = {
+            qwerty: [ "qwertyuiop", "asdfghjkl", "zxcvbnm" ],
+            dvorak: [ "pyfgcrl", "aoeuidhtns", "qjkxbmwvz" ],
+            colemak: [ "qwfpgjluy", "arstdhneio", "zxcvbkm" ]
+        };
+
+        // --- AUDIO & SOUNDSCAPES ---
         function initAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-            }
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        function toggleSoundMenu() {
-            document.getElementById('soundMenu').classList.toggle('hidden');
-        }
-
-        function changeSoundProfile(val) {
-            currentSoundProfile = val;
-            if (val === 'custom') {
-                document.getElementById('customAudioContainer').classList.remove('hidden');
-            } else {
-                document.getElementById('customAudioContainer').classList.add('hidden');
-            }
-        }
-
-        document.getElementById('customAudioInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        function playMetronomeTick() {
             initAudio();
-            const arrayBuffer = await file.arrayBuffer();
-            customAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        });
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.05);
+        }
 
-        function playKeystroke() {
-            if (currentSoundProfile === 'none') return;
+        function playMechClick() {
+            if(appData.settings.soundscape !== 'keyboard') return;
             initAudio();
-            
-            if (currentSoundProfile === 'custom' && customAudioBuffer) {
-                const source = audioCtx.createBufferSource();
-                source.buffer = customAudioBuffer;
-                source.connect(audioCtx.destination);
-                source.start(0);
-                return;
-            }
-
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                
-                if (currentSoundProfile === 'blue') {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.03);
-                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
-                } else if (currentSoundProfile === 'brown') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.04);
-                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
-                }
-                
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.05);
-            } catch (e) { console.error(e); }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'square'; 
+            osc.frequency.setValueAtTime(120 + Math.random()*80, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+            osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.03);
         }
 
-        // --- CORE NAVIGATION & RENDERING ---
-        function navigate(state) {
-            appState = state;
-            render();
-        }
-
-        function sanitizeText(text) {
-            // Failsafe for untypable chars: Replace smart quotes and dashes, strip weird unicode
-            let t = text.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u2013\u2014]/g, "-");
-            return t.replace(/[^\x20-\x7E\n\r]/g, ""); // Keep standard printable ASCII + newlines
-        }
-
-        function render() {
-            const container = document.getElementById('app-container');
-            container.innerHTML = ''; // Clear
-
-            if (appState === 'dashboard') container.innerHTML = getDashboardHTML();
-            else if (appState === 'setup') container.innerHTML = getSetupHTML();
-            else if (appState === 'typing') renderTypingInterface(container);
-            else if (appState === 'results') container.innerHTML = getResultsHTML();
-            else if (appState === 'strict_fail') container.innerHTML = getStrictFailHTML();
-        }
-
-        // --- DASHBOARD VIEW ---
-        function getDashboardHTML() {
-            let html = `
-                <div class="w-full animate-fade-in mt-8">
-                    <div class="bg-cozy-accent text-white p-6 rounded-2xl mb-10 shadow-sm flex flex-col md:flex-row items-center justify-between">
-                        <div class="mb-4 md:mb-0">
-                            <h2 class="text-2xl font-bold mb-1">Turn your documents into notes!</h2>
-                            <p class="opacity-90 max-w-lg text-sm mb-3">Paste essays, study guides, or code snippets into your AI tool using our specialized prompt to create perfect typing drills for muscle memory.</p>
-                            <button onclick="openAiModal()" class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-bold shadow-sm transition inline-flex items-center">
-                                <i class="fa-solid fa-sparkles mr-2"></i> Get AI Prompt
-                            </button>
-                        </div>
-                        <i class="fa-solid fa-book-open text-6xl opacity-30 md:mr-8"></i>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 border-b border-cozy-border dark:border-cozy-darkBorder pb-4 gap-4">
-                        <h2 class="text-3xl font-semibold">Your Library</h2>
-                        <div class="flex space-x-3 w-full sm:w-auto">
-                            <label class="cursor-pointer px-4 py-2 bg-cozy-border dark:bg-cozy-darkBorder hover:bg-cozy-yellow hover:text-white rounded-lg transition text-sm font-medium flex-1 text-center sm:flex-none">
-                                <i class="fa-solid fa-ghost mr-2"></i> Import Ghost
-                                <input type="file" class="hidden" accept=".json" onchange="importGhost(event)">
-                            </label>
-                            <button onclick="startSetup(null)" class="px-5 py-2 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-lg shadow-sm transition font-medium flex-1 sm:flex-none">
-                                <i class="fa-solid fa-plus mr-2"></i> New Text
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            `;
-
-            if (saveSlots.length === 0) {
-                html += `<p class="col-span-full text-center opacity-50 py-12 italic">Your library is empty. Add a new text to begin.</p>`;
+        function toggleRain(on) {
+            initAudio();
+            if(on && appData.settings.soundscape === 'rain') {
+                if(rainNode) return;
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; // white noise
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer; noise.loop = true;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.value = 350; // Brown noise / rain
+                const gain = audioCtx.createGain(); gain.gain.value = 0.6;
+                noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+                noise.start();
+                rainNode = { noise, gain, filter };
             } else {
-                saveSlots.forEach((slot, index) => {
-                    html += `
-                        <div class="bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-6 rounded-2xl shadow-sm hover:shadow-md transition group">
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-bold text-lg truncate pr-4">${slot.title}</h3>
-                                <button onclick="deleteSlot(${index})" class="text-cozy-red/50 hover:text-cozy-red opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                            <p class="text-sm opacity-70 mb-6 font-mono truncate">${slot.fullText.substring(0, 40)}...</p>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="bg-cozy-border dark:bg-cozy-darkBorder px-3 py-1 rounded-full font-bold">Level ${slot.level}/4</span>
-                                <button onclick="resumeSlot(${index})" class="text-cozy-accent font-semibold hover:underline">Continue <i class="fa-solid fa-arrow-right text-xs"></i></button>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-
-            html += `</div></div>`;
-            return html;
-        }
-
-        // --- SETUP VIEW ---
-        function startSetup(slotIndex) {
-            if (slotIndex !== null) {
-                currentSession = { ...saveSlots[slotIndex], charStates: [], currentIndex: 0, timestamps: [], combo: 0, multiplier: 1, strictMode: false };
-                navigate('setup');
-            } else {
-                currentSession = { id: Date.now(), title: '', fullText: '', level: 1, strictMode: false, charStates: [], currentIndex: 0, timestamps: [], combo: 0, multiplier: 1 };
-                navigate('setup');
+                if(rainNode) { rainNode.noise.stop(); rainNode = null; }
             }
         }
 
-        function getSetupHTML() {
-            const levels = [
-                { id: 1, title: "Key Terms Drill", desc: "Master the 10 longest, most complex words to build core memory." },
-                { id: 2, title: "Sentence Scramble", desc: "Type individual sentences to internalize structure." },
-                { id: 3, title: "Full Immersion", desc: "Type the entire text in its original flow." },
-                { id: 4, title: "Blind Recall", desc: "The next 10 characters vanish as you approach. Rely on short-term memory!" }
-            ];
-
-            return `
-                <div class="w-full max-w-2xl bg-cozy-card dark:bg-cozy-darkCard p-8 rounded-3xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm mt-8 animate-fade-in transition-colors duration-300">
-                    <h2 class="text-3xl font-bold mb-6">Setup Curriculum</h2>
-                    
-                    <label class="block font-semibold mb-2">Title</label>
-                    <input type="text" id="setupTitle" value="${currentSession.title}" placeholder="e.g., Biology Chapter 4 Notes" class="w-full bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-3 mb-6 focus:outline-none focus:border-cozy-accent">
-
-                    <label class="block font-semibold mb-2 flex justify-between">
-                        <span>Target Text</span>
-                        <button onclick="openAiModal()" class="text-xs text-cozy-accent hover:underline font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Format with AI</button>
-                    </label>
-                    <textarea id="setupText" rows="6" placeholder="Paste your text here..." class="w-full bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-3 mb-6 focus:outline-none focus:border-cozy-accent font-mono text-sm leading-relaxed">${currentSession.fullText}</textarea>
-
-                    <label class="block font-semibold mb-3">Select Level</label>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                        ${levels.map(l => `
-                            <div class="border ${currentSession.level === l.id ? 'border-cozy-accent bg-cozy-accent/10 dark:bg-cozy-accent/20' : 'border-cozy-border dark:border-cozy-darkBorder bg-cozy-bg dark:bg-cozy-darkBg'} rounded-xl p-4 cursor-pointer hover:border-cozy-accent transition" onclick="selectLevel(${l.id})">
-                                <h4 class="font-bold flex items-center mb-1">
-                                    <i class="fa-solid ${l.id === 4 ? 'fa-eye-slash text-cozy-red' : 'fa-layer-group text-cozy-accent'} mr-2"></i> Level ${l.id}
-                                </h4>
-                                <p class="text-xs opacity-70">${l.desc}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div class="flex items-center justify-between bg-cozy-bg dark:bg-cozy-darkBg p-4 rounded-xl border border-cozy-border dark:border-cozy-darkBorder mb-8">
-                        <div>
-                            <h4 class="font-bold text-cozy-red"><i class="fa-solid fa-fire mr-2"></i>Strict Mode</h4>
-                            <p class="text-xs opacity-70">Any mistake results in instant failure.</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="strictModeToggle" class="sr-only peer" ${currentSession.strictMode ? 'checked' : ''}>
-                            <div class="w-11 h-6 bg-cozy-border dark:bg-cozy-darkBorder peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cozy-red"></div>
-                        </label>
-                    </div>
-
-                    <div class="flex justify-end space-x-4">
-                        <button onclick="navigate('dashboard')" class="px-6 py-3 font-semibold opacity-60 hover:opacity-100 transition">Cancel</button>
-                        <button onclick="saveAndStart()" class="px-8 py-3 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-xl shadow-sm transition font-bold text-lg">Start Typing</button>
-                    </div>
-                </div>
-            `;
+        // --- CORE FUNCTIONS ---
+        function updateNavbarStats() {
+            const expReq = appData.stats.level * 100;
+            const pct = Math.min(100, (appData.stats.exp / expReq) * 100);
+            document.getElementById('levelDisplay').innerText = `Lvl ${appData.stats.level}`;
+            document.getElementById('expBar').style.width = `${pct}%`;
+            document.getElementById('expText').innerText = `${appData.stats.exp}/${expReq}`;
         }
 
-        window.selectLevel = function(lvl) {
-            currentSession.level = lvl;
-            render(); 
-        }
-
-        window.saveAndStart = function() {
-            const title = document.getElementById('setupTitle').value.trim() || 'Untitled Session';
-            let rawText = document.getElementById('setupText').value;
-            rawText = sanitizeText(rawText).replace(/\s+/g, ' ').trim();
-            
-            if (rawText.length < 10) {
-                showModal("Wait!", "Please provide at least 10 characters of text.", "alert");
-                return;
+        function addExp(amount) {
+            appData.stats.exp += amount;
+            let expReq = appData.stats.level * 100;
+            let leveledUp = false;
+            while(appData.stats.exp >= expReq) {
+                appData.stats.exp -= expReq; appData.stats.level++;
+                expReq = appData.stats.level * 100; leveledUp = true;
             }
-
-            const isStrict = document.getElementById('strictModeToggle').checked;
-
-            currentSession.title = title;
-            currentSession.fullText = rawText;
-            currentSession.strictMode = isStrict;
-            
-            const existingIndex = saveSlots.findIndex(s => s.id === currentSession.id);
-            if (existingIndex > -1) {
-                saveSlots[existingIndex] = { ...currentSession, charStates: undefined, timestamps: undefined };
-            } else {
-                saveSlots.push({ ...currentSession, charStates: undefined, timestamps: undefined });
-            }
-            localStorage.setItem('learnToType_slots', JSON.stringify(saveSlots));
-
-            prepareTypingText();
-            navigate('typing');
+            saveData(); return leveledUp;
         }
 
-        // --- TYPING ENGINE ---
-        function prepareTypingText() {
-            let target = currentSession.fullText;
-            
-            if (currentSession.level === 1) {
-                const words = target.match(/\b[a-zA-Z]+\b/g) || [];
-                const uniqueWords = [...new Set(words.map(w => w.toLowerCase()))];
-                target = uniqueWords.sort((a, b) => b.length - a.length).slice(0, 10).join(' ');
-            } else if (currentSession.level === 2) {
-                const sentences = target.match(/[^.!?]+[.!?]+/g) || [target];
-                target = sentences.map(s => s.trim()).join('  ');
-            } 
-
-            if(!target.trim()) target = currentSession.fullText;
-
-            currentSession.targetText = target;
-            currentSession.charStates = target.split('').map(char => ({
-                expected: char,
-                status: 'untyped',
-                errorCount: 0
-            }));
-            currentSession.currentIndex = 0;
-            currentSession.startTime = null;
-            currentSession.timestamps = [];
-            currentSession.velocityLog = [];
-            currentSession.combo = 0;
-            currentSession.multiplier = 1;
+        function getSyntaxClass(word) {
+            const keywords = ['function','const','let','var','return','if','else','for','while','new','class'];
+            if (keywords.includes(word)) return 'syntax-keyword';
+            if (word.match(/^['"`].*['"`]$/)) return 'syntax-string';
+            if (word.match(/^[{}()[\].,;=+\-*/]+$/)) return 'syntax-symbol';
+            return '';
         }
 
-        function renderTypingInterface(container) {
-            container.innerHTML = `
-                <div class="w-full flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="bg-cozy-border dark:bg-cozy-darkBorder px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Level ${currentSession.level}</span>
-                        ${currentSession.strictMode ? '<span class="bg-cozy-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"><i class="fa-solid fa-fire mr-1"></i> Strict</span>' : ''}
-                        ${ghostData ? '<span class="bg-cozy-ghost text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"><i class="fa-solid fa-ghost mr-1"></i> Vs Ghost</span>' : ''}
-                    </div>
-                    <div class="flex space-x-6 text-sm font-semibold">
-                        <div class="flex flex-col items-center"><span class="opacity-50 text-xs uppercase">WPM</span><span id="liveWpm" class="text-xl text-cozy-accent">0</span></div>
-                        <div class="flex flex-col items-center"><span class="opacity-50 text-xs uppercase">Combo</span><span id="liveCombo" class="text-xl text-cozy-yellow">0 (1x)</span></div>
-                    </div>
-                </div>
-
-                <div class="w-full bg-cozy-bg dark:bg-cozy-darkBg border-y border-cozy-border dark:border-cozy-darkBorder mb-6 hidden" id="graphContainer">
-                    <canvas id="velocityCanvas"></canvas>
-                </div>
-
-                <div id="typingArea" class="w-full bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-8 rounded-2xl shadow-sm text-2xl md:text-3xl leading-relaxed outline-none typing-area select-none transition-colors duration-300" tabindex="0">
-                    <!-- Text injected here -->
-                </div>
-                
-                <p class="text-center opacity-40 text-sm mt-8 animate-pulse font-mono flex items-center justify-center">
-                    <i class="fa-solid fa-keyboard mr-2"></i> Start typing to begin recording...
-                </p>
-            `;
-
-            const typingArea = document.getElementById('typingArea');
-            
-            let html = '';
-            let globalIndex = 0;
-            const wordsArray = currentSession.targetText.split(/(?<=\s)|(?=\s)/); 
-            
-            for(let word of wordsArray) {
-                if (word.length === 0) continue;
-                html += `<span class="inline-block whitespace-pre">`;
-                for(let char of word) {
-                    html += `<span id="char-${globalIndex}" class="transition-colors duration-100 char-untyped">${char === ' ' || char === '\n' ? '&nbsp;' : char}</span>`;
-                    globalIndex++;
-                }
-                html += `</span>`;
-            }
-            
-            typingArea.innerHTML = html;
-            
-            typingArea.focus();
-            typingArea.addEventListener('blur', () => typingArea.focus());
-
-            document.getElementById('graphContainer').classList.remove('hidden');
-            const canvas = document.getElementById('velocityCanvas');
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = 60;
-
-            if (ghostData) {
-                startGhostRacer();
-            }
-
-            if (activeKeydownListener) window.removeEventListener('keydown', activeKeydownListener);
-            activeKeydownListener = handleKeydown;
-            window.addEventListener('keydown', activeKeydownListener);
-
-            updateVisuals();
-        }
-
-        function handleKeydown(e) {
-            if (['Control', 'Alt', 'Meta', 'Shift', 'Tab'].includes(e.key)) return;
-            if (e.ctrlKey || e.metaKey || e.altKey) return;
-            
-            if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); 
-
-            const state = currentSession;
-            if (state.currentIndex >= state.charStates.length) return;
-
-            if (!state.startTime && e.key !== 'Backspace') {
-                state.startTime = Date.now();
-                startVelocityTracker();
-            }
-
-            playKeystroke();
-
-            if (e.key === 'Backspace') {
-                if (state.strictMode) return; 
-                if (state.currentIndex > 0) {
-                    state.currentIndex--;
-                    state.charStates[state.currentIndex].status = 'untyped';
-                    state.combo = 0;
-                    state.multiplier = 1;
-                    updateVisuals();
-                }
-                return;
-            }
-
-            const expectedChar = state.charStates[state.currentIndex].expected;
-            const typedChar = (e.key === 'Enter' && expectedChar === ' ') ? ' ' : (e.key === 'Enter' && expectedChar === '\n') ? '\n' : e.key;
-            
-            const isMatch = expectedChar === typedChar;
-
-            if (isMatch) {
-                const charObj = state.charStates[state.currentIndex];
-                charObj.status = charObj.errorCount > 0 ? 'corrected' : 'correct';
-                
-                state.timestamps.push({ i: state.currentIndex, t: Date.now() - state.startTime });
-                
-                state.combo++;
-                if (state.combo >= 50) state.multiplier = 4;
-                else if (state.combo >= 20) state.multiplier = 3;
-                else if (state.combo >= 10) state.multiplier = 2;
-
-                state.currentIndex++;
-                
-                if (state.currentIndex >= state.charStates.length) {
-                    endSession();
-                }
-            } else {
-                if (state.strictMode) {
-                    endSession(true); 
-                    return;
-                }
-                state.charStates[state.currentIndex].errorCount++;
-                state.charStates[state.currentIndex].status = 'error';
-                state.combo = 0;
-                state.multiplier = 1;
-                state.currentIndex++; 
-            }
-
-            updateVisuals();
-        }
-
-        function updateVisuals() {
-            const state = currentSession;
-            
-            document.getElementById('liveCombo').innerText = `${state.combo} (${state.multiplier}x)`;
-            
-            for (let i = 0; i < state.charStates.length; i++) {
-                const span = document.getElementById(`char-${i}`);
-                if (!span) continue;
-
-                const cState = state.charStates[i].status;
-                
-                span.className = 'transition-colors duration-100';
-
-                if (i === state.currentIndex) {
-                    span.classList.add('caret-active');
-                } else if (cState === 'correct') {
-                    span.classList.add('char-correct');
-                } else if (cState === 'error') {
-                    span.classList.add('char-error');
-                } else if (cState === 'corrected') {
-                    span.classList.add('char-corrected');
-                } else {
-                    span.classList.add('char-untyped');
-                }
-
-                if (state.level === 4) {
-                    if (i > state.currentIndex && i <= state.currentIndex + 10) {
-                        span.classList.add('memory-hidden');
-                    }
-                }
-            }
-        }
-
-        function startVelocityTracker() {
-            if (velocityInterval) clearInterval(velocityInterval);
-            
-            let lastCount = 0;
-            velocityInterval = setInterval(() => {
-                if (appState !== 'typing') return clearInterval(velocityInterval);
-                
-                const currentHits = currentSession.timestamps.length;
-                const hitsInLastSec = currentHits - lastCount;
-                lastCount = currentHits;
-
-                const wpm = Math.round((hitsInLastSec * 60) / 5); 
-                currentSession.velocityLog.push(wpm);
-                
-                const timeMinutes = Math.max(0.01, (Date.now() - currentSession.startTime)/60000);
-                document.getElementById('liveWpm').innerText = Math.round((currentHits / 5) / timeMinutes) || 0;
-                
-                drawGraph();
-            }, 1000);
-        }
-
-        function drawGraph() {
-            const canvas = document.getElementById('velocityCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const data = currentSession.velocityLog;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (data.length < 2) return;
-
-            const maxWpm = Math.max(100, ...data);
-            const stepX = canvas.width / (data.length - 1);
-
-            ctx.beginPath();
-            ctx.strokeStyle = '#D97757';
-            ctx.lineWidth = 2;
-            
-            data.forEach((val, i) => {
-                const x = i * stepX;
-                const y = canvas.height - ((val / maxWpm) * canvas.height * 0.8) - 5;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-        }
-
-        // --- GHOST ENGINE ---
-        function importGhost(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // --- GHOST & REPLAY HANDLING ---
+        window.handleGhostUpload = function(event) {
+            const file = event.target.files[0];
+            if(!file) return;
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = function(e) {
                 try {
-                    ghostData = JSON.parse(event.target.result);
-                    showModal("Ghost Loaded!", `Opponent WPM Target: ${ghostData.wpm}`, "alert");
-                } catch(err) {
-                    showModal("Error", "Invalid ghost file. Make sure it's a valid JSON.", "alert");
-                }
+                    const ghostData = JSON.parse(e.target.result);
+                    if(!ghostData.ghost || !ghostData.slot) throw new Error("Invalid Ghost Data");
+                    showGhostActionModal(ghostData);
+                } catch(err) { alert("Invalid ghost file format."); }
             };
             reader.readAsText(file);
+            event.target.value = ''; // reset input
+        };
+
+        function showGhostActionModal(ghostData) {
+            document.getElementById('modal-container').innerHTML = `
+                <div class="fixed inset-0 bg-black/50 z-50 flex justify-center items-center">
+                    <div class="bg-cozy-bg dark:bg-cozy-darkBg p-6 rounded-2xl max-w-sm w-full border border-cozy-border shadow-xl">
+                        <h3 class="text-2xl font-bold mb-2"><i class="fa-solid fa-ghost text-cozy-ghost mr-2"></i> Ghost Uploaded</h3>
+                        <p class="text-sm opacity-70 mb-6">Target WPM: <span class="font-bold text-cozy-accent">${ghostData.wpm}</span></p>
+                        <div class="flex flex-col gap-3">
+                            <button onclick="startGhostRace('${encodeURIComponent(JSON.stringify(ghostData))}')" class="w-full py-3 bg-cozy-accent text-white font-bold rounded-xl hover:bg-cozy-accentHover transition">
+                                <i class="fa-solid fa-flag-checkered mr-2"></i> Race Ghost
+                            </button>
+                            <button onclick="watchGhostReplay('${encodeURIComponent(JSON.stringify(ghostData))}')" class="w-full py-3 bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border hover:border-cozy-ghost font-bold rounded-xl transition">
+                                <i class="fa-solid fa-play mr-2"></i> Watch Replay
+                            </button>
+                            <button onclick="document.getElementById('modal-container').innerHTML=''" class="w-full py-2 opacity-50 hover:opacity-100 text-sm">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        function startGhostRacer() {
-            if (ghostInterval) cancelAnimationFrame(ghostInterval);
+        window.startGhostRace = function(encodedData) {
+            document.getElementById('modal-container').innerHTML='';
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            navigate('typing', { slot: data.slot, racingGhost: data.ghost, wpm: data.wpm });
+        };
+
+        window.watchGhostReplay = function(encodedData) {
+            document.getElementById('modal-container').innerHTML='';
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            navigate('replay', { slot: data.slot, ghostRun: data.ghost });
+        };
+
+        // --- ROUTING ---
+        function navigate(view, params = null) {
+            const content = document.getElementById('app-content');
+            document.body.className = document.body.className.replace('zen-mode', '').trim();
+            clearInterval(metronomeInterval);
+            cancelAnimationFrame(ghostAnimationReq);
+            toggleRain(false);
+
+            if (view === 'dashboard') { content.innerHTML = renderDashboard(); initChart(); }
+            else if (view === 'create') content.innerHTML = renderCreate();
+            else if (view === 'typing') renderTyping(params, content);
+            else if (view === 'replay') renderReplay(params, content);
+            else if (view === 'results') content.innerHTML = renderResults();
+            else if (view === 'settings') content.innerHTML = renderSettings();
             
-            const renderGhost = () => {
-                if (appState !== 'typing' || !currentSession.startTime) {
-                    if (appState === 'typing') ghostInterval = requestAnimationFrame(renderGhost);
-                    return;
+            updateNavbarStats();
+        }
+
+        // --- VIEWS ---
+        function renderDashboard() {
+            const layout = layouts[appData.settings.layout] || layouts.qwerty;
+            
+            // Generate Heatmap
+            let maxMisses = 1;
+            Object.values(appData.stats.heatmap).forEach(v => { if(v > maxMisses) maxMisses = v; });
+            
+            let heatmapHtml = '<div class="flex flex-col gap-2 items-center w-full overflow-x-auto py-2">';
+            layout.forEach(row => {
+                heatmapHtml += '<div class="flex gap-2">';
+                for(let char of row) {
+                    let misses = appData.stats.heatmap[char] || 0;
+                    let intensity = misses > 0 ? 0.2 + (0.8 * (misses / maxMisses)) : 0;
+                    let bg = misses > 0 ? `rgba(192, 90, 90, ${intensity})` : '';
+                    let borderClass = misses > 0 ? 'border-red-400' : 'border-cozy-border dark:border-cozy-darkBorder';
+                    
+                    heatmapHtml += `
+                        <div class="key-box w-10 h-10 flex items-center justify-center rounded border ${borderClass} bg-cozy-card dark:bg-cozy-darkCard shadow-sm font-mono text-sm uppercase relative group" style="${bg ? `background-color: ${bg}; color: white;` : ''}">
+                            ${char}
+                            ${misses > 0 ? `<span class="absolute -top-8 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none">${misses}</span>` : ''}
+                        </div>
+                    `;
                 }
+                heatmapHtml += '</div>';
+            });
+            heatmapHtml += '</div>';
 
-                const elapsed = Date.now() - currentSession.startTime;
-                let currentGhostIndex = 0;
+            // Generate Slots
+            let slotsHtml = appData.slots.length === 0 ? `<p class="opacity-50 text-center italic py-8">No saved drills. Create one to begin!</p>` : '';
+            appData.slots.forEach((slot, idx) => {
+                slotsHtml += `
+                    <div class="p-4 border border-cozy-border dark:border-cozy-darkBorder rounded-xl mb-3 flex justify-between items-center bg-cozy-bg dark:bg-cozy-darkBg hover:border-cozy-accent transition group">
+                        <div class="overflow-hidden flex-1 mr-4">
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                ${slot.mode === 'code' ? '<i class="fa-solid fa-code text-blue-500"></i>' : '<i class="fa-solid fa-book text-cozy-green"></i>'}
+                                Drill #${idx + 1}
+                            </h3>
+                            <p class="text-sm opacity-60 truncate mt-1 font-mono">${slot.text}</p>
+                        </div>
+                        <div class="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
+                            <button onclick="navigate('typing', {slotIndex: ${idx}})" class="px-4 py-2 bg-cozy-accent text-white rounded hover:bg-cozy-accentHover transition font-bold"><i class="fa-solid fa-play"></i></button>
+                            <button onclick="deleteSlot(${idx})" class="px-4 py-2 border border-cozy-red text-cozy-red rounded hover:bg-cozy-red hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
 
-                for (let pt of ghostData.timestamps) {
-                    if (elapsed >= pt.t) currentGhostIndex = pt.i;
-                    else break;
+            // Badges
+            const b = appData.stats.badges;
+            const badgesHtml = `
+                <div class="grid grid-cols-4 gap-2 text-center mt-4">
+                    <div class="flex flex-col items-center opacity-${b.speedDemon ? '100' : '20'} grayscale-${b.speedDemon ? '0' : '100'} transition" title="Speed Demon: 100+ WPM">
+                        <i class="fa-solid fa-bolt text-2xl text-yellow-500 mb-1"></i><span class="text-[10px] font-bold">100 WPM</span>
+                    </div>
+                    <div class="flex flex-col items-center opacity-${b.perfection ? '100' : '20'} grayscale-${b.perfection ? '0' : '100'} transition" title="Perfectionist: 100% True Accuracy">
+                        <i class="fa-solid fa-bullseye text-2xl text-cozy-green mb-1"></i><span class="text-[10px] font-bold">Perfect</span>
+                    </div>
+                    <div class="flex flex-col items-center opacity-${b.veteran ? '100' : '20'} grayscale-${b.veteran ? '0' : '100'} transition" title="Veteran: Level 10 Reached">
+                        <i class="fa-solid fa-medal text-2xl text-purple-500 mb-1"></i><span class="text-[10px] font-bold">Lvl 10</span>
+                    </div>
+                    <div class="flex flex-col items-center opacity-${b.survivor ? '100' : '20'} grayscale-${b.survivor ? '0' : '100'} transition" title="Survivor: Beat Sudden Death">
+                        <i class="fa-solid fa-skull text-2xl text-cozy-red mb-1"></i><span class="text-[10px] font-bold">Survivor</span>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 flex flex-col gap-8">
+                        <div>
+                            <div class="flex justify-between items-end mb-4">
+                                <h2 class="text-3xl font-bold">Your Drills</h2>
+                                <button onclick="navigate('create')" class="px-5 py-2 bg-cozy-accent text-white rounded-lg hover:opacity-90 transition font-bold shadow-sm">
+                                    <i class="fa-solid fa-plus mr-2"></i> New
+                                </button>
+                            </div>
+                            <div class="bg-cozy-card dark:bg-cozy-darkCard p-4 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm max-h-[400px] overflow-y-auto">
+                                ${slotsHtml}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h2 class="text-2xl font-bold mb-4">Performance History</h2>
+                            <div class="bg-cozy-card dark:bg-cozy-darkCard p-4 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm h-64 relative">
+                                ${appData.stats.history.length === 0 ? '<p class="absolute inset-0 flex justify-center items-center opacity-50 italic">Complete a session to see history.</p>' : '<canvas id="historyChart"></canvas>'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col gap-6">
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm">
+                            <h3 class="font-bold text-xl mb-2 flex justify-between items-center">Heatmap <button onclick="generateWeakKeysDrill()" class="text-xs bg-cozy-accent text-white px-2 py-1 rounded shadow hover:bg-cozy-accentHover"><i class="fa-solid fa-crosshairs"></i> Target Weakness</button></h3>
+                            ${heatmapHtml}
+                        </div>
+
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm grid grid-cols-2 gap-4 text-center">
+                            <div>
+                                <p class="text-xs uppercase opacity-50 font-bold tracking-wider">Total Errors</p>
+                                <p class="text-3xl font-black text-cozy-red">${appData.stats.totalErrors}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs uppercase opacity-50 font-bold tracking-wider">Total EXP</p>
+                                <p class="text-3xl font-black text-cozy-accent">${appData.stats.exp + ((appData.stats.level -1)*100)}</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm">
+                            <h3 class="font-bold text-xl mb-2"><i class="fa-solid fa-trophy text-yellow-500 mr-2"></i> Trophy Case</h3>
+                            ${badgesHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('historyChart');
+            if(!ctx || appData.stats.history.length === 0) return;
+            if(historyChartInstance) historyChartInstance.destroy();
+            
+            const data = appData.stats.history.slice(-50); // last 50
+            historyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map((_, i) => i+1),
+                    datasets: [
+                        { label: 'WPM', data: data.map(d => d.wpm), borderColor: '#D97757', backgroundColor: '#D97757', tension: 0.3, yAxisID: 'y' },
+                        { label: 'True Acc %', data: data.map(d => d.acc), borderColor: '#6B8E23', backgroundColor: '#6B8E23', tension: 0.3, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { type: 'linear', display: true, position: 'left', min: 0 },
+                        y1: { type: 'linear', display: true, position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } }
+                    }
                 }
+            });
+        }
 
-                document.querySelectorAll('.ghost-active').forEach(el => el.classList.remove('ghost-active'));
+        function renderCreate() {
+            window.insertAIPrompt = function() {
+                const promptText = "I am using a typing application to memorize my study notes and build muscle memory. Please read the attached document and extract the most important facts, core concepts, or key code snippets.\n\nConvert them into clear, concise, self-contained sentences. Remove any complex formatting, bullet points, asterisks, or Markdown elements.\n\nThe final output should be plain, readable text separated by spaces or newlines, perfectly formatted for a continuous typing practice session.";
+                document.getElementById('drillInput').value = promptText;
+                alert("Prompt inserted! Copy this text and paste it into ChatGPT, Claude, or Gemini alongside your study notes.");
+            };
+
+            window.saveAndStart = function() {
+                let rawText = document.getElementById('drillInput').value;
+                let text = rawText.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+                if(!text) return alert("Please enter some text!");
+                const mode = document.querySelector('input[name="drillMode"]:checked').value;
                 
-                if (currentGhostIndex < ghostData.timestamps.length) {
-                    const span = document.getElementById(`char-${currentGhostIndex}`);
-                    if (span) span.classList.add('ghost-active');
-                    ghostInterval = requestAnimationFrame(renderGhost);
+                appData.slots.push({ text, mode });
+                saveData();
+                navigate('typing', { slotIndex: appData.slots.length - 1 });
+            };
+
+            return `
+                <div class="max-w-3xl mx-auto w-full">
+                    <button onclick="navigate('dashboard')" class="mb-6 opacity-60 hover:opacity-100 transition"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+                    <h2 class="text-3xl font-bold mb-6">Create New Drill</h2>
+                    
+                    <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm">
+                        <div class="flex gap-4 mb-6">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="drillMode" value="info" class="peer hidden" checked>
+                                <div class="p-3 text-center rounded-lg border-2 border-transparent bg-cozy-border dark:bg-cozy-darkBorder peer-checked:border-cozy-accent peer-checked:bg-cozy-bg transition font-bold">
+                                    <i class="fa-solid fa-circle-info mr-2 text-cozy-accent"></i> Info
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="drillMode" value="language" class="peer hidden">
+                                <div class="p-3 text-center rounded-lg border-2 border-transparent bg-cozy-border dark:bg-cozy-darkBorder peer-checked:border-cozy-accent peer-checked:bg-cozy-bg transition font-bold">
+                                    <i class="fa-solid fa-language mr-2 text-cozy-green"></i> Prose
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="drillMode" value="code" class="peer hidden">
+                                <div class="p-3 text-center rounded-lg border-2 border-transparent bg-cozy-border dark:bg-cozy-darkBorder peer-checked:border-cozy-accent peer-checked:bg-cozy-bg transition font-bold">
+                                    <i class="fa-solid fa-code mr-2 text-blue-500"></i> Code
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-bold text-sm opacity-70">Text Content (Auto-formats whitespace)</label>
+                            <button onclick="insertAIPrompt()" class="text-xs bg-indigo-500 text-white px-3 py-1 rounded shadow hover:bg-indigo-600 transition flex items-center">
+                                <i class="fa-solid fa-robot mr-1"></i> Get AI Prompt
+                            </button>
+                        </div>
+                        <textarea id="drillInput" class="w-full h-56 bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-4 font-mono text-lg resize-none focus:outline-none focus:border-cozy-accent transition" placeholder="Paste your study notes or code here..."></textarea>
+                        
+                        <button onclick="saveAndStart()" class="w-full mt-6 py-4 bg-cozy-accent text-white font-bold rounded-xl text-lg hover:bg-cozy-accentHover transition shadow-md">
+                            Save & Start Typing
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSettings() {
+            window.exportSave = function() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+                const a = document.createElement('a'); a.href = dataStr; a.download = "TypePro_SaveData.json"; a.click();
+            };
+            window.importSave = function(e) {
+                const file = e.target.files[0]; if(!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if(data.slots && data.stats) { appData = data; saveData(); alert("Imported!"); navigate('dashboard'); }
+                    } catch(err) { alert("Invalid save file."); }
+                }; reader.readAsText(file);
+            };
+            window.toggleSetting = function(key) {
+                if (key === 'layout') {
+                    const arr = ['qwerty', 'dvorak', 'colemak'];
+                    appData.settings.layout = arr[(arr.indexOf(appData.settings.layout) + 1) % arr.length];
+                } else if (key === 'soundscape') {
+                    const arr = ['none', 'rain', 'keyboard'];
+                    appData.settings.soundscape = arr[(arr.indexOf(appData.settings.soundscape) + 1) % arr.length];
+                } else if (key === 'targetWpm') {
+                    let wpm = parseInt(prompt("Enter Target WPM:", appData.settings.targetWpm));
+                    if (!isNaN(wpm) && wpm > 0) appData.settings.targetWpm = wpm;
+                } else appData.settings[key] = !appData.settings[key];
+                saveData(); navigate('settings');
+            };
+            window.saveCustomCSS = function() {
+                appData.settings.customCSS = document.getElementById('cssInput').value;
+                saveData(); alert("Theme Applied!");
+            };
+
+            return `
+                <div class="max-w-3xl mx-auto w-full">
+                    <button onclick="navigate('dashboard')" class="mb-6 opacity-60 hover:opacity-100 transition"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+                    <h2 class="text-3xl font-bold mb-6">Settings & Themes</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm space-y-2">
+                            <h3 class="font-bold text-xl mb-4 border-b pb-2 border-cozy-border dark:border-cozy-darkBorder">Gameplay Modes</h3>
+                            
+                            <div class="flex justify-between items-center py-2">
+                                <div><h4 class="font-bold"><i class="fa-solid fa-eye-slash text-cozy-accent w-5"></i> Zen Mode</h4></div>
+                                <button onclick="toggleSetting('zenMode')" class="px-3 py-1 rounded text-sm font-bold ${appData.settings.zenMode ? 'bg-cozy-green text-white' : 'bg-cozy-border dark:bg-cozy-darkBorder'}">${appData.settings.zenMode ? 'ON' : 'OFF'}</button>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <div><h4 class="font-bold"><i class="fa-solid fa-glasses text-cozy-accent w-5"></i> Blind Mode</h4></div>
+                                <button onclick="toggleSetting('blindMode')" class="px-3 py-1 rounded text-sm font-bold ${appData.settings.blindMode ? 'bg-cozy-green text-white' : 'bg-cozy-border dark:bg-cozy-darkBorder'}">${appData.settings.blindMode ? 'ON' : 'OFF'}</button>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <div><h4 class="font-bold"><i class="fa-solid fa-skull text-cozy-red w-5"></i> Sudden Death</h4><p class="text-[10px] opacity-60">1 typo = Fail</p></div>
+                                <button onclick="toggleSetting('suddenDeath')" class="px-3 py-1 rounded text-sm font-bold ${appData.settings.suddenDeath ? 'bg-cozy-red text-white' : 'bg-cozy-border dark:bg-cozy-darkBorder'}">${appData.settings.suddenDeath ? 'ON' : 'OFF'}</button>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <div><h4 class="font-bold"><i class="fa-solid fa-music text-cozy-accent w-5"></i> Metronome</h4><p class="text-[10px] opacity-60 cursor-pointer text-cozy-accent" onclick="toggleSetting('targetWpm')">Target: ${appData.settings.targetWpm} WPM</p></div>
+                                <button onclick="toggleSetting('metronome')" class="px-3 py-1 rounded text-sm font-bold ${appData.settings.metronome ? 'bg-cozy-green text-white' : 'bg-cozy-border dark:bg-cozy-darkBorder'}">${appData.settings.metronome ? 'ON' : 'OFF'}</button>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <div><h4 class="font-bold"><i class="fa-solid fa-headphones text-cozy-accent w-5"></i> Soundscape</h4></div>
+                                <button onclick="toggleSetting('soundscape')" class="px-3 py-1 rounded text-sm font-bold uppercase bg-cozy-border dark:bg-cozy-darkBorder">${appData.settings.soundscape}</button>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <div><h4 class="font-bold"><i class="fa-solid fa-keyboard text-cozy-accent w-5"></i> Layout</h4></div>
+                                <button onclick="toggleSetting('layout')" class="px-3 py-1 rounded text-sm font-bold uppercase bg-cozy-border dark:bg-cozy-darkBorder">${appData.settings.layout}</button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-6">
+                            <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm">
+                                <h3 class="font-bold text-xl mb-2 flex justify-between">Custom CSS Theme <button onclick="saveCustomCSS()" class="text-xs bg-cozy-accent text-white px-2 py-1 rounded">Apply</button></h3>
+                                <p class="text-xs opacity-60 mb-2">Override colors using <code>.dark .bg-cozy-darkBg { background: #000; }</code></p>
+                                <textarea id="cssInput" class="w-full h-32 bg-cozy-bg dark:bg-cozy-darkBg border rounded-xl p-3 font-mono text-xs focus:outline-none">${appData.settings.customCSS}</textarea>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <button onclick="exportSave()" class="w-full py-4 border-2 border-cozy-border dark:border-cozy-darkBorder hover:border-cozy-accent rounded-xl font-bold transition flex flex-col items-center justify-center">
+                                    <i class="fa-solid fa-download mb-1 text-xl"></i> Export Save
+                                </button>
+                                <label class="w-full py-4 border-2 border-cozy-border dark:border-cozy-darkBorder hover:border-cozy-accent rounded-xl font-bold transition flex flex-col items-center justify-center cursor-pointer">
+                                    <i class="fa-solid fa-upload mb-1 text-xl"></i> Import Save
+                                    <input type="file" class="hidden" accept=".json" onchange="importSave(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTyping(params, container) {
+            const isRacing = !!params.racingGhost;
+            const slot = params.slot || appData.slots[params.slotIndex];
+            const chars = slot.text.split('');
+            const isCodeMode = slot.mode === 'code';
+            
+            currentSession = {
+                slotIndex: params.slotIndex !== undefined ? params.slotIndex : -1, // -1 means temporary slot (racing)
+                slotData: slot, textLength: chars.length,
+                startTime: null, endTime: null, currentIndex: 0,
+                errorsMade: 0, totalPresses: 0, badPresses: 0,
+                ghostData: [], suddenDeathFail: false, isRacing: isRacing,
+                racerWpm: params.wpm || 0
+            };
+
+            if (appData.settings.zenMode) document.body.classList.add('zen-mode');
+            toggleRain(true);
+
+            let words = slot.text.split(' ');
+            let html = `<div id="textContainer" class="text-3xl font-mono leading-relaxed relative z-10 break-words ${appData.settings.blindMode ? 'blind-mode' : ''}">`;
+            let charGlobalIndex = 0;
+            
+            words.forEach(word => {
+                let sClass = isCodeMode ? getSyntaxClass(word) : '';
+                html += `<span class="word-group inline-block">`;
+                for(let i=0; i<word.length; i++) {
+                    html += `<span id="char-${charGlobalIndex}" class="char pending opacity-40 transition-colors ${sClass}">${word[i]}</span>`;
+                    charGlobalIndex++;
+                }
+                if (charGlobalIndex < chars.length) {
+                    html += `<span id="char-${charGlobalIndex}" class="char pending opacity-40">&nbsp;</span>`;
+                    charGlobalIndex++;
+                }
+                html += `</span> `;
+            });
+            html += '</div>';
+
+            let headerText = isRacing 
+                ? `<div class="text-cozy-ghost animate-pulse flex items-center"><i class="fa-solid fa-ghost mr-2"></i> Racing Ghost (${currentSession.racerWpm} WPM)</div>`
+                : `<span id="liveWpm">0 WPM</span>`;
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center w-full max-w-5xl mx-auto mt-10 relative">
+                    <div class="non-zen w-full flex justify-between items-center mb-6 opacity-60 font-mono text-sm uppercase font-bold tracking-widest">
+                        ${headerText}
+                        ${appData.settings.suddenDeath ? '<span class="text-cozy-red animate-pulse"><i class="fa-solid fa-skull mr-2"></i> Sudden Death</span>' : ''}
+                        <button onclick="navigate('dashboard')" class="hover:text-cozy-accent"><i class="fa-solid fa-xmark fa-xl"></i></button>
+                    </div>
+                    
+                    <div class="relative w-full p-8 bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder rounded-2xl shadow-sm min-h-[300px]">
+                        ${html}
+                    </div>
+                    
+                    <div class="non-zen mt-8 text-center opacity-50 text-sm font-mono">
+                        <p>Press <kbd class="px-2 py-1 bg-cozy-bg dark:bg-cozy-darkBg rounded border">ESC</kbd> to exit.</p>
+                    </div>
+                </div>
+            `;
+
+            const updateCursor = () => {
+                document.querySelectorAll('.char').forEach(el => el.classList.remove('cursor-blink'));
+                if (currentSession.currentIndex < chars.length) {
+                    document.getElementById(`char-${currentSession.currentIndex}`).classList.add('cursor-blink');
                 }
             };
-            ghostInterval = requestAnimationFrame(renderGhost);
-        }
 
-        function exportGhost() {
-            const payload = JSON.stringify({
-                wpm: document.getElementById('finalWpm').innerText,
-                timestamps: currentSession.timestamps
-            });
-            const blob = new Blob([payload], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.setAttribute("href", url);
-            a.setAttribute("download", `ghost_run_${Date.now()}.json`);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url); // Clean up memory
-        }
+            const finishSession = (failed = false) => {
+                document.removeEventListener('keydown', handleKeyDown);
+                currentSession.endTime = Date.now();
+                currentSession.suddenDeathFail = failed;
+                navigate('results');
+            };
 
-        // --- END SESSION & RESULTS ---
-        function endSession(failed = false) {
-            if (activeKeydownListener) window.removeEventListener('keydown', activeKeydownListener);
-            if (velocityInterval) clearInterval(velocityInterval);
-            
-            currentSession.endTime = Date.now();
-            
-            if (failed) {
-                navigate('strict_fail');
-                return;
-            }
+            const simulateRacingGhost = () => {
+                if(!currentSession.startTime || !isRacing) return;
+                const ghostEvents = params.racingGhost;
+                let ghostPos = 0;
+                
+                const update = () => {
+                    const elapsed = Date.now() - currentSession.startTime;
+                    ghostPos = 0; // recalculate position based on time
+                    for(let i=0; i<ghostEvents.length; i++) {
+                        if(ghostEvents[i].time > elapsed) break;
+                        if(ghostEvents[i].char === 'Backspace') { if(ghostPos > 0) ghostPos--; }
+                        else ghostPos++;
+                    }
+                    
+                    document.querySelectorAll('.ghost-cursor').forEach(el => el.classList.remove('ghost-cursor'));
+                    if(ghostPos < chars.length) {
+                        const el = document.getElementById(`char-${ghostPos}`);
+                        if(el) el.classList.add('ghost-cursor');
+                    }
+                    
+                    if(ghostPos < chars.length && document.getElementById('textContainer')) {
+                        ghostAnimationReq = requestAnimationFrame(update);
+                    }
+                };
+                ghostAnimationReq = requestAnimationFrame(update);
+            };
 
-            if (currentSession.level < 4) {
-                const existingIndex = saveSlots.findIndex(s => s.id === currentSession.id);
-                if (existingIndex > -1) {
-                    saveSlots[existingIndex].level++;
-                    localStorage.setItem('learnToType_slots', JSON.stringify(saveSlots));
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape') return navigate('dashboard');
+                if (e.key.length !== 1 && e.key !== 'Backspace') return;
+
+                if (!currentSession.startTime && e.key.length === 1) {
+                    currentSession.startTime = Date.now();
+                    if (appData.settings.metronome) {
+                        const cps = (appData.settings.targetWpm * 5) / 60;
+                        metronomeInterval = setInterval(playMetronomeTick, 1000 / cps);
+                    }
+                    if (isRacing) simulateRacingGhost();
                 }
+
+                currentSession.totalPresses++;
+                playMechClick();
+                const timeOffset = currentSession.startTime ? Date.now() - currentSession.startTime : 0;
+                currentSession.ghostData.push({ char: e.key, time: timeOffset });
+
+                if (e.key === 'Backspace') {
+                    if (appData.settings.suddenDeath) return; // Cannot backspace in sudden death!
+                    currentSession.badPresses++; 
+                    if (currentSession.currentIndex > 0) {
+                        currentSession.currentIndex--;
+                        const charEl = document.getElementById(`char-${currentSession.currentIndex}`);
+                        charEl.className = `char pending opacity-40 transition-colors ${charEl.getAttribute('data-original-class') || ''}`;
+                    }
+                } else {
+                    const expectedChar = chars[currentSession.currentIndex];
+                    const charEl = document.getElementById(`char-${currentSession.currentIndex}`);
+                    
+                    if(!charEl.hasAttribute('data-original-class')) {
+                        charEl.setAttribute('data-original-class', Array.from(charEl.classList).filter(c => c.startsWith('syntax-')).join(' '));
+                    }
+
+                    if (e.key === expectedChar) {
+                        charEl.className = 'char text-cozy-text dark:text-cozy-darkText';
+                    } else {
+                        if (appData.settings.suddenDeath) {
+                            charEl.className = 'char text-cozy-red bg-red-100 dark:bg-red-900/30 rounded underline';
+                            return finishSession(true);
+                        }
+                        charEl.className = 'char text-cozy-red bg-red-100 dark:bg-red-900/30 rounded underline';
+                        currentSession.errorsMade++; currentSession.badPresses++;
+                        appData.stats.totalErrors++;
+                        let lowKey = expectedChar.toLowerCase();
+                        appData.stats.heatmap[lowKey] = (appData.stats.heatmap[lowKey] || 0) + 1;
+                    }
+                    
+                    currentSession.currentIndex++;
+                    if (currentSession.currentIndex >= chars.length) finishSession(false);
+                }
+                updateCursor();
+
+                if (!isRacing && currentSession.startTime && currentSession.currentIndex > 0 && currentSession.currentIndex % 5 === 0) {
+                    const minutes = (Date.now() - currentSession.startTime) / 60000;
+                    const words = currentSession.currentIndex / 5;
+                    const wpmDisplay = document.getElementById('liveWpm');
+                    if(wpmDisplay) wpmDisplay.innerText = `${Math.round(words / minutes)} WPM`;
+                }
+            };
+
+            document.addEventListener('keydown', handleKeyDown);
+            updateCursor();
+        }
+
+        function renderResults() {
+            let wpm = 0, standardAcc = 0, trueAcc = 0, expEarned = 0, leveledUp = false;
+            let earnedBadges = [];
+
+            if (!currentSession.suddenDeathFail) {
+                const minutes = (currentSession.endTime - currentSession.startTime) / 60000;
+                const words = currentSession.textLength / 5;
+                wpm = Math.round(words / minutes);
+                standardAcc = Math.max(0, Math.round(((currentSession.textLength - currentSession.errorsMade) / currentSession.textLength) * 100));
+                trueAcc = currentSession.totalPresses > 0 ? Math.max(0, Math.round(((currentSession.totalPresses - currentSession.badPresses) / currentSession.totalPresses) * 100)) : 0;
+                
+                expEarned = Math.floor(wpm * (trueAcc / 100));
+                if(currentSession.slotIndex !== -1) { // Dont give exp for temporary ghost races
+                    leveledUp = addExp(expEarned);
+                    appData.stats.history.push({ date: Date.now(), wpm, acc: trueAcc });
+                }
+
+                // Check Badges
+                if (wpm >= 100 && !appData.stats.badges.speedDemon) { appData.stats.badges.speedDemon = true; earnedBadges.push("Speed Demon"); }
+                if (trueAcc === 100 && currentSession.textLength > 50 && !appData.stats.badges.perfection) { appData.stats.badges.perfection = true; earnedBadges.push("Perfectionist"); }
+                if (appData.stats.level >= 10 && !appData.stats.badges.veteran) { appData.stats.badges.veteran = true; earnedBadges.push("Veteran"); }
+                if (appData.settings.suddenDeath && !appData.stats.badges.survivor) { appData.stats.badges.survivor = true; earnedBadges.push("Survivor"); }
+                if (currentSession.isRacing && wpm > currentSession.racerWpm && !appData.stats.badges.ghostHunter) { appData.stats.badges.ghostHunter = true; earnedBadges.push("Ghost Hunter"); }
+                
+                saveData();
             }
 
-            navigate('results');
-        }
+            window.exportGhost = function() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                    wpm, standardAcc, trueAcc, slot: currentSession.slotData, ghost: currentSession.ghostData
+                }));
+                const a = document.createElement('a'); a.href = dataStr; a.download = `TypePro_Ghost_${wpm}WPM.json`; a.click();
+            };
 
-        function getStrictFailHTML() {
-            return `
-                <div class="w-full max-w-lg mx-auto bg-cozy-card dark:bg-cozy-darkCard p-12 rounded-3xl border border-cozy-red/30 shadow-sm mt-16 text-center animate-fade-in transition-colors duration-300">
-                    <div class="w-20 h-20 mx-auto bg-cozy-red text-white rounded-full flex items-center justify-center text-4xl mb-6 shadow-md">
-                        <i class="fa-solid fa-xmark"></i>
+            if (currentSession.suddenDeathFail) {
+                return `
+                    <div class="max-w-2xl mx-auto w-full text-center py-20">
+                        <i class="fa-solid fa-skull text-8xl text-cozy-red mb-6 animate-pulse"></i>
+                        <h2 class="text-5xl font-black text-cozy-red tracking-widest uppercase mb-4">Sudden Death</h2>
+                        <p class="text-xl opacity-70 mb-10">One mistake is all it takes.</p>
+                        <div class="flex justify-center gap-4">
+                            <button onclick="navigate('typing', {slotIndex: ${currentSession.slotIndex}})" class="px-8 py-3 bg-cozy-red text-white hover:opacity-90 rounded-xl transition font-bold text-lg"><i class="fa-solid fa-rotate-right mr-2"></i> Try Again</button>
+                            <button onclick="navigate('dashboard')" class="px-8 py-3 border border-cozy-border rounded-xl hover:bg-cozy-card transition font-bold text-lg">Retreat</button>
+                        </div>
                     </div>
-                    <h2 class="text-3xl font-bold mb-4">Strict Mode Failed</h2>
-                    <p class="opacity-70 mb-8">You made a typo. In strict mode, perfection is required.</p>
-                    <div class="space-x-4">
-                        <button onclick="navigate('dashboard')" class="px-6 py-3 font-semibold opacity-60 hover:opacity-100 transition">Dashboard</button>
-                        <button onclick="prepareTypingText(); navigate('typing');" class="px-8 py-3 bg-cozy-red hover:bg-red-700 text-white rounded-xl shadow-sm transition font-bold text-lg"><i class="fa-solid fa-rotate-right mr-2"></i> Try Again</button>
-                    </div>
-                </div>
-            `;
-        }
+                `;
+            }
 
-        function getResultsHTML() {
-            // Fix infinity WPM for extremely fast completions: Math.max ensures we don't divide by 0
-            const timeMinutes = Math.max(0.001, (currentSession.endTime - currentSession.startTime) / 60000);
-            const totalChars = currentSession.charStates.length;
-            const wpm = Math.round((totalChars / 5) / timeMinutes);
-            
-            let uncorrectedErrors = 0;
-            let correctedChars = 0;
-            let charsWithErrors = 0;
-
-            currentSession.charStates.forEach(c => {
-                if (c.status === 'error') uncorrectedErrors++;
-                if (c.errorCount > 0) charsWithErrors++;
-                if (c.status === 'corrected') correctedChars++;
-            });
-
-            const accuracy = Math.round(((totalChars - uncorrectedErrors) / totalChars) * 100);
-            const persistence = charsWithErrors === 0 ? 100 : Math.round((correctedChars / charsWithErrors) * 100);
+            let badgeHtml = earnedBadges.map(b => `<span class="bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase shadow mx-1 animate-bounce"><i class="fa-solid fa-star mr-1"></i> ${b} Unlocked!</span>`).join('');
 
             return `
-                <div class="w-full max-w-4xl bg-cozy-bg dark:bg-cozy-darkBg p-8 mt-4 animate-fade-in text-center transition-colors duration-300">
-                    <div class="inline-flex items-center justify-center w-20 h-20 bg-cozy-green text-white rounded-full mb-6 shadow-sm">
-                        <i class="fa-solid fa-check text-4xl"></i>
-                    </div>
-                    <h2 class="text-4xl font-bold mb-10">Level ${currentSession.level} Complete</h2>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder">
+                <div class="max-w-3xl mx-auto w-full text-center">
+                    <h2 class="text-4xl font-bold mb-2">Session Complete!</h2>
+                    ${leveledUp ? `<p class="text-cozy-green font-bold animate-pulse mb-4"><i class="fa-solid fa-arrow-up mr-2"></i> LEVEL UP! </p>` : `<p class="opacity-60 mb-4">+${expEarned} EXP Earned</p>`}
+                    ${badgeHtml ? `<div class="mb-8">${badgeHtml}</div>` : ''}
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 mt-4">
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border shadow-sm">
                             <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Speed</p>
-                            <p class="text-5xl font-black text-cozy-accent"><span id="finalWpm">${wpm}</span> <span class="text-xl font-medium">WPM</span></p>
+                            <p class="text-5xl font-black text-cozy-accent">${wpm}</p><p class="text-sm opacity-60 mt-1">WPM</p>
                         </div>
-                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder">
-                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Accuracy</p>
-                            <p class="text-5xl font-black text-cozy-green">${accuracy}<span class="text-xl font-medium">%</span></p>
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border shadow-sm">
+                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Std Acc</p>
+                            <p class="text-5xl font-black text-cozy-green">${standardAcc}%</p><p class="text-xs opacity-60 mt-1">Final Text</p>
                         </div>
-                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder">
-                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Persistence</p>
-                            <p class="text-5xl font-black text-cozy-yellow">${persistence}<span class="text-xl font-medium">%</span></p>
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-cozy-accent text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">Strict</div>
+                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">True Acc</p>
+                            <p class="text-5xl font-black text-cozy-text dark:text-cozy-darkText">${trueAcc}%</p><p class="text-xs opacity-60 mt-1">Keystrokes</p>
+                        </div>
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border shadow-sm">
+                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Errors</p>
+                            <p class="text-5xl font-black text-cozy-red">${currentSession.errorsMade}</p><p class="text-xs opacity-60 mt-1">Mistakes</p>
                         </div>
                     </div>
 
-                    <div class="flex justify-center space-x-6">
-                        <button onclick="exportGhost()" class="px-6 py-3 border-2 border-cozy-border dark:border-cozy-darkBorder hover:border-cozy-ghost rounded-xl transition font-semibold">
-                            <i class="fa-solid fa-download mr-2 text-cozy-ghost"></i> Export Ghost Run
-                        </button>
-                        <button onclick="navigate('dashboard')" class="px-8 py-3 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-xl shadow-sm transition font-bold text-lg">
-                            Continue <i class="fa-solid fa-arrow-right ml-2"></i>
-                        </button>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        ${currentSession.slotIndex !== -1 ? `<button onclick="navigate('typing', {slotIndex: ${currentSession.slotIndex}})" class="px-6 py-3 border border-cozy-border hover:bg-cozy-border dark:hover:bg-cozy-darkBorder rounded-xl transition font-bold"><i class="fa-solid fa-rotate-right mr-2"></i> Retry</button>` : ''}
+                        <button onclick="exportGhost()" class="px-6 py-3 border-2 border-cozy-border hover:border-cozy-ghost rounded-xl transition font-bold text-sm text-gray-500"><i class="fa-solid fa-ghost mr-2 text-cozy-ghost"></i> Export Ghost</button>
+                        <button onclick="navigate('dashboard')" class="px-8 py-3 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-xl shadow-sm transition font-bold text-lg">Dashboard <i class="fa-solid fa-arrow-right ml-2"></i></button>
                     </div>
                 </div>
             `;
         }
 
-        // Slot Management
-        window.deleteSlot = function(index) {
-            showModal("Delete Library Item", "Are you sure you want to permanently delete this text? This cannot be undone.", "confirm", () => {
-                saveSlots.splice(index, 1);
-                localStorage.setItem('learnToType_slots', JSON.stringify(saveSlots));
-                render();
+        function renderReplay(params, container) {
+            const slot = params.slot;
+            const ghostEvents = params.ghostRun;
+            const chars = slot.text.split('');
+            
+            let words = slot.text.split(' ');
+            let html = `<div id="textContainer" class="text-3xl font-mono leading-relaxed relative z-10 break-words opacity-80">`;
+            let charGlobalIndex = 0;
+            
+            words.forEach(word => {
+                html += `<span class="word-group inline-block">`;
+                for(let i=0; i<word.length; i++) {
+                    html += `<span id="char-${charGlobalIndex}" class="char pending opacity-40 transition-colors">${word[i]}</span>`; charGlobalIndex++;
+                }
+                if (charGlobalIndex < chars.length) {
+                    html += `<span id="char-${charGlobalIndex}" class="char pending opacity-40">&nbsp;</span>`; charGlobalIndex++;
+                }
+                html += `</span> `;
             });
+            html += '</div>';
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center w-full max-w-4xl mx-auto mt-10">
+                    <div class="w-full flex justify-between items-center mb-6 font-mono text-sm">
+                        <span class="text-cozy-ghost animate-pulse font-bold tracking-widest"><i class="fa-solid fa-film mr-2"></i> Replay Viewer</span>
+                        <button onclick="navigate('dashboard')" class="px-4 py-2 bg-cozy-border dark:bg-cozy-darkBorder rounded hover:bg-cozy-accent hover:text-white transition">Exit Replay</button>
+                    </div>
+                    <div class="relative w-full p-8 bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border rounded-2xl shadow-sm min-h-[300px]">
+                        ${html}
+                    </div>
+                </div>
+            `;
+
+            // Start Replay Animation
+            let eventIdx = 0;
+            let replayPos = 0;
+            let replayStartTime = null;
+
+            const updateReplayCursor = (pos) => {
+                document.querySelectorAll('.char').forEach(el => el.classList.remove('cursor-blink'));
+                if (pos < chars.length) {
+                    const el = document.getElementById(`char-${pos}`);
+                    if(el) el.classList.add('cursor-blink');
+                }
+            };
+            updateReplayCursor(0);
+
+            const replayLoop = () => {
+                if(!replayStartTime) replayStartTime = Date.now();
+                const elapsed = Date.now() - replayStartTime;
+                
+                while(eventIdx < ghostEvents.length && ghostEvents[eventIdx].time <= elapsed) {
+                    const e = ghostEvents[eventIdx];
+                    if(e.char === 'Backspace') {
+                        if(replayPos > 0) {
+                            replayPos--;
+                            const el = document.getElementById(`char-${replayPos}`);
+                            el.className = `char pending opacity-40 transition-colors`;
+                        }
+                    } else {
+                        const expected = chars[replayPos];
+                        const el = document.getElementById(`char-${replayPos}`);
+                        if(e.char === expected) el.className = 'char text-cozy-text dark:text-cozy-darkText';
+                        else el.className = 'char text-cozy-red bg-red-100 dark:bg-red-900/30 rounded underline';
+                        replayPos++;
+                    }
+                    eventIdx++;
+                }
+                updateReplayCursor(replayPos);
+                if(eventIdx < ghostEvents.length && document.getElementById('textContainer')) {
+                    ghostAnimationReq = requestAnimationFrame(replayLoop);
+                } else if (eventIdx >= ghostEvents.length) {
+                    document.querySelectorAll('.char').forEach(el => el.classList.remove('cursor-blink'));
+                }
+            };
+            
+            // Short delay before playing
+            setTimeout(() => { ghostAnimationReq = requestAnimationFrame(replayLoop); }, 1000);
         }
-        
-        window.resumeSlot = function(index) {
-            startSetup(index);
-        }
+
+        // Feature: Weakest Key Generator
+        window.generateWeakKeysDrill = function() {
+            const sortedKeys = Object.entries(appData.stats.heatmap)
+                .sort((a,b) => b[1] - a[1]).map(e => e[0]).filter(k => k.length === 1 && k.match(/[a-z]/i));
+            
+            if(sortedKeys.length === 0) return alert("You don't have enough recorded mistakes to generate a drill yet!");
+            
+            const weakKeys = sortedKeys.slice(0, 4);
+            const filler = ['e', 't', 'a', 'o', 'i', 'n', 's'];
+            const pool = [...weakKeys, ...weakKeys, ...weakKeys, ...filler]; // Weight weaknesses
+            
+            let words = [];
+            for(let i=0; i<30; i++) {
+                let w = '';
+                let len = 3 + Math.floor(Math.random()*4);
+                for(let j=0; j<len; j++) w += pool[Math.floor(Math.random()*pool.length)];
+                words.push(w);
+            }
+            
+            appData.slots.push({ text: words.join(' '), mode: 'language' });
+            saveData();
+            navigate('typing', { slotIndex: appData.slots.length - 1 });
+        };
+
+        window.deleteSlot = function(index) {
+            if(confirm("Delete this drill?")) {
+                appData.slots.splice(index, 1); saveData(); navigate('dashboard');
+            }
+        };
 
         // Init
-        render();
-
+        document.documentElement.classList.add('dark');
+        navigate('dashboard');
     </script>
 </body>
 </html>
