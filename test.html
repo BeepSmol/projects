@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn to Type</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Cozy Aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cozy: {
+                            bg: '#FDFBF7',
+                            card: '#F4EFE6',
+                            border: '#E8DED1',
+                            text: '#4A3F35',
+                            darkBg: '#1A1A1A',
+                            darkCard: '#242424',
+                            darkBorder: '#3A3A3A',
+                            darkText: '#EAEAEA',
+                            accent: '#D97757', // Warm rust
+                            accentHover: '#C26547',
+                            green: '#6B8E23', // Olive green
+                            red: '#C05A5A',
+                            yellow: '#D4A373',
+                            ghost: '#8FA5B1' // Soft blue/grey for ghost caret
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Lora', 'serif'],
+                        mono: ['"Fira Code"', 'monospace']
+                    }
+                }
+            }
+        }
+        
+        // Initialize Theme from LocalStorage to prevent flash
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        body { font-family: 'Lora', serif; }
+        .typing-area { font-family: '"Fira Code"', monospace; }
+        
+        /* Active Caret: Solid block on the letter */
+        .caret-active {
+            background-color: #D97757 !important;
+            color: #FDFBF7 !important;
+            border-radius: 4px;
+            animation: pulse-caret 1s infinite alternate;
+        }
+
+        /* Ghost Caret: Bottom border */
+        .ghost-active {
+            border-bottom: 4px solid #8FA5B1 !important;
+            background-color: rgba(143, 165, 177, 0.1);
+        }
+
+        /* Typing States */
+        .char-untyped { color: #A89F91; }
+        .dark .char-untyped { color: #6B7280; }
+        
+        .char-correct { color: #6B8E23; }
+        .dark .char-correct { color: #84A931; }
+        
+        .char-error { background-color: #C05A5A; color: #FDFBF7; border-radius: 4px; }
+        
+        .char-corrected { color: #D4A373; }
+        .dark .char-corrected { color: #E5B484; }
+        
+        /* Level 4 Memory Effect */
+        .memory-hidden { opacity: 0; transition: opacity 0.2s ease; }
+
+        @keyframes pulse-caret {
+            0% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        /* Graph Canvas */
+        #velocityCanvas { width: 100%; height: 60px; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E8DED1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #3A3A3A; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4A373; }
+    </style>
+</head>
+<body class="bg-cozy-bg text-cozy-text dark:bg-cozy-darkBg dark:text-cozy-darkText min-h-screen selection:bg-cozy-yellow selection:text-white transition-colors duration-300 antialiased flex flex-col">
+
+    <!-- Top Navigation -->
+    <nav class="w-full bg-cozy-card dark:bg-cozy-darkCard border-b border-cozy-border dark:border-cozy-darkBorder py-4 px-6 md:px-12 flex justify-between items-center shadow-sm z-10 transition-colors duration-300">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="navigate('dashboard')">
+            <i class="fa-solid fa-seedling text-cozy-accent text-2xl"></i>
+            <h1 class="font-semibold text-2xl tracking-tight">Learn to Type</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button id="themeToggleBtn" class="p-2 rounded-lg hover:bg-cozy-border dark:hover:bg-cozy-darkBorder transition" onclick="toggleTheme()">
+                <i class="fa-solid fa-moon dark:hidden"></i>
+                <i class="fa-solid fa-sun hidden dark:block text-cozy-yellow"></i>
+            </button>
+            <button id="soundToggleBtn" class="p-2 rounded-lg hover:bg-cozy-border dark:hover:bg-cozy-darkBorder transition" onclick="toggleSoundMenu()">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Sound Menu Dropdown -->
+    <div id="soundMenu" class="hidden absolute top-16 right-6 md:right-12 bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder rounded-xl shadow-lg p-4 z-20 w-64 transition-colors duration-300">
+        <h3 class="font-semibold mb-3 border-b border-cozy-border dark:border-cozy-darkBorder pb-2">Keyboard Sound</h3>
+        <select id="soundSelect" class="w-full bg-cozy-bg dark:bg-cozy-darkBg text-cozy-text dark:text-cozy-darkText border border-cozy-border dark:border-cozy-darkBorder rounded-lg p-2 mb-4 focus:outline-none" onchange="changeSoundProfile(this.value)">
+            <option value="brown">Tactile (Brown Switch)</option>
+            <option value="blue">Clicky (Blue Switch)</option>
+            <option value="custom">Custom Upload...</option>
+            <option value="none">Muted</option>
+        </select>
+        <div id="customAudioContainer" class="hidden">
+            <label class="block text-sm mb-1 opacity-70">Upload .wav or .mp3</label>
+            <input type="file" id="customAudioInput" accept="audio/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cozy-accent file:text-white hover:file:bg-cozy-accentHover">
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="customModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-6 rounded-2xl shadow-xl max-w-sm w-full animate-fade-in">
+            <h3 id="modalTitle" class="text-xl font-bold mb-2">Notice</h3>
+            <p id="modalMessage" class="opacity-80 mb-6"></p>
+            <div class="flex justify-end space-x-3" id="modalButtons">
+                <!-- Buttons injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Prompt Generator Modal -->
+    <div id="aiPromptModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-6 md:p-8 rounded-3xl shadow-xl max-w-2xl w-full">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-2xl font-bold"><i class="fa-solid fa-wand-magic-sparkles text-cozy-accent mr-2"></i>Turn Notes into Typing Drills</h3>
+                <button onclick="closeAiModal()" class="opacity-50 hover:opacity-100 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <p class="opacity-80 mb-6 text-sm">Attach your study guide, essay, or notes to an AI model (like ChatGPT, Claude, or Gemini) along with this prompt to get perfect, type-ready text.</p>
+            
+            <div class="relative">
+                <textarea id="aiPromptText" readonly class="w-full h-40 bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-4 text-sm font-mono focus:outline-none resize-none">I am using a typing application to memorize my study notes and build muscle memory. Please read the attached document and extract the most important facts, core concepts, or key code snippets. 
+
+Convert them into clear, concise, self-contained sentences. Remove any complex formatting, bullet points, asterisks, or Markdown elements. 
+
+The final output should be plain, readable text separated by spaces or newlines, perfectly formatted for a continuous typing practice session.</textarea>
+                <button onclick="copyAiPrompt()" class="absolute bottom-4 right-4 bg-cozy-accent hover:bg-cozy-accentHover text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+                    <i class="fa-solid fa-copy mr-1"></i> Copy Prompt
+                </button>
+            </div>
+            <p id="copySuccessMsg" class="text-cozy-green text-sm mt-3 opacity-0 transition-opacity font-bold">Copied to clipboard!</p>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main id="app-container" class="flex-grow flex flex-col items-center p-6 md:p-12 w-full max-w-5xl mx-auto transition-colors duration-300"></main>
+
+    <!-- Vanilla JS Application Logic -->
+    <script>
+        // --- STATE MANAGEMENT ---
+        let appState = 'dashboard';
+        let saveSlots = JSON.parse(localStorage.getItem('learnToType_slots')) || [];
+        
+        let currentSession = {
+            id: null,
+            title: '',
+            fullText: '',
+            level: 1,
+            strictMode: false,
+            charStates: [],
+            currentIndex: 0,
+            startTime: null,
+            endTime: null,
+            timestamps: [],
+            velocityLog: [],
+            combo: 0,
+            multiplier: 1
+        };
+
+        let ghostData = null;
+        let activeKeydownListener = null;
+        let velocityInterval = null;
+        let ghostInterval = null;
+        let modalConfirmCallback = null;
+
+        // --- UI UTILS (THEME & MODAL) ---
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        function showModal(title, message, type = 'alert', onConfirm = null) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            const btnContainer = document.getElementById('modalButtons');
+            btnContainer.innerHTML = '';
+
+            if (type === 'confirm') {
+                modalConfirmCallback = onConfirm;
+                btnContainer.innerHTML = `
+                    <button onclick="closeModal()" class="px-4 py-2 font-semibold opacity-70 hover:opacity-100 transition">Cancel</button>
+                    <button onclick="executeModalConfirm()" class="px-4 py-2 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-lg shadow-sm transition font-bold">Confirm</button>
+                `;
+            } else {
+                btnContainer.innerHTML = `
+                    <button onclick="closeModal()" class="px-4 py-2 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-lg shadow-sm transition font-bold">OK</button>
+                `;
+            }
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('customModal').classList.add('hidden'); modalConfirmCallback = null; }
+        function executeModalConfirm() { if(modalConfirmCallback) modalConfirmCallback(); closeModal(); }
+
+        function openAiModal() { document.getElementById('aiPromptModal').classList.remove('hidden'); }
+        function closeAiModal() { document.getElementById('aiPromptModal').classList.add('hidden'); }
+        function copyAiPrompt() {
+            const text = document.getElementById('aiPromptText');
+            text.select();
+            document.execCommand('copy');
+            const msg = document.getElementById('copySuccessMsg');
+            msg.style.opacity = '1';
+            setTimeout(() => msg.style.opacity = '0', 2000);
+        }
+
+        // --- AUDIO ENGINE ---
+        let audioCtx = null;
+        let currentSoundProfile = 'brown';
+        let customAudioBuffer = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function toggleSoundMenu() {
+            document.getElementById('soundMenu').classList.toggle('hidden');
+        }
+
+        function changeSoundProfile(val) {
+            currentSoundProfile = val;
+            if (val === 'custom') {
+                document.getElementById('customAudioContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('customAudioContainer').classList.add('hidden');
+            }
+        }
+
+        document.getElementById('customAudioInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            initAudio();
+            const arrayBuffer = await file.arrayBuffer();
+            customAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        });
+
+        function playKeystroke() {
+            if (currentSoundProfile === 'none') return;
+            initAudio();
+            
+            if (currentSoundProfile === 'custom' && customAudioBuffer) {
+                const source = audioCtx.createBufferSource();
+                source.buffer = customAudioBuffer;
+                source.connect(audioCtx.destination);
+                source.start(0);
+                return;
+            }
+
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                if (currentSoundProfile === 'blue') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.03);
+                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+                } else if (currentSoundProfile === 'brown') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.04);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+                }
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } catch (e) { console.error(e); }
+        }
+
+        // --- CORE NAVIGATION & RENDERING ---
+        function navigate(state) {
+            appState = state;
+            render();
+        }
+
+        function sanitizeText(text) {
+            // Failsafe for untypable chars: Replace smart quotes and dashes, strip weird unicode
+            let t = text.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u2013\u2014]/g, "-");
+            return t.replace(/[^\x20-\x7E\n\r]/g, ""); // Keep standard printable ASCII + newlines
+        }
+
+        function render() {
+            const container = document.getElementById('app-container');
+            container.innerHTML = ''; // Clear
+
+            if (appState === 'dashboard') container.innerHTML = getDashboardHTML();
+            else if (appState === 'setup') container.innerHTML = getSetupHTML();
+            else if (appState === 'typing') renderTypingInterface(container);
+            else if (appState === 'results') container.innerHTML = getResultsHTML();
+            else if (appState === 'strict_fail') container.innerHTML = getStrictFailHTML();
+        }
+
+        // --- DASHBOARD VIEW ---
+        function getDashboardHTML() {
+            let html = `
+                <div class="w-full animate-fade-in mt-8">
+                    <div class="bg-cozy-accent text-white p-6 rounded-2xl mb-10 shadow-sm flex flex-col md:flex-row items-center justify-between">
+                        <div class="mb-4 md:mb-0">
+                            <h2 class="text-2xl font-bold mb-1">Turn your documents into notes!</h2>
+                            <p class="opacity-90 max-w-lg text-sm mb-3">Paste essays, study guides, or code snippets into your AI tool using our specialized prompt to create perfect typing drills for muscle memory.</p>
+                            <button onclick="openAiModal()" class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-bold shadow-sm transition inline-flex items-center">
+                                <i class="fa-solid fa-sparkles mr-2"></i> Get AI Prompt
+                            </button>
+                        </div>
+                        <i class="fa-solid fa-book-open text-6xl opacity-30 md:mr-8"></i>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 border-b border-cozy-border dark:border-cozy-darkBorder pb-4 gap-4">
+                        <h2 class="text-3xl font-semibold">Your Library</h2>
+                        <div class="flex space-x-3 w-full sm:w-auto">
+                            <label class="cursor-pointer px-4 py-2 bg-cozy-border dark:bg-cozy-darkBorder hover:bg-cozy-yellow hover:text-white rounded-lg transition text-sm font-medium flex-1 text-center sm:flex-none">
+                                <i class="fa-solid fa-ghost mr-2"></i> Import Ghost
+                                <input type="file" class="hidden" accept=".json" onchange="importGhost(event)">
+                            </label>
+                            <button onclick="startSetup(null)" class="px-5 py-2 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-lg shadow-sm transition font-medium flex-1 sm:flex-none">
+                                <i class="fa-solid fa-plus mr-2"></i> New Text
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            `;
+
+            if (saveSlots.length === 0) {
+                html += `<p class="col-span-full text-center opacity-50 py-12 italic">Your library is empty. Add a new text to begin.</p>`;
+            } else {
+                saveSlots.forEach((slot, index) => {
+                    html += `
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-6 rounded-2xl shadow-sm hover:shadow-md transition group">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="font-bold text-lg truncate pr-4">${slot.title}</h3>
+                                <button onclick="deleteSlot(${index})" class="text-cozy-red/50 hover:text-cozy-red opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                            <p class="text-sm opacity-70 mb-6 font-mono truncate">${slot.fullText.substring(0, 40)}...</p>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="bg-cozy-border dark:bg-cozy-darkBorder px-3 py-1 rounded-full font-bold">Level ${slot.level}/4</span>
+                                <button onclick="resumeSlot(${index})" class="text-cozy-accent font-semibold hover:underline">Continue <i class="fa-solid fa-arrow-right text-xs"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `</div></div>`;
+            return html;
+        }
+
+        // --- SETUP VIEW ---
+        function startSetup(slotIndex) {
+            if (slotIndex !== null) {
+                currentSession = { ...saveSlots[slotIndex], charStates: [], currentIndex: 0, timestamps: [], combo: 0, multiplier: 1, strictMode: false };
+                navigate('setup');
+            } else {
+                currentSession = { id: Date.now(), title: '', fullText: '', level: 1, strictMode: false, charStates: [], currentIndex: 0, timestamps: [], combo: 0, multiplier: 1 };
+                navigate('setup');
+            }
+        }
+
+        function getSetupHTML() {
+            const levels = [
+                { id: 1, title: "Key Terms Drill", desc: "Master the 10 longest, most complex words to build core memory." },
+                { id: 2, title: "Sentence Scramble", desc: "Type individual sentences to internalize structure." },
+                { id: 3, title: "Full Immersion", desc: "Type the entire text in its original flow." },
+                { id: 4, title: "Blind Recall", desc: "The next 10 characters vanish as you approach. Rely on short-term memory!" }
+            ];
+
+            return `
+                <div class="w-full max-w-2xl bg-cozy-card dark:bg-cozy-darkCard p-8 rounded-3xl border border-cozy-border dark:border-cozy-darkBorder shadow-sm mt-8 animate-fade-in transition-colors duration-300">
+                    <h2 class="text-3xl font-bold mb-6">Setup Curriculum</h2>
+                    
+                    <label class="block font-semibold mb-2">Title</label>
+                    <input type="text" id="setupTitle" value="${currentSession.title}" placeholder="e.g., Biology Chapter 4 Notes" class="w-full bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-3 mb-6 focus:outline-none focus:border-cozy-accent">
+
+                    <label class="block font-semibold mb-2 flex justify-between">
+                        <span>Target Text</span>
+                        <button onclick="openAiModal()" class="text-xs text-cozy-accent hover:underline font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Format with AI</button>
+                    </label>
+                    <textarea id="setupText" rows="6" placeholder="Paste your text here..." class="w-full bg-cozy-bg dark:bg-cozy-darkBg border border-cozy-border dark:border-cozy-darkBorder rounded-xl p-3 mb-6 focus:outline-none focus:border-cozy-accent font-mono text-sm leading-relaxed">${currentSession.fullText}</textarea>
+
+                    <label class="block font-semibold mb-3">Select Level</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        ${levels.map(l => `
+                            <div class="border ${currentSession.level === l.id ? 'border-cozy-accent bg-cozy-accent/10 dark:bg-cozy-accent/20' : 'border-cozy-border dark:border-cozy-darkBorder bg-cozy-bg dark:bg-cozy-darkBg'} rounded-xl p-4 cursor-pointer hover:border-cozy-accent transition" onclick="selectLevel(${l.id})">
+                                <h4 class="font-bold flex items-center mb-1">
+                                    <i class="fa-solid ${l.id === 4 ? 'fa-eye-slash text-cozy-red' : 'fa-layer-group text-cozy-accent'} mr-2"></i> Level ${l.id}
+                                </h4>
+                                <p class="text-xs opacity-70">${l.desc}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex items-center justify-between bg-cozy-bg dark:bg-cozy-darkBg p-4 rounded-xl border border-cozy-border dark:border-cozy-darkBorder mb-8">
+                        <div>
+                            <h4 class="font-bold text-cozy-red"><i class="fa-solid fa-fire mr-2"></i>Strict Mode</h4>
+                            <p class="text-xs opacity-70">Any mistake results in instant failure.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="strictModeToggle" class="sr-only peer" ${currentSession.strictMode ? 'checked' : ''}>
+                            <div class="w-11 h-6 bg-cozy-border dark:bg-cozy-darkBorder peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cozy-red"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end space-x-4">
+                        <button onclick="navigate('dashboard')" class="px-6 py-3 font-semibold opacity-60 hover:opacity-100 transition">Cancel</button>
+                        <button onclick="saveAndStart()" class="px-8 py-3 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-xl shadow-sm transition font-bold text-lg">Start Typing</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.selectLevel = function(lvl) {
+            currentSession.level = lvl;
+            render(); 
+        }
+
+        window.saveAndStart = function() {
+            const title = document.getElementById('setupTitle').value.trim() || 'Untitled Session';
+            let rawText = document.getElementById('setupText').value;
+            rawText = sanitizeText(rawText).replace(/\s+/g, ' ').trim();
+            
+            if (rawText.length < 10) {
+                showModal("Wait!", "Please provide at least 10 characters of text.", "alert");
+                return;
+            }
+
+            const isStrict = document.getElementById('strictModeToggle').checked;
+
+            currentSession.title = title;
+            currentSession.fullText = rawText;
+            currentSession.strictMode = isStrict;
+            
+            const existingIndex = saveSlots.findIndex(s => s.id === currentSession.id);
+            if (existingIndex > -1) {
+                saveSlots[existingIndex] = { ...currentSession, charStates: undefined, timestamps: undefined };
+            } else {
+                saveSlots.push({ ...currentSession, charStates: undefined, timestamps: undefined });
+            }
+            localStorage.setItem('learnToType_slots', JSON.stringify(saveSlots));
+
+            prepareTypingText();
+            navigate('typing');
+        }
+
+        // --- TYPING ENGINE ---
+        function prepareTypingText() {
+            let target = currentSession.fullText;
+            
+            if (currentSession.level === 1) {
+                const words = target.match(/\b[a-zA-Z]+\b/g) || [];
+                const uniqueWords = [...new Set(words.map(w => w.toLowerCase()))];
+                target = uniqueWords.sort((a, b) => b.length - a.length).slice(0, 10).join(' ');
+            } else if (currentSession.level === 2) {
+                const sentences = target.match(/[^.!?]+[.!?]+/g) || [target];
+                target = sentences.map(s => s.trim()).join('  ');
+            } 
+
+            if(!target.trim()) target = currentSession.fullText;
+
+            currentSession.targetText = target;
+            currentSession.charStates = target.split('').map(char => ({
+                expected: char,
+                status: 'untyped',
+                errorCount: 0
+            }));
+            currentSession.currentIndex = 0;
+            currentSession.startTime = null;
+            currentSession.timestamps = [];
+            currentSession.velocityLog = [];
+            currentSession.combo = 0;
+            currentSession.multiplier = 1;
+        }
+
+        function renderTypingInterface(container) {
+            container.innerHTML = `
+                <div class="w-full flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-cozy-border dark:bg-cozy-darkBorder px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Level ${currentSession.level}</span>
+                        ${currentSession.strictMode ? '<span class="bg-cozy-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"><i class="fa-solid fa-fire mr-1"></i> Strict</span>' : ''}
+                        ${ghostData ? '<span class="bg-cozy-ghost text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"><i class="fa-solid fa-ghost mr-1"></i> Vs Ghost</span>' : ''}
+                    </div>
+                    <div class="flex space-x-6 text-sm font-semibold">
+                        <div class="flex flex-col items-center"><span class="opacity-50 text-xs uppercase">WPM</span><span id="liveWpm" class="text-xl text-cozy-accent">0</span></div>
+                        <div class="flex flex-col items-center"><span class="opacity-50 text-xs uppercase">Combo</span><span id="liveCombo" class="text-xl text-cozy-yellow">0 (1x)</span></div>
+                    </div>
+                </div>
+
+                <div class="w-full bg-cozy-bg dark:bg-cozy-darkBg border-y border-cozy-border dark:border-cozy-darkBorder mb-6 hidden" id="graphContainer">
+                    <canvas id="velocityCanvas"></canvas>
+                </div>
+
+                <div id="typingArea" class="w-full bg-cozy-card dark:bg-cozy-darkCard border border-cozy-border dark:border-cozy-darkBorder p-8 rounded-2xl shadow-sm text-2xl md:text-3xl leading-relaxed outline-none typing-area select-none transition-colors duration-300" tabindex="0">
+                    <!-- Text injected here -->
+                </div>
+                
+                <p class="text-center opacity-40 text-sm mt-8 animate-pulse font-mono flex items-center justify-center">
+                    <i class="fa-solid fa-keyboard mr-2"></i> Start typing to begin recording...
+                </p>
+            `;
+
+            const typingArea = document.getElementById('typingArea');
+            
+            let html = '';
+            let globalIndex = 0;
+            const wordsArray = currentSession.targetText.split(/(?<=\s)|(?=\s)/); 
+            
+            for(let word of wordsArray) {
+                if (word.length === 0) continue;
+                html += `<span class="inline-block whitespace-pre">`;
+                for(let char of word) {
+                    html += `<span id="char-${globalIndex}" class="transition-colors duration-100 char-untyped">${char === ' ' || char === '\n' ? '&nbsp;' : char}</span>`;
+                    globalIndex++;
+                }
+                html += `</span>`;
+            }
+            
+            typingArea.innerHTML = html;
+            
+            typingArea.focus();
+            typingArea.addEventListener('blur', () => typingArea.focus());
+
+            document.getElementById('graphContainer').classList.remove('hidden');
+            const canvas = document.getElementById('velocityCanvas');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = 60;
+
+            if (ghostData) {
+                startGhostRacer();
+            }
+
+            if (activeKeydownListener) window.removeEventListener('keydown', activeKeydownListener);
+            activeKeydownListener = handleKeydown;
+            window.addEventListener('keydown', activeKeydownListener);
+
+            updateVisuals();
+        }
+
+        function handleKeydown(e) {
+            if (['Control', 'Alt', 'Meta', 'Shift', 'Tab'].includes(e.key)) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            
+            if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); 
+
+            const state = currentSession;
+            if (state.currentIndex >= state.charStates.length) return;
+
+            if (!state.startTime && e.key !== 'Backspace') {
+                state.startTime = Date.now();
+                startVelocityTracker();
+            }
+
+            playKeystroke();
+
+            if (e.key === 'Backspace') {
+                if (state.strictMode) return; 
+                if (state.currentIndex > 0) {
+                    state.currentIndex--;
+                    state.charStates[state.currentIndex].status = 'untyped';
+                    state.combo = 0;
+                    state.multiplier = 1;
+                    updateVisuals();
+                }
+                return;
+            }
+
+            const expectedChar = state.charStates[state.currentIndex].expected;
+            const typedChar = (e.key === 'Enter' && expectedChar === ' ') ? ' ' : (e.key === 'Enter' && expectedChar === '\n') ? '\n' : e.key;
+            
+            const isMatch = expectedChar === typedChar;
+
+            if (isMatch) {
+                const charObj = state.charStates[state.currentIndex];
+                charObj.status = charObj.errorCount > 0 ? 'corrected' : 'correct';
+                
+                state.timestamps.push({ i: state.currentIndex, t: Date.now() - state.startTime });
+                
+                state.combo++;
+                if (state.combo >= 50) state.multiplier = 4;
+                else if (state.combo >= 20) state.multiplier = 3;
+                else if (state.combo >= 10) state.multiplier = 2;
+
+                state.currentIndex++;
+                
+                if (state.currentIndex >= state.charStates.length) {
+                    endSession();
+                }
+            } else {
+                if (state.strictMode) {
+                    endSession(true); 
+                    return;
+                }
+                state.charStates[state.currentIndex].errorCount++;
+                state.charStates[state.currentIndex].status = 'error';
+                state.combo = 0;
+                state.multiplier = 1;
+                state.currentIndex++; 
+            }
+
+            updateVisuals();
+        }
+
+        function updateVisuals() {
+            const state = currentSession;
+            
+            document.getElementById('liveCombo').innerText = `${state.combo} (${state.multiplier}x)`;
+            
+            for (let i = 0; i < state.charStates.length; i++) {
+                const span = document.getElementById(`char-${i}`);
+                if (!span) continue;
+
+                const cState = state.charStates[i].status;
+                
+                span.className = 'transition-colors duration-100';
+
+                if (i === state.currentIndex) {
+                    span.classList.add('caret-active');
+                } else if (cState === 'correct') {
+                    span.classList.add('char-correct');
+                } else if (cState === 'error') {
+                    span.classList.add('char-error');
+                } else if (cState === 'corrected') {
+                    span.classList.add('char-corrected');
+                } else {
+                    span.classList.add('char-untyped');
+                }
+
+                if (state.level === 4) {
+                    if (i > state.currentIndex && i <= state.currentIndex + 10) {
+                        span.classList.add('memory-hidden');
+                    }
+                }
+            }
+        }
+
+        function startVelocityTracker() {
+            if (velocityInterval) clearInterval(velocityInterval);
+            
+            let lastCount = 0;
+            velocityInterval = setInterval(() => {
+                if (appState !== 'typing') return clearInterval(velocityInterval);
+                
+                const currentHits = currentSession.timestamps.length;
+                const hitsInLastSec = currentHits - lastCount;
+                lastCount = currentHits;
+
+                const wpm = Math.round((hitsInLastSec * 60) / 5); 
+                currentSession.velocityLog.push(wpm);
+                
+                const timeMinutes = Math.max(0.01, (Date.now() - currentSession.startTime)/60000);
+                document.getElementById('liveWpm').innerText = Math.round((currentHits / 5) / timeMinutes) || 0;
+                
+                drawGraph();
+            }, 1000);
+        }
+
+        function drawGraph() {
+            const canvas = document.getElementById('velocityCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const data = currentSession.velocityLog;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (data.length < 2) return;
+
+            const maxWpm = Math.max(100, ...data);
+            const stepX = canvas.width / (data.length - 1);
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#D97757';
+            ctx.lineWidth = 2;
+            
+            data.forEach((val, i) => {
+                const x = i * stepX;
+                const y = canvas.height - ((val / maxWpm) * canvas.height * 0.8) - 5;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        // --- GHOST ENGINE ---
+        function importGhost(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    ghostData = JSON.parse(event.target.result);
+                    showModal("Ghost Loaded!", `Opponent WPM Target: ${ghostData.wpm}`, "alert");
+                } catch(err) {
+                    showModal("Error", "Invalid ghost file. Make sure it's a valid JSON.", "alert");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function startGhostRacer() {
+            if (ghostInterval) cancelAnimationFrame(ghostInterval);
+            
+            const renderGhost = () => {
+                if (appState !== 'typing' || !currentSession.startTime) {
+                    if (appState === 'typing') ghostInterval = requestAnimationFrame(renderGhost);
+                    return;
+                }
+
+                const elapsed = Date.now() - currentSession.startTime;
+                let currentGhostIndex = 0;
+
+                for (let pt of ghostData.timestamps) {
+                    if (elapsed >= pt.t) currentGhostIndex = pt.i;
+                    else break;
+                }
+
+                document.querySelectorAll('.ghost-active').forEach(el => el.classList.remove('ghost-active'));
+                
+                if (currentGhostIndex < ghostData.timestamps.length) {
+                    const span = document.getElementById(`char-${currentGhostIndex}`);
+                    if (span) span.classList.add('ghost-active');
+                    ghostInterval = requestAnimationFrame(renderGhost);
+                }
+            };
+            ghostInterval = requestAnimationFrame(renderGhost);
+        }
+
+        function exportGhost() {
+            const payload = JSON.stringify({
+                wpm: document.getElementById('finalWpm').innerText,
+                timestamps: currentSession.timestamps
+            });
+            const blob = new Blob([payload], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.setAttribute("href", url);
+            a.setAttribute("download", `ghost_run_${Date.now()}.json`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // Clean up memory
+        }
+
+        // --- END SESSION & RESULTS ---
+        function endSession(failed = false) {
+            if (activeKeydownListener) window.removeEventListener('keydown', activeKeydownListener);
+            if (velocityInterval) clearInterval(velocityInterval);
+            
+            currentSession.endTime = Date.now();
+            
+            if (failed) {
+                navigate('strict_fail');
+                return;
+            }
+
+            if (currentSession.level < 4) {
+                const existingIndex = saveSlots.findIndex(s => s.id === currentSession.id);
+                if (existingIndex > -1) {
+                    saveSlots[existingIndex].level++;
+                    localStorage.setItem('learnToType_slots', JSON.stringify(saveSlots));
+                }
+            }
+
+            navigate('results');
+        }
+
+        function getStrictFailHTML() {
+            return `
+                <div class="w-full max-w-lg mx-auto bg-cozy-card dark:bg-cozy-darkCard p-12 rounded-3xl border border-cozy-red/30 shadow-sm mt-16 text-center animate-fade-in transition-colors duration-300">
+                    <div class="w-20 h-20 mx-auto bg-cozy-red text-white rounded-full flex items-center justify-center text-4xl mb-6 shadow-md">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-4">Strict Mode Failed</h2>
+                    <p class="opacity-70 mb-8">You made a typo. In strict mode, perfection is required.</p>
+                    <div class="space-x-4">
+                        <button onclick="navigate('dashboard')" class="px-6 py-3 font-semibold opacity-60 hover:opacity-100 transition">Dashboard</button>
+                        <button onclick="prepareTypingText(); navigate('typing');" class="px-8 py-3 bg-cozy-red hover:bg-red-700 text-white rounded-xl shadow-sm transition font-bold text-lg"><i class="fa-solid fa-rotate-right mr-2"></i> Try Again</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getResultsHTML() {
+            // Fix infinity WPM for extremely fast completions: Math.max ensures we don't divide by 0
+            const timeMinutes = Math.max(0.001, (currentSession.endTime - currentSession.startTime) / 60000);
+            const totalChars = currentSession.charStates.length;
+            const wpm = Math.round((totalChars / 5) / timeMinutes);
+            
+            let uncorrectedErrors = 0;
+            let correctedChars = 0;
+            let charsWithErrors = 0;
+
+            currentSession.charStates.forEach(c => {
+                if (c.status === 'error') uncorrectedErrors++;
+                if (c.errorCount > 0) charsWithErrors++;
+                if (c.status === 'corrected') correctedChars++;
+            });
+
+            const accuracy = Math.round(((totalChars - uncorrectedErrors) / totalChars) * 100);
+            const persistence = charsWithErrors === 0 ? 100 : Math.round((correctedChars / charsWithErrors) * 100);
+
+            return `
+                <div class="w-full max-w-4xl bg-cozy-bg dark:bg-cozy-darkBg p-8 mt-4 animate-fade-in text-center transition-colors duration-300">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-cozy-green text-white rounded-full mb-6 shadow-sm">
+                        <i class="fa-solid fa-check text-4xl"></i>
+                    </div>
+                    <h2 class="text-4xl font-bold mb-10">Level ${currentSession.level} Complete</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder">
+                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Speed</p>
+                            <p class="text-5xl font-black text-cozy-accent"><span id="finalWpm">${wpm}</span> <span class="text-xl font-medium">WPM</span></p>
+                        </div>
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder">
+                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Accuracy</p>
+                            <p class="text-5xl font-black text-cozy-green">${accuracy}<span class="text-xl font-medium">%</span></p>
+                        </div>
+                        <div class="bg-cozy-card dark:bg-cozy-darkCard p-6 rounded-2xl border border-cozy-border dark:border-cozy-darkBorder">
+                            <p class="opacity-50 uppercase font-bold text-sm tracking-widest mb-2">Persistence</p>
+                            <p class="text-5xl font-black text-cozy-yellow">${persistence}<span class="text-xl font-medium">%</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center space-x-6">
+                        <button onclick="exportGhost()" class="px-6 py-3 border-2 border-cozy-border dark:border-cozy-darkBorder hover:border-cozy-ghost rounded-xl transition font-semibold">
+                            <i class="fa-solid fa-download mr-2 text-cozy-ghost"></i> Export Ghost Run
+                        </button>
+                        <button onclick="navigate('dashboard')" class="px-8 py-3 bg-cozy-accent hover:bg-cozy-accentHover text-white rounded-xl shadow-sm transition font-bold text-lg">
+                            Continue <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Slot Management
+        window.deleteSlot = function(index) {
+            showModal("Delete Library Item", "Are you sure you want to permanently delete this text? This cannot be undone.", "confirm", () => {
+                saveSlots.splice(index, 1);
+                localStorage.setItem('learnToType_slots', JSON.stringify(saveSlots));
+                render();
+            });
+        }
+        
+        window.resumeSlot = function(index) {
+            startSetup(index);
+        }
+
+        // Init
+        render();
+
+    </script>
+</body>
+</html>
