@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandbox Engine</title>
+    <title>Physics Engine</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js -->
@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
     
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Tahoma', 'Verdana', sans-serif; user-select: none; }
         #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; z-index: 1; }
         
         /* UI Layers */
@@ -26,15 +26,23 @@
             background: white; border-radius: 50%; transform: translate(-50%, -50%);
             pointer-events: none; transition: all 0.1s ease; mix-blend-mode: difference;
         }
-        #crosshair.active { width: 12px; height: 12px; background: transparent; border: 2px solid #48bb78; }
+        #crosshair.active { width: 12px; height: 12px; background: transparent; border: 2px solid #00ff00; }
         
+        /* Retro Windows 95 Style Utilities */
+        .retro-panel { background-color: #c0c0c0; border-top: 2px solid #ffffff; border-left: 2px solid #ffffff; border-bottom: 2px solid #808080; border-right: 2px solid #808080; color: black; }
+        .retro-inset { background-color: #ffffff; border-top: 2px solid #808080; border-left: 2px solid #808080; border-bottom: 2px solid #ffffff; border-right: 2px solid #ffffff; }
+        .retro-button { background-color: #c0c0c0; border-top: 2px solid #ffffff; border-left: 2px solid #ffffff; border-bottom: 2px solid #404040; border-right: 2px solid #404040; color: black; font-weight: bold; cursor: pointer; }
+        .retro-button:active { border-top: 2px solid #404040; border-left: 2px solid #404040; border-bottom: 2px solid #ffffff; border-right: 2px solid #ffffff; padding-top: 2px; padding-left: 2px; }
+        .retro-title { background: linear-gradient(90deg, #000080, #1084d0); color: white; font-weight: bold; padding: 2px 4px; }
+
         /* Scrollbars */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #dfdfdf; border-left: 1px solid #808080; }
+        ::-webkit-scrollbar-thumb { background: #c0c0c0; border: 1px solid #ffffff; border-bottom-color: #808080; border-right-color: #808080; }
 
         .code-editor { font-family: 'Courier New', monospace; tab-size: 4; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+        #dynamic-ui { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
+        .dyn-element { pointer-events: auto; position: absolute; }
     </style>
 </head>
 <body>
@@ -48,134 +56,225 @@
         <!-- Crosshair -->
         <div id="crosshair" class="hidden"></div>
 
+        <!-- Dynamic Mod UI Container -->
+        <div id="dynamic-ui"></div>
+
+        <!-- Mod API: Currency / Score UI -->
+        <div id="currency-ui" class="hidden absolute top-6 left-6 text-3xl font-bold text-yellow-400 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] font-mono tracking-widest z-10">
+            SCORE: <span id="currency-val">0</span>
+        </div>
+
+        <!-- Mod API: Game Over Screen -->
+        <div id="game-over-ui" class="interactive hidden absolute inset-0 bg-red-900 bg-opacity-80 flex items-center justify-center z-50 flex-col backdrop-blur-sm">
+            <h1 class="text-7xl font-black text-white mb-2 tracking-widest drop-shadow-lg">GAME OVER</h1>
+            <p id="game-over-msg" class="text-2xl text-red-200 mb-8 font-bold"></p>
+            <button class="retro-button px-8 py-3 text-xl" onclick="WG.Mod.resetGame()">Close & Restart</button>
+            <button class="retro-button px-8 py-3 text-xl mt-4 bg-gray-300" onclick="WG.exitToMainMenu()">Main Menu</button>
+        </div>
+
         <!-- HUD -->
         <div id="hud" class="hidden absolute bottom-6 right-8 text-right drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
             <h1 class="text-4xl font-extrabold italic text-blue-400 tracking-wider" id="hud-tool">PHYSGUN</h1>
             <p class="text-sm text-gray-200 font-semibold" id="hud-desc">LMB: Grab | Scroll: Distance | RMB: Freeze | E: Unfreeze</p>
             <div class="mt-3 flex justify-end gap-2 text-xs font-bold text-gray-400">
-                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 rounded border border-gray-600">1: Physgun</span>
-                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 rounded border border-gray-600">2: Portal Gun</span>
-                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 rounded border border-gray-600">Esc: Menu</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">1: Physgun</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">2: Portal Gun</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">3: Link/Weld</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-yellow-400">T: Thrusters</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">Q/Esc: Menu</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">~: Console</span>
             </div>
         </div>
 
-        <!-- Launch Screen -->
-        <div id="launch-screen" class="interactive absolute inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm">
-            <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-3xl text-white border border-gray-700">
-                <div class="text-center mb-8">
-                    <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-emerald-400 to-purple-500 mb-2">3D Physics engine</h1>
-                    <p class="text-gray-400 font-medium">By BeepSmol (PLAY IN FULLSCREEN (F11/Fn+F11))</p>
+        <!-- Command Console -->
+        <div id="console" class="interactive hidden absolute top-0 left-0 w-full bg-black bg-opacity-90 border-b-2 border-green-600 z-[90] flex flex-col p-2 font-mono text-sm shadow-2xl">
+            <div class="flex justify-between text-gray-400 mb-1 border-b border-gray-700 pb-1">
+                <span>Developer Console (Press ~ to close)</span>
+                <button onclick="WG.UI.toggleConsole()" class="hover:text-white">X</button>
+            </div>
+            <div id="console-output" class="h-48 overflow-y-auto text-green-400 mb-2 p-1"></div>
+            <div class="flex">
+                <span class="text-green-500 mr-2">></span>
+                <input type="text" id="console-input" class="flex-1 bg-transparent text-white outline-none" autocomplete="off" spellcheck="false" placeholder="Enter Javascript API command...">
+            </div>
+        </div>
+
+        <!-- Retro Launch Screen -->
+        <div id="launch-screen" class="interactive absolute inset-0 bg-teal-800 flex items-center justify-center z-[100]">
+            <div class="retro-panel w-full max-w-3xl flex flex-col shadow-2xl">
+                <div class="retro-title flex justify-between">
+                    <span>PhysicsEngine_Launch.exe</span>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-6">
-                    <!-- Blank Canvas -->
-                    <div class="bg-gray-900 p-6 rounded-xl border border-gray-700 hover:border-blue-500 transition shadow-inner">
-                        <div class="text-3xl mb-3">🟩</div>
-                        <h2 class="text-2xl font-bold mb-2">Blank Canvas</h2>
-                        <p class="text-sm text-gray-400 mb-6 h-10">An infinite flatgrass world. Build and experiment from scratch.</p>
-                        <div class="flex flex-col space-y-2">
-                            <button class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition" onclick="WG.launch('blank', 'main')">Play</button>
-                            <button class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-bold transition" onclick="WG.launch('blank', 'sandbox')">Sandbox (Edit Mode)</button>
+                <div class="p-6 flex flex-col md:flex-row gap-6">
+                    <!-- Retro Info -->
+                    <div class="flex-1 retro-inset p-4 text-sm flex flex-col justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 pb-1">System Instructions</h2>
+                            <ul class="space-y-2 text-gray-800">
+                                <li><b>W A S D</b> - Traverse environment</li>
+                                <li><b>Space</b> - Execute Jump</li>
+                                <li><b>Q / Esc</b> - Toggle Main Interface</li>
+                                <li><b>1 / 2 / 3</b> - Select Active Device</li>
+                            </ul>
+                        </div>
+                        <div class="mt-4 pt-2 border-t border-gray-400 text-xs text-gray-600">
+                            Version 4.0<br>
+                            Includes: Console, Advanced Collisions, Constraints, Thrusters, Minigame Exports!
                         </div>
                     </div>
 
-                    <!-- Premade Game -->
-                    <div class="bg-gray-900 p-6 rounded-xl border border-gray-700 hover:border-emerald-500 transition shadow-inner">
-                        <div class="text-3xl mb-3">🏗️</div>
-                        <h2 class="text-2xl font-bold mb-2">Physics Playground</h2>
-                        <p class="text-sm text-gray-400 mb-6 h-10">A pre-built environment with ramps, walls, and dynamic objects.</p>
-                        <div class="flex flex-col space-y-2">
-                            <button class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition" onclick="WG.launch('premade', 'main')">Play</button>
-                            <button class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-bold transition" onclick="WG.launch('premade', 'sandbox')">Sandbox (Edit Mode)</button>
+                    <!-- Launch Options -->
+                    <div class="flex-1 flex flex-col justify-center space-y-4">
+                        <div class="text-center mb-2">
+                            <h1 class="text-4xl font-black text-gray-800 tracking-tighter">Physics Engine</h1>
                         </div>
+                        
+                        <button class="retro-button w-full py-4 text-lg" onclick="WG.launch('blank', 'sandbox')">
+                            Load Blank Canvas
+                        </button>
+                        <button class="retro-button w-full py-4 text-lg" onclick="WG.launch('premade', 'sandbox')">
+                            Load Demo World
+                        </button>
+                        <button class="retro-button w-full py-2 text-sm mt-4" onclick="WG.Data.importFile()">
+                            Import Save File (.json)
+                        </button>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="mt-8 pt-6 border-t border-gray-700 flex justify-between items-center">
-                    <button class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-semibold transition" onclick="WG.Data.importFile()">📂 Import World (.json)</button>
-                    <span class="text-xs text-gray-500 font-mono">v0.5.7</span>
+        <!-- File Import Mode Screen -->
+        <div id="import-mode-screen" class="interactive hidden absolute inset-0 bg-teal-800 flex items-center justify-center z-[105]">
+            <div class="retro-panel p-6 shadow-2xl text-center max-w-md w-full">
+                <div class="retro-title mb-4 text-left">System Alert - World Loaded</div>
+                <h2 class="text-xl font-bold mb-2">Select Execution Mode</h2>
+                <p class="text-sm mb-6">Do you want to play this world as a game, or edit it?</p>
+                <div class="flex gap-4">
+                    <button class="retro-button px-4 py-3 w-full font-bold text-blue-900" onclick="WG.Data.resumeImport('play')">Play Game Mode</button>
+                    <button class="retro-button px-4 py-3 w-full font-bold text-green-900" onclick="WG.Data.resumeImport('sandbox')">Sandbox (Edit)</button>
                 </div>
             </div>
         </div>
 
         <!-- Q-Menu -->
-        <div id="q-menu" class="interactive hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 backdrop-blur-md">
-            <div class="bg-gray-800 w-[80%] h-[80%] rounded-2xl shadow-2xl flex overflow-hidden border border-gray-600">
-                <!-- Sidebar -->
-                <div class="w-64 bg-gray-900 p-5 flex flex-col border-r border-gray-700">
-                    <h2 class="text-white text-2xl font-black mb-6 tracking-wide">SPAWN MENU</h2>
-                    <div class="flex-1 space-y-2">
-                        <button class="w-full text-left px-4 py-3 bg-gray-800 text-gray-200 rounded-lg hover:bg-gray-700 hover:text-white font-semibold transition" onclick="WG.UI.switchTab('primitives')">📦 Primitives</button>
-                        <button class="w-full text-left px-4 py-3 bg-gray-800 text-gray-200 rounded-lg hover:bg-gray-700 hover:text-white font-semibold transition" onclick="WG.UI.switchTab('custom')">🧩 Custom Models</button>
-                    </div>
-                    <div class="space-y-3 pt-4 border-t border-gray-700">
-                        <button class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold shadow-lg transition" onclick="WG.UI.openModelMaker()">🎨 Model Maker</button>
-                        <button class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg transition" onclick="WG.UI.openModCreator()">⚙️ Mod API</button>
-                    </div>
-                    <div class="space-y-2 pt-4 border-t border-gray-700 mt-4">
-                        <button class="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-semibold text-sm transition" onclick="WG.Data.saveSlot()">💾 Save World State</button>
-                        <button class="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-semibold text-sm transition" onclick="WG.Data.exportFile()">📦 Export to File</button>
-                    </div>
+        <div id="q-menu" class="interactive hidden absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 backdrop-blur-sm">
+            <div class="retro-panel w-[85%] h-[85%] flex flex-col shadow-2xl">
+                <div class="retro-title flex justify-between">
+                    <span>Sandbox Menu & Tools</span>
+                    <button class="bg-gray-300 text-black px-1 border border-gray-100 border-b-gray-600 border-r-gray-600 text-xs cursor-pointer font-bold leading-none flex items-center" onclick="WG.UI.toggleQMenu(false); WG.lockPointer();">X</button>
                 </div>
-                <!-- Content Area -->
-                <div class="flex-1 p-8 overflow-y-auto bg-gray-800" id="q-content">
-                    <!-- Injected via JS -->
+                <div class="flex flex-1 overflow-hidden">
+                    <!-- Sidebar -->
+                    <div class="w-64 p-3 flex flex-col border-r border-gray-500 bg-[#d4d0c8]">
+                        <div class="flex-1 space-y-2">
+                            <button class="retro-button w-full text-left px-3 py-2" onclick="WG.UI.switchTab('primitives')">Primitives & Props</button>
+                            <button class="retro-button w-full text-left px-3 py-2" onclick="WG.UI.switchTab('custom')">Custom Models</button>
+                            <button class="retro-button w-full text-left px-3 py-2" onclick="WG.UI.switchTab('settings')">World Settings</button>
+                        </div>
+                        <div class="space-y-2 pt-4 border-t border-gray-500">
+                            <button class="retro-button w-full py-2 bg-purple-200" onclick="WG.UI.openModelMaker()">Model Maker</button>
+                            <button class="retro-button w-full py-2 bg-blue-200" onclick="WG.UI.openModCreator()">Mod API Editor</button>
+                        </div>
+                        <div class="space-y-2 pt-4 border-t border-gray-500 mt-4">
+                            <button class="retro-button w-full py-1 text-sm" onclick="WG.Data.exportFile()">Export World & Scripts</button>
+                        </div>
+                        <div class="pt-4 mt-4 space-y-2">
+                            <button class="retro-button w-full py-2 bg-red-200 text-red-900" onclick="WG.UI.toggleQMenu(false); WG.lockPointer();">Resume (Esc)</button>
+                            <button class="retro-button w-full py-2 bg-gray-400 text-black" onclick="WG.exitToMainMenu()">Main Menu</button>
+                        </div>
+                    </div>
+                    <!-- Content Area -->
+                    <div class="flex-1 p-6 overflow-y-auto retro-inset m-2 bg-gray-100" id="q-content">
+                        <!-- Injected via JS -->
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Model Maker Modal -->
-        <div id="model-maker" class="interactive hidden absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-            <div class="bg-gray-800 w-[700px] h-[500px] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-600">
-                <div class="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center">
-                    <h2 class="text-white text-xl font-bold">Model Maker</h2>
-                    <button class="text-gray-400 hover:text-white text-2xl leading-none" onclick="WG.UI.closeModals()">&times;</button>
+        <!-- Visual Model Maker Modal -->
+        <div id="model-maker" class="interactive hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div class="retro-panel w-[900px] h-[600px] flex flex-col shadow-2xl">
+                <div class="retro-title flex justify-between">
+                    <span>Visual Model Maker.exe</span>
+                    <button class="bg-gray-300 text-black px-1 border border-gray-100 border-b-gray-600 border-r-gray-600 text-xs cursor-pointer font-bold leading-none flex items-center" onclick="WG.UI.closeModals()">&times;</button>
                 </div>
-                <div class="p-5 flex-1 flex flex-col">
-                    <div class="flex space-x-3 mb-4">
-                        <input type="text" id="mm-name" placeholder="Prop Name (e.g. Table)" class="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700 flex-1 focus:outline-none focus:border-purple-500">
-                        <button class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-lg font-bold transition" onclick="WG.UI.MM.addPart()">+ Add Part</button>
+                <div class="flex-1 flex overflow-hidden">
+                    <div class="w-1/2 bg-black border-r border-gray-500 relative retro-inset m-2">
+                        <canvas id="mm-canvas" class="w-full h-full absolute inset-0"></canvas>
+                        <div class="absolute top-2 left-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 border border-white">Live Preview</div>
                     </div>
-                    <!-- Parts List -->
-                    <div class="flex-1 overflow-y-auto bg-gray-900 rounded-lg border border-gray-700 p-3 space-y-3" id="mm-parts"></div>
+                    <div class="w-1/2 p-3 flex flex-col">
+                        <div class="flex flex-col space-y-2 mb-4 bg-[#d4d0c8] p-2 border border-gray-500">
+                            <input type="text" id="mm-name" placeholder="Prop Name (e.g. Chair)" class="retro-inset px-2 py-1 flex-1 text-sm w-full">
+                            <div class="flex justify-between items-center text-sm">
+                                <label><input type="checkbox" id="mm-bouncy" class="mr-1"> Bouncy Material</label>
+                                <label>Mass: <input type="number" id="mm-mass" value="5" class="retro-inset w-16 px-1 ml-1"></label>
+                            </div>
+                            <button class="retro-button py-1 mt-2 w-full" onclick="WG.UI.MM.addPart()">+ Add Part</button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto retro-inset p-2 space-y-2 bg-gray-100" id="mm-parts"></div>
+                    </div>
                 </div>
-                <div class="p-4 bg-gray-900 border-t border-gray-700 flex justify-end">
-                    <button class="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-2 rounded-lg font-bold transition shadow-lg" onclick="WG.UI.MM.save()">Save to Library</button>
+                <div class="p-3 border-t border-gray-500 flex justify-end bg-[#d4d0c8]">
+                    <button class="retro-button px-8 py-2 font-bold" onclick="WG.UI.MM.save()">Save to Library</button>
                 </div>
             </div>
         </div>
 
         <!-- Mod Creator Modal -->
-        <div id="mod-creator" class="interactive hidden absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-            <div class="bg-gray-800 w-[800px] h-[600px] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-600">
-                <div class="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center">
-                    <h2 class="text-white text-xl font-bold">Mod API Editor</h2>
-                    <button class="text-gray-400 hover:text-white text-2xl leading-none" onclick="WG.UI.closeModals()">&times;</button>
+        <div id="mod-creator" class="interactive hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div class="retro-panel w-[1000px] h-[700px] flex flex-col shadow-2xl">
+                <div class="retro-title flex justify-between">
+                    <span>Mod API Studio (Script Editor)</span>
+                    <button class="bg-gray-300 text-black px-1 border border-gray-100 border-b-gray-600 border-r-gray-600 text-xs cursor-pointer font-bold leading-none flex items-center" onclick="WG.UI.closeModals()">&times;</button>
                 </div>
-                <div class="p-4 flex-1 flex flex-col bg-[#1e1e1e]">
-                    <div class="text-xs text-gray-400 mb-2 font-mono">
-                        Available: <span class="text-blue-400">API.spawn(type, x, y, z, {color, mass, size})</span> | <span class="text-blue-400">API.onTick(fn)</span> | <span class="text-blue-400">API.setGravity(y)</span>
+                
+                <div class="flex-1 flex overflow-hidden">
+                    <div class="w-1/3 p-4 overflow-y-auto border-r border-gray-500 bg-[#d4d0c8]">
+                        <h3 class="font-bold mb-2 underline">API Documentation</h3>
+                        <div class="text-[11px] space-y-3 text-black leading-tight">
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.spawn(type, x, y, z, options)</strong><br>
+                                Opts: {size:[w,h,d], color:hex, mass:int, modTag:'name'}
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.onTick( callback(delta) )</strong>
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.onCollide( callback(objA, objB) )</strong><br>
+                                Passes string tags (e.g. 'player', 'danger', 'coin')
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.createButton(id, text, x, y, onClick)</strong><br>
+                                <strong>API.createText(id, text, x, y, color)</strong><br>
+                                <strong>API.clearUI()</strong>
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1 text-blue-800">
+                                <strong>API.setCurrency(val) / API.addCurrency(val)</strong><br>
+                                <strong>API.gameOver(message)</strong><br>
+                                <strong>API.print(message)</strong> - Writes to Console
+                            </div>
+                            
+                            <hr class="border-gray-500 my-2">
+                            <h3 class="font-bold mb-1">Load Templates</h3>
+                            <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('minigame')">"Dodge the Anvil" (Game)</button>
+                            <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('clicker')">"Coin Collector" (Game)</button>
+                            <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('ui')">"Custom UI & Gravity" (Tool)</button>
+                        </div>
                     </div>
-                    <textarea id="mod-code" class="code-editor flex-1 bg-transparent text-green-400 p-2 border border-gray-700 rounded focus:outline-none focus:border-indigo-500 resize-none" spellcheck="false">
-// Example: Low Gravity + Spawn Loop
-API.setGravity(-2); // Moon Gravity
-
-let timer = 0;
-API.onTick((delta) => {
-    timer += delta;
-    if(timer > 5) {
-        // Spawn a random box every 5 seconds above the origin
-        let size = [Math.random()*2+1, Math.random()*2+1, Math.random()*2+1];
-        let color = Math.floor(Math.random()*16777215);
-        API.spawn('box', 0, 20, 0, { size: size, color: color, mass: 2 });
-        timer = 0;
-    }
-});
-                    </textarea>
+                    
+                    <div class="w-2/3 flex flex-col p-2 bg-[#d4d0c8]">
+                        <textarea id="mod-code" class="code-editor flex-1 retro-inset p-2 text-sm text-black focus:outline-none resize-none" spellcheck="false">
+// Welcome to the Mod Builder!
+API.print("Script Loaded!");
+                        </textarea>
+                    </div>
                 </div>
-                <div class="p-4 bg-gray-900 border-t border-gray-700 flex justify-end space-x-3">
-                    <button class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-bold transition" onclick="WG.Mod.clear()">Clear Hooks</button>
-                    <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold transition shadow-lg" onclick="WG.Mod.execute()">Inject Script</button>
+
+                <div class="p-3 border-t border-gray-500 flex justify-end space-x-2 bg-[#d4d0c8]">
+                    <button class="retro-button px-6 py-1 text-red-800" onclick="WG.Mod.clear()">Clear Scripts</button>
+                    <button class="retro-button px-6 py-1 font-bold text-blue-900" onclick="WG.Mod.execute()">Inject & Run Script</button>
                 </div>
             </div>
         </div>
@@ -184,103 +283,111 @@ API.onTick((delta) => {
 
 <script>
 /**
- * WebGMOD - Unified Global Namespace Architecture
+ * Physics Engine v4.0 (3D Three.js + Cannon.js)
  */
 window.WG = {
     mode: 'sandbox',
-    objects: [],
-    customModels: {},
+    objects: [], customModels: {}, constraints: [],
     
-    // Systems
     scene: null, camera: null, renderer: null, world: null, clock: null,
     materials: {},
     
-    // State
     isRunning: false,
-    keys: { w: false, a: false, s: false, d: false, space: false, q: false, e: false },
-    mouse: { left: false, right: false },
+    keys: { w: false, a: false, s: false, d: false, space: false, t: false },
+    thrustersActive: false,
+    
+    terminalVelocityDown: -50,
+    gravity: -25,
 
     launch: async function(template, mode) {
-        this.mode = mode;
+        this.mode = mode || 'sandbox';
+        
+        try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); } catch(e) {}
+
         document.getElementById('launch-screen').classList.add('hidden');
         document.getElementById('crosshair').classList.remove('hidden');
-        if(mode === 'sandbox') document.getElementById('hud').classList.remove('hidden');
+        
+        if(this.mode === 'sandbox') {
+            document.getElementById('hud').classList.remove('hidden');
+        } else {
+            document.getElementById('hud').classList.add('hidden');
+            // Hide tool visuals in play mode
+            WG.Tools.equip('none');
+        }
 
         await this.Data.initDB();
-        this.initEngine();
-        this.Player.init();
-        this.Tools.init();
-        this.Portals.init();
-        this.UI.init();
+        
+        if(!this.scene) { 
+            this.initEngine();
+            this.Player.init();
+            this.Tools.init();
+            this.Portals.init();
+            this.UI.init();
+            this.Mod.init();
+        }
 
-        // Load custom models
         await this.Data.loadCustomModels();
 
         if (template === 'premade') this.buildPremade();
-        else this.buildBlank();
+        else if (template === 'blank') this.buildBlank();
 
         this.isRunning = true;
         this.animate();
-
-        // Try to lock pointer
         this.lockPointer();
+    },
+
+    exitToMainMenu: function() {
+        this.isRunning = false;
+        document.exitPointerLock();
+        this.UI.hideAll();
+        document.getElementById('launch-screen').classList.remove('hidden');
+        this.Mod.clear();
+        this.clearWorld();
     },
 
     initEngine: function() {
         const canvas = document.getElementById('game-canvas');
         
-        // THREE.JS SETUP
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87ceeb);
-        this.scene.fog = new THREE.Fog(0x87ceeb, 20, 300);
+        this.scene.background = new THREE.Color(0x7ec0ee); 
+        this.scene.fog = new THREE.FogExp2(0x7ec0ee, 0.002);
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
         this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // LIGHTS
-        const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
         this.scene.add(ambient);
         
-        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
-        hemi.position.set(0, 200, 0);
-        this.scene.add(hemi);
-
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(100, 200, 50);
         dirLight.castShadow = true;
-        dirLight.shadow.camera.top = 100; dirLight.shadow.camera.bottom = -100;
-        dirLight.shadow.camera.left = -100; dirLight.shadow.camera.right = 100;
+        dirLight.shadow.camera.top = 150; dirLight.shadow.camera.bottom = -150;
+        dirLight.shadow.camera.left = -150; dirLight.shadow.camera.right = 150;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
         this.scene.add(dirLight);
 
-        // CANNON.JS SETUP
         this.world = new CANNON.World();
-        this.world.gravity.set(0, -15, 0);
+        this.world.gravity.set(0, this.gravity, 0);
         this.world.broadphase = new CANNON.NaiveBroadphase();
-        this.world.solver.iterations = 20; // High iterations for stability
+        this.world.solver.iterations = 40; 
         
-        // Materials
         this.materials.standard = new CANNON.Material("standard");
         this.materials.player = new CANNON.Material("player");
+        this.materials.bouncy = new CANNON.Material("bouncy");
         
-        // Player material has 0 friction so we don't stick to walls
-        const playerContactMat = new CANNON.ContactMaterial(
-            this.materials.standard, this.materials.player, 
-            { friction: 0.0, restitution: 0.0 }
-        );
-        const stdContactMat = new CANNON.ContactMaterial(
-            this.materials.standard, this.materials.standard, 
-            { friction: 0.3, restitution: 0.2 }
-        );
+        const playerMat = new CANNON.ContactMaterial(this.materials.standard, this.materials.player, { friction: 0.0, restitution: 0.0 });
+        const stdMat = new CANNON.ContactMaterial(this.materials.standard, this.materials.standard, { friction: 0.6, restitution: 0.1 });
+        const bouncyMat = new CANNON.ContactMaterial(this.materials.standard, this.materials.bouncy, { friction: 0.3, restitution: 0.9 });
         
-        this.world.addContactMaterial(playerContactMat);
-        this.world.addContactMaterial(stdContactMat);
+        this.world.addContactMaterial(playerMat);
+        this.world.addContactMaterial(stdMat);
+        this.world.addContactMaterial(bouncyMat);
 
         this.clock = new THREE.Clock();
 
@@ -288,6 +395,15 @@ window.WG = {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.Portals.resize(); 
+        });
+
+        // Key tracking for thrusters
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyT' && document.pointerLockElement === document.body) this.thrustersActive = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if(e.code === 'KeyT') this.thrustersActive = false;
         });
     },
 
@@ -297,15 +413,24 @@ window.WG = {
             if(obj.body) this.world.remove(obj.body);
         });
         this.objects = [];
+        this.constraints.forEach(c => this.world.removeConstraint(c));
+        this.constraints = [];
         this.Portals.clear();
-        this.Mod.clear();
     },
 
     buildBlank: function() {
         this.clearWorld();
-        // Ground
-        const groundGeo = new THREE.PlaneGeometry(500, 500);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x3d5a40, roughness: 0.8 });
+        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#4a5d4e'; ctx.fillRect(0,0,256,256);
+        ctx.fillStyle = '#3c4d3f'; ctx.fillRect(0,0,128,128); ctx.fillRect(128,128,128,128);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(150, 150);
+
+        const groundMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0 });
         const groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.rotation.x = -Math.PI / 2;
         groundMesh.receiveShadow = true;
@@ -317,39 +442,41 @@ window.WG = {
         groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
         this.world.addBody(groundBody);
 
-        // Add to objects array so raycaster finds it
-        this.objects.push({ type: 'static', mesh: groundMesh, body: groundBody });
-
-        // Grid
-        const grid = new THREE.GridHelper(500, 100, 0x000000, 0x000000);
-        grid.material.opacity = 0.2; grid.material.transparent = true;
-        this.scene.add(grid);
+        this.objects.push({ id: 'ground', type: 'static', mesh: groundMesh, body: groundBody, opts: { isGround: true } });
+        
+        this.Player.body.position.set(0, 10, 10);
+        this.Player.body.velocity.set(0,0,0);
     },
 
     buildPremade: function() {
         this.buildBlank();
+        this.spawnPrimitive('box', 0, 25, -100, { size: [200, 50, 4], isStatic: true, color: '#aaaaaa' });
+        this.spawnPrimitive('box', 0, 25, 100, { size: [200, 50, 4], isStatic: true, color: '#aaaaaa' });
+        this.spawnPrimitive('box', -100, 25, 0, { size: [4, 50, 200], isStatic: true, color: '#aaaaaa' });
+        this.spawnPrimitive('box', 100, 25, 0, { size: [4, 50, 200], isStatic: true, color: '#aaaaaa' });
+
+        let ramp1 = this.spawnPrimitive('box', 0, 5, -30, { size: [20, 1, 40], isStatic: true, color: '#8b5a2b' });
+        ramp1.body.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), 0.25);
         
-        // Generate some walls
-        this.spawnPrimitive('box', 0, 10, -50, { size: [100, 20, 2], isStatic: true, color: '#888888' });
-        this.spawnPrimitive('box', 0, 10, 50, { size: [100, 20, 2], isStatic: true, color: '#888888' });
-        this.spawnPrimitive('box', -50, 10, 0, { size: [2, 20, 100], isStatic: true, color: '#888888' });
-        this.spawnPrimitive('box', 50, 10, 0, { size: [2, 20, 100], isStatic: true, color: '#888888' });
+        let ramp2 = this.spawnPrimitive('box', 40, 10, -50, { size: [30, 2, 80], isStatic: true, color: '#6b4226' });
+        ramp2.body.quaternion.setFromAxisAngle(new CANNON.Vec3(0,0,1), -0.4);
 
-        // A ramp
-        let ramp = this.spawnPrimitive('box', 0, 4, -20, { size: [20, 1, 30], isStatic: true, color: '#a0522d' });
-        ramp.body.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), 0.3);
-
-        // Dynamic Props
-        this.spawnPrimitive('box', -10, 5, -10, { size: [2,2,2], color: '#ff3333', mass: 5 });
-        this.spawnPrimitive('box', -10, 8, -10, { size: [2,2,2], color: '#33ff33', mass: 5 });
-        this.spawnPrimitive('sphere', 10, 5, -10, { size: [3], color: '#3333ff', mass: 10 });
-        this.spawnPrimitive('cylinder', 15, 5, 0, { size: [2, 4], color: '#ffff33', mass: 8 });
+        for(let i=0; i<6; i++) {
+            this.spawnPrimitive('box', -20, i*4 + 2, -20, { size: [4,4,4], color: '#d32f2f', mass: 10 });
+        }
+        
+        this.spawnPrimitive('sphere', 20, 20, -10, { size: [4], color: '#388e3c', mass: 5, bouncy: true });
+        
+        // Example Thruster and Balloon
+        this.spawnPrimitive('cylinder', 10, 5, 10, { size: [2,4], color: '#ffaa00', mass: 2, isThruster: true });
+        this.spawnPrimitive('sphere', -10, 5, 10, { size: [4], color: '#ff66b2', mass: 0.5, isBalloon: true });
     },
 
     spawnPrimitive: function(type, x, y, z, opts = {}) {
         let size = opts.size || [2, 2, 2];
-        let color = opts.color || Math.random() * 0xffffff;
+        let color = opts.color || Math.floor(Math.random() * 0xffffff);
         let mass = opts.isStatic ? 0 : (opts.mass !== undefined ? opts.mass : 5);
+        let matType = opts.bouncy ? this.materials.bouncy : this.materials.standard;
 
         let geo, shape;
         if(type === 'box') {
@@ -363,18 +490,17 @@ window.WG = {
             shape = new CANNON.Cylinder(size[0]/2, size[0]/2, size[1], 16);
         }
 
-        const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+        const mat = new THREE.MeshStandardMaterial({ color: color, roughness: opts.bouncy? 0.1 : 0.8 });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.castShadow = true; mesh.receiveShadow = true;
         this.scene.add(mesh);
 
         const body = new CANNON.Body({
             mass: mass,
-            material: this.materials.standard,
+            material: matType,
             position: new CANNON.Vec3(x, y, z)
         });
         
-        // Cannon cylinders align differently than Three
         if(type === 'cylinder') {
             let q = new CANNON.Quaternion();
             q.setFromAxisAngle(new CANNON.Vec3(1,0,0), Math.PI/2);
@@ -385,9 +511,27 @@ window.WG = {
 
         if(opts.rotation) body.quaternion.set(opts.rotation[0], opts.rotation[1], opts.rotation[2], opts.rotation[3]);
 
+        // explicitly clear velocity so they don't fling
+        body.velocity.set(0,0,0);
+        body.angularVelocity.set(0,0,0);
+
+        // Attach collide listener for Mod API
+        body.addEventListener("collide", (e) => {
+            if(WG.Mod.hooks.onCollide) {
+                const bA = e.body; // other body
+                const bB = e.target; // this body
+                const objA = WG.objects.find(o=>o.body===bA);
+                const objB = WG.objects.find(o=>o.body===bB);
+                let tagA = objA ? (objA.opts.modTag || objA.subType || "prop") : (bA === WG.Player.body ? 'player' : 'world');
+                let tagB = objB ? (objB.opts.modTag || objB.subType || "prop") : 'world';
+                WG.Mod.hooks.onCollide(tagA, tagB);
+            }
+        });
+
         this.world.addBody(body);
         
-        const obj = { type: 'primitive', subType: type, mesh, body, opts: { size, color, mass } };
+        const obj = { id: Math.random().toString(36).substr(2,9), type: 'primitive', subType: type, mesh, body, opts: { size, color, mass, bouncy: opts.bouncy, isThruster: opts.isThruster, isBalloon: opts.isBalloon, modTag: opts.modTag } };
+        
         this.objects.push(obj);
         return obj;
     },
@@ -397,14 +541,17 @@ window.WG = {
         if(!def) return null;
 
         const group = new THREE.Group();
-        const body = new CANNON.Body({ mass: 10, material: this.materials.standard, position: new CANNON.Vec3(x, y, z) });
+        const matType = def.bouncy ? this.materials.bouncy : this.materials.standard;
+        const totalMass = def.mass !== undefined ? parseFloat(def.mass) : 5;
+
+        const body = new CANNON.Body({ mass: totalMass, material: matType, position: new CANNON.Vec3(x, y, z) });
+        body.velocity.set(0,0,0);
 
         def.parts.forEach(part => {
             let geo, shape;
             let sz = part.size.map(Number);
             let off = part.offset.map(Number);
-            let c = part.color;
-
+            
             if(part.type === 'box') {
                 geo = new THREE.BoxGeometry(sz[0], sz[1], sz[2]);
                 shape = new CANNON.Box(new CANNON.Vec3(sz[0]/2, sz[1]/2, sz[2]/2));
@@ -413,7 +560,7 @@ window.WG = {
                 shape = new CANNON.Sphere(sz[0]/2);
             }
             
-            const mat = new THREE.MeshStandardMaterial({ color: c });
+            const mat = new THREE.MeshStandardMaterial({ color: part.color, roughness: def.bouncy ? 0.2 : 0.7 });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(off[0], off[1], off[2]);
             mesh.castShadow = true; mesh.receiveShadow = true;
@@ -426,7 +573,7 @@ window.WG = {
 
         this.scene.add(group);
         this.world.addBody(body);
-        const obj = { type: 'custom', modelName: name, mesh: group, body: body };
+        const obj = { id: Math.random().toString(36).substr(2,9), type: 'custom', modelName: name, mesh: group, body: body, opts: {mass: totalMass} };
         this.objects.push(obj);
         return obj;
     },
@@ -435,9 +582,29 @@ window.WG = {
         for (let i = 0; i < this.objects.length; i++) {
             const obj = this.objects[i];
             if(obj.mesh && obj.body) {
+                if (obj.body.velocity.y < this.terminalVelocityDown) obj.body.velocity.y = this.terminalVelocityDown;
+                
+                // Thrusters
+                if(obj.opts.isThruster && this.thrustersActive && document.pointerLockElement) {
+                    // Apply force locally "up" along the cylinder
+                    const localForce = new CANNON.Vec3(0, obj.body.mass * 30, 0);
+                    const worldForce = obj.body.quaternion.vmult(localForce);
+                    obj.body.applyForce(worldForce, obj.body.position);
+                }
+
+                // Balloons
+                if(obj.opts.isBalloon) {
+                    const floatForce = new CANNON.Vec3(0, obj.body.mass * (-this.gravity + 5), 0);
+                    obj.body.applyForce(floatForce, obj.body.position);
+                }
+
                 obj.mesh.position.copy(obj.body.position);
                 obj.mesh.quaternion.copy(obj.body.quaternion);
             }
+        }
+        
+        if(this.Player.body && this.Player.body.velocity.y < this.terminalVelocityDown) {
+            this.Player.body.velocity.y = this.terminalVelocityDown;
         }
     },
 
@@ -445,65 +612,66 @@ window.WG = {
         if(!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
 
+        if(this.Mod.isGameOver) return; 
+
         const delta = Math.min(this.clock.getDelta(), 0.1);
 
-        // Logic Updates
         this.Player.update(delta);
         this.Tools.update(delta);
         this.Mod.update(delta);
         
-        // Physics Step
         this.world.step(1/60, delta, 3);
         this.syncPhysics();
         this.Portals.updatePhysics();
 
-        // Render pass
         this.Portals.renderViews();
         this.renderer.render(this.scene, this.camera);
+
+        if(this.UI.MM.isOpen) this.UI.MM.renderPreview();
     },
 
     lockPointer: function() {
-        if(this.UI.isOpen) return;
+        if(this.UI.isOpen || this.UI.modalsOpen() || this.Mod.isGameOver || !this.isRunning) return;
         document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
         document.body.requestPointerLock();
     }
 };
 
 // ========================================================
-// PLAYER CONTROLLER
+// PLAYER CONTROLLER (Slower, accurate, stops in menus)
 // ========================================================
 WG.Player = {
-    yaw: new THREE.Object3D(),
-    pitch: new THREE.Object3D(),
-    body: null,
-    canJump: false,
-    speed: 30,
+    yaw: new THREE.Object3D(), pitch: new THREE.Object3D(),
+    body: null, canJump: false, radius: 1,
+    
+    accel: 50,       // Slower acceleration for accuracy
+    maxSpeed: 15,    // Lower terminal horizontal velocity
+    friction: 0.85,  
 
     init: function() {
-        // Setup Hierarchy
         this.pitch.add(WG.camera);
         this.yaw.position.y = 1;
         this.yaw.add(this.pitch);
         WG.scene.add(this.yaw);
 
-        // Physics Body
-        const shape = new CANNON.Sphere(1);
+        const shape = new CANNON.Sphere(this.radius);
         this.body = new CANNON.Body({ 
-            mass: 50, 
-            material: WG.materials.player, // 0 friction
-            fixedRotation: true,
-            linearDamping: 0.9 // Prevent infinite sliding
+            mass: 60, material: WG.materials.player, 
+            fixedRotation: true, linearDamping: 0.1 
         });
         this.body.addShape(shape);
         this.body.position.set(0, 10, 10);
         WG.world.addBody(this.body);
 
-        // Jump logic
+        // Attach collide for player to trigger mod API events
         this.body.addEventListener("collide", (e) => {
-            if(e.contact.ni.y > 0.5) this.canJump = true;
+            if(WG.Mod.hooks.onCollide) {
+                const objB = WG.objects.find(o=>o.body===e.body);
+                let tagB = objB ? (objB.opts.modTag || objB.subType || "prop") : 'world';
+                WG.Mod.hooks.onCollide('player', tagB);
+            }
         });
 
-        // Mouse look
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement !== document.body) return;
             this.yaw.rotation.y -= e.movementX * 0.002;
@@ -511,47 +679,72 @@ WG.Player = {
             this.pitch.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.pitch.rotation.x));
         });
 
-        // Keys
         document.addEventListener('keydown', (e) => this.handleKey(e, true));
         document.addEventListener('keyup', (e) => this.handleKey(e, false));
 
-        // Pointerlock monitoring
         document.addEventListener('pointerlockchange', () => {
-            if(document.pointerLockElement !== document.body && WG.mode === 'sandbox') {
-                if(!WG.UI.modalsOpen()) WG.UI.toggleQMenu(true);
+            if(document.pointerLockElement !== document.body) {
+                if(!WG.UI.modalsOpen() && WG.isRunning && !WG.Mod.isGameOver && !WG.UI.isConsoleOpen) {
+                    WG.UI.toggleQMenu(true);
+                }
+            } else {
+                WG.UI.toggleQMenu(false);
             }
         });
     },
 
     handleKey: function(e, isDown) {
+        if(WG.UI.isConsoleOpen) return; // ignore game keys in console
         const key = e.code.toLowerCase().replace('key', '');
         if(WG.keys.hasOwnProperty(key)) WG.keys[key] = isDown;
 
-        // One-shot actions
         if(isDown && document.pointerLockElement === document.body) {
             if(e.code === 'Space' && this.canJump) {
-                this.body.velocity.y = 12;
+                this.body.velocity.y = 15; 
                 this.canJump = false;
             }
-            if(e.code === 'Digit1') WG.Tools.equip('physgun');
-            if(e.code === 'Digit2') WG.Tools.equip('portal');
+            if(WG.mode === 'sandbox') {
+                if(e.code === 'Digit1') WG.Tools.equip('physgun');
+                if(e.code === 'Digit2') WG.Tools.equip('portal');
+                if(e.code === 'Digit3') WG.Tools.equip('constraint');
+            }
         }
 
-        // Q-Menu release to close
-        if(e.code === 'KeyQ' && !isDown && WG.mode === 'sandbox' && WG.UI.isOpen) {
-             WG.UI.toggleQMenu(false);
-             WG.lockPointer();
+        if((e.code === 'KeyQ' || e.code === 'Escape') && !isDown) {
+            if (document.pointerLockElement === document.body) {
+                document.exitPointerLock(); 
+            } else if (WG.UI.isOpen) {
+                WG.lockPointer(); 
+            }
+        }
+        
+        if(e.code === 'Backquote' && !isDown) { // Tilde/Backquote
+            WG.UI.toggleConsole();
         }
     },
 
     update: function(delta) {
-        // Sync position (camera at top of sphere)
         this.yaw.position.copy(this.body.position);
         this.yaw.position.y += 0.5;
 
-        if (document.pointerLockElement !== document.body) return;
+        // Accurate Jump Raycast directly below
+        const pos = this.body.position;
+        const start = new CANNON.Vec3(pos.x, pos.y - this.radius + 0.1, pos.z);
+        const end = new CANNON.Vec3(pos.x, pos.y - this.radius - 0.25, pos.z);
+        const ray = new CANNON.Ray(start, end);
+        
+        const hasHit = ray.intersectWorld(WG.world, { mode: CANNON.Ray.CLOSEST });
+        this.canJump = (hasHit && ray.result.body !== this.body);
 
-        // Movement Vectors
+        // Completely stop receiving input if pointer is not locked (e.g., in menu)
+        if (document.pointerLockElement !== document.body) {
+            if(this.canJump) {
+                this.body.velocity.x *= Math.pow(this.friction, delta * 60);
+                this.body.velocity.z *= Math.pow(this.friction, delta * 60);
+            }
+            return;
+        }
+
         const dir = new THREE.Vector3();
         if(WG.keys.w) dir.z -= 1;
         if(WG.keys.s) dir.z += 1;
@@ -562,46 +755,46 @@ WG.Player = {
             dir.normalize();
             dir.applyEuler(new THREE.Euler(0, this.yaw.rotation.y, 0));
             
-            // Apply snappy velocity
-            this.body.velocity.x = dir.x * this.speed;
-            this.body.velocity.z = dir.z * this.speed;
-        } else {
-            // High friction stopping
-            this.body.velocity.x *= 0.8;
-            this.body.velocity.z *= 0.8;
-        }
-    },
+            this.body.velocity.x += dir.x * this.accel * delta;
+            this.body.velocity.z += dir.z * this.accel * delta;
 
-    getLookDir: function() {
-        const v = new THREE.Vector3(0,0,-1);
-        v.applyQuaternion(WG.camera.quaternion);
-        v.applyQuaternion(this.yaw.quaternion);
-        return v;
+            const horiz = new THREE.Vector2(this.body.velocity.x, this.body.velocity.z);
+            if(horiz.length() > this.maxSpeed) {
+                horiz.normalize().multiplyScalar(this.maxSpeed);
+                this.body.velocity.x = horiz.x;
+                this.body.velocity.z = horiz.y;
+            }
+        } else {
+            if(this.canJump) { 
+                this.body.velocity.x *= Math.pow(this.friction, delta * 60);
+                this.body.velocity.z *= Math.pow(this.friction, delta * 60);
+            }
+        }
     }
 };
 
 // ========================================================
-// TOOLS (Physgun & Portal)
+// TOOLS (Physgun, Portal, Constraints)
 // ========================================================
 WG.Tools = {
-    active: 'physgun',
-    raycaster: new THREE.Raycaster(),
-
-    // Physgun State
+    active: 'physgun', raycaster: new THREE.Raycaster(),
     heldBody: null, heldDist: 5, heldOffset: new CANNON.Vec3(), marker: null,
+    
+    // Constraint Tool Data
+    cNodeA: null, cPointA: null,
 
     init: function() {
-        // Physgun Marker
         const geo = new THREE.SphereGeometry(0.15, 8, 8);
-        const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+        const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
         this.marker = new THREE.Mesh(geo, mat);
         WG.scene.add(this.marker);
         this.marker.visible = false;
 
         document.addEventListener('mousedown', (e) => {
-            if(document.pointerLockElement !== document.body) return;
+            if(document.pointerLockElement !== document.body || WG.mode !== 'sandbox') return;
             if(this.active === 'physgun') this.pgDown(e);
             if(this.active === 'portal') WG.Portals.shoot(e);
+            if(this.active === 'constraint') this.cnDown(e);
         });
         document.addEventListener('mouseup', (e) => {
             if(this.active === 'physgun' && e.button === 0) this.pgUp();
@@ -620,72 +813,67 @@ WG.Tools = {
     },
 
     equip: function(tool) {
-        if(WG.mode === 'main') return;
+        if(WG.mode !== 'sandbox') return;
         this.active = tool;
-        if(this.heldBody) this.pgUp(); // Drop
+        if(this.heldBody) this.pgUp(); 
         
         const hTool = document.getElementById('hud-tool');
         const hDesc = document.getElementById('hud-desc');
         if(tool === 'physgun') {
             hTool.innerText = "PHYSGUN"; hTool.className = "text-4xl font-extrabold italic text-blue-400 tracking-wider";
             hDesc.innerText = "LMB: Grab | Scroll: Distance | RMB: Freeze | E: Unfreeze";
-        } else {
+        } else if (tool === 'portal') {
             hTool.innerText = "PORTALGUN"; hTool.className = "text-4xl font-extrabold italic text-orange-500 tracking-wider";
             hDesc.innerText = "LMB: Blue Portal | RMB: Orange Portal";
+        } else if (tool === 'constraint') {
+            hTool.innerText = "WELD TOOL"; hTool.className = "text-4xl font-extrabold italic text-yellow-400 tracking-wider";
+            hDesc.innerText = "LMB: Link Obj A to Obj B | RMB: Clear Selection";
+            this.cNodeA = null;
+        } else {
+            hTool.innerText = ""; hDesc.innerText = "";
         }
     },
 
     raycastObjects: function() {
         this.raycaster.setFromCamera({x:0, y:0}, WG.camera);
-        // Intersect only physical objects, not players or markers
         const interactables = WG.objects.map(o => o.mesh).filter(m => m !== undefined);
         return this.raycaster.intersectObjects(interactables, true);
     },
 
+    // Physgun logic
     pgDown: function(e) {
         const hits = this.raycastObjects();
         if(hits.length === 0) return;
-
         const hit = hits[0];
         const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
-        
         if(!obj) return;
 
-        if(e.button === 0) { // Grab
-            if(obj.type === 'static' && obj.body.mass === 0) return; // Cant grab ground
+        if(e.button === 0) { 
+            if(obj.type === 'static' && obj.body.mass === 0) return;
             
             this.heldBody = obj.body;
             this.heldDist = hit.distance;
             this.marker.visible = true;
             document.getElementById('crosshair').classList.add('active');
 
-            // Wake and make dynamic if frozen
             if(this.heldBody.type === CANNON.Body.STATIC) {
                 this.heldBody.type = CANNON.Body.DYNAMIC;
                 this.heldBody.mass = obj.opts ? obj.opts.mass : 5;
                 this.heldBody.updateMassProperties();
             }
             
-            // Calculate local offset from center of mass
             const hitPoint = new CANNON.Vec3(hit.point.x, hit.point.y, hit.point.z);
             this.heldBody.pointToLocalFrame(hitPoint, this.heldOffset);
-
-        } else if (e.button === 2) { // Freeze
-            if(this.heldBody) {
-                this.freezeBody(this.heldBody);
-                this.pgUp();
-            } else if (obj.type !== 'static') {
-                this.freezeBody(obj.body);
-            }
+        } else if (e.button === 2) { 
+            if(this.heldBody) { this.freezeBody(this.heldBody); this.pgUp(); } 
+            else if (obj.type !== 'static') this.freezeBody(obj.body);
         }
     },
-
     pgUp: function() {
         this.heldBody = null;
         this.marker.visible = false;
         document.getElementById('crosshair').classList.remove('active');
     },
-
     pgUnfreeze: function() {
         const hits = this.raycastObjects();
         if(hits.length > 0) {
@@ -698,78 +886,113 @@ WG.Tools = {
             }
         }
     },
-
     freezeBody: function(body) {
-        body.velocity.set(0,0,0);
-        body.angularVelocity.set(0,0,0);
-        body.type = CANNON.Body.STATIC;
-        body.mass = 0;
-        body.updateMassProperties();
+        body.velocity.set(0,0,0); body.angularVelocity.set(0,0,0);
+        body.type = CANNON.Body.STATIC; body.mass = 0; body.updateMassProperties();
+    },
+
+    // Constraint Tool Logic
+    cnDown: function(e) {
+        if(e.button === 2) { // Cancel
+            this.cNodeA = null;
+            WG.Mod.API.print("Weld selection cleared.", '#fbbf24');
+            return;
+        }
+
+        const hits = this.raycastObjects();
+        if(hits.length === 0) return;
+        const hit = hits[0];
+        const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+        if(!obj) return;
+
+        if(!this.cNodeA) {
+            this.cNodeA = obj.body;
+            WG.Mod.API.print("Node A selected. Click another object.", '#fbbf24');
+        } else {
+            if(this.cNodeA !== obj.body) {
+                // Create Distance constraint (Weld)
+                const dist = this.cNodeA.position.distanceTo(obj.body.position);
+                const constraint = new CANNON.DistanceConstraint(this.cNodeA, obj.body, dist);
+                WG.world.addConstraint(constraint);
+                WG.constraints.push(constraint); // Track to clear later
+                
+                // Wake both up
+                if(this.cNodeA.type === CANNON.Body.STATIC && this.cNodeA.mass !== 0) { this.cNodeA.type = CANNON.Body.DYNAMIC; this.cNodeA.updateMassProperties(); }
+                if(obj.body.type === CANNON.Body.STATIC && obj.body.mass !== 0) { obj.body.type = CANNON.Body.DYNAMIC; obj.body.updateMassProperties(); }
+                
+                WG.Mod.API.print("Objects Welded!", '#4ade80');
+            }
+            this.cNodeA = null;
+        }
     },
 
     update: function() {
         if(this.heldBody) {
-            // Target Position based on look direction and distance
-            const camPos = WG.camera.getWorldPosition(new THREE.Vector3());
-            const lookDir = WG.Player.getLookDir();
+            const camPos = new THREE.Vector3();
+            WG.camera.getWorldPosition(camPos);
+            const lookDir = new THREE.Vector3();
+            WG.camera.getWorldDirection(lookDir); 
+
             const targetPos = camPos.add(lookDir.multiplyScalar(this.heldDist));
-            
             this.marker.position.copy(targetPos);
 
-            // Calculate current world position of the grabbed point
             const worldGripPoint = new CANNON.Vec3();
             this.heldBody.pointToWorldFrame(this.heldOffset, worldGripPoint);
 
-            // Velocity-based manipulation (highly stable)
             const forceVec = new CANNON.Vec3(
                 targetPos.x - worldGripPoint.x,
                 targetPos.y - worldGripPoint.y,
                 targetPos.z - worldGripPoint.z
             );
             
-            // Apply proportional velocity to reach target
-            this.heldBody.velocity.set(forceVec.x * 10, forceVec.y * 10, forceVec.z * 10);
+            this.heldBody.velocity.set(forceVec.x * 12, forceVec.y * 12, forceVec.z * 12);
             
-            // Counteract gravity
             const antigrav = WG.world.gravity.scale(-1);
             this.heldBody.force.vadd(antigrav.scale(this.heldBody.mass), this.heldBody.force);
-
-            // Strong angular damping to prevent spinning out of control
-            this.heldBody.angularVelocity.scale(0.8, this.heldBody.angularVelocity);
+            this.heldBody.angularVelocity.scale(0.8, this.heldBody.angularVelocity); 
         }
     }
 };
 
 // ========================================================
-// PORTALS SYSTEM
+// PORTALS SYSTEM (Floor Fixes)
 // ========================================================
 WG.Portals = {
-    blue: null, orange: null,
-    width: 3.5, height: 5.5,
+    blue: null, orange: null, width: 4, height: 6,
 
     init: function() {
-        this.rtBlue = new THREE.WebGLRenderTarget(512, 512);
-        this.rtOrange = new THREE.WebGLRenderTarget(512, 512);
-        this.camBlue = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        this.camOrange = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        this.rtBlue = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+        this.rtOrange = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+        
+        this.camBlue = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camOrange = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
         const geo = new THREE.PlaneGeometry(this.width, this.height);
         
-        // Blue Portal Mesh
         const mB = new THREE.MeshBasicMaterial({ map: this.rtBlue.texture, side: THREE.DoubleSide });
         this.meshBlue = new THREE.Mesh(geo, mB);
-        const fb = new THREE.Mesh(new THREE.PlaneGeometry(this.width+0.4, this.height+0.4), new THREE.MeshBasicMaterial({color:0x0088ff}));
-        fb.position.z = -0.01; this.meshBlue.add(fb);
+        const fb = new THREE.Mesh(new THREE.PlaneGeometry(this.width+0.6, this.height+0.6), new THREE.MeshBasicMaterial({color:0x0088ff}));
+        fb.position.z = -0.02; this.meshBlue.add(fb);
         this.meshBlue.visible = false;
         WG.scene.add(this.meshBlue);
 
-        // Orange Portal Mesh
         const mO = new THREE.MeshBasicMaterial({ map: this.rtOrange.texture, side: THREE.DoubleSide });
         this.meshOrange = new THREE.Mesh(geo, mO);
-        const fo = new THREE.Mesh(new THREE.PlaneGeometry(this.width+0.4, this.height+0.4), new THREE.MeshBasicMaterial({color:0xff8800}));
-        fo.position.z = -0.01; this.meshOrange.add(fo);
+        const fo = new THREE.Mesh(new THREE.PlaneGeometry(this.width+0.6, this.height+0.6), new THREE.MeshBasicMaterial({color:0xff8800}));
+        fo.position.z = -0.02; this.meshOrange.add(fo);
         this.meshOrange.visible = false;
         WG.scene.add(this.meshOrange);
+    },
+
+    resize: function() {
+        if(this.rtBlue) {
+            this.rtBlue.setSize(window.innerWidth, window.innerHeight);
+            this.rtOrange.setSize(window.innerWidth, window.innerHeight);
+            this.camBlue.aspect = window.innerWidth / window.innerHeight;
+            this.camBlue.updateProjectionMatrix();
+            this.camOrange.aspect = window.innerWidth / window.innerHeight;
+            this.camOrange.updateProjectionMatrix();
+        }
     },
 
     clear: function() {
@@ -785,28 +1008,24 @@ WG.Portals = {
         const hit = hits[0];
         const isBlue = e.button === 0;
         
-        // Only place on static objects
         const obj = WG.objects.find(o => o.mesh === hit.object);
-        if(!obj || obj.body.type !== CANNON.Body.STATIC) return;
+        if(!obj || obj.body.type !== CANNON.Body.STATIC) return; 
 
         const mesh = isBlue ? this.meshBlue : this.meshOrange;
+        mesh.position.copy(hit.point).add(hit.face.normal.clone().multiplyScalar(0.05));
         
-        // Position slightly off the surface to avoid z-fighting
-        mesh.position.copy(hit.point).add(hit.face.normal.clone().multiplyScalar(0.02));
-        
-        // Align rotation to normal
+        // Critical fix for floor/ceiling portals to prevent flipping/singularity
+        if (Math.abs(hit.face.normal.y) > 0.99) {
+            mesh.up.set(0, 0, 1);
+        } else {
+            mesh.up.set(0, 1, 0);
+        }
         const lookPt = mesh.position.clone().add(hit.face.normal);
         mesh.lookAt(lookPt);
         mesh.visible = true;
 
-        const pData = {
-            pos: mesh.position.clone(),
-            quat: mesh.quaternion.clone(),
-            normal: hit.face.normal.clone()
-        };
-
-        if(isBlue) this.blue = pData;
-        else this.orange = pData;
+        const pData = { pos: mesh.position.clone(), quat: mesh.quaternion.clone(), normal: hit.face.normal.clone() };
+        if(isBlue) this.blue = pData; else this.orange = pData;
     },
 
     renderViews: function() {
@@ -815,35 +1034,26 @@ WG.Portals = {
         const mainCamPos = WG.camera.getWorldPosition(new THREE.Vector3());
         const mainCamQuat = WG.camera.getWorldQuaternion(new THREE.Quaternion());
 
-        // Helper to setup virtual camera
         const setupCam = (cam, src, dest) => {
-            // Transform matrix from Src -> Dest (with 180 Y flip)
             const qSrcInv = src.quat.clone().invert();
             const qY180 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
             const qTotal = new THREE.Quaternion().multiplyQuaternions(qY180, dest.quat).multiply(qSrcInv);
 
-            // Offset
             const offset = mainCamPos.clone().sub(src.pos);
             offset.applyQuaternion(qTotal);
             cam.position.copy(dest.pos).add(offset);
-
-            // Rotation
             cam.quaternion.copy(mainCamQuat).premultiply(qTotal);
-            
-            // Adjust near clipping plane to portal surface (simplified)
-            cam.near = 0.5;
+            cam.near = Math.max(0.1, cam.position.distanceTo(dest.pos) * 0.9); 
             cam.updateProjectionMatrix();
         };
 
-        // Render Blue (seen from Orange)
         setupCam(this.camBlue, this.blue, this.orange);
-        this.meshOrange.visible = false; // Hide destination to prevent infinite hall of mirrors
+        this.meshOrange.visible = false; 
         WG.renderer.setRenderTarget(this.rtBlue);
         WG.renderer.clear();
         WG.renderer.render(WG.scene, this.camBlue);
         this.meshOrange.visible = true;
 
-        // Render Orange (seen from Blue)
         setupCam(this.camOrange, this.orange, this.blue);
         this.meshBlue.visible = false;
         WG.renderer.setRenderTarget(this.rtOrange);
@@ -851,64 +1061,50 @@ WG.Portals = {
         WG.renderer.render(WG.scene, this.camOrange);
         this.meshBlue.visible = true;
 
-        WG.renderer.setRenderTarget(null); // Return to main screen
+        WG.renderer.setRenderTarget(null);
     },
 
     updatePhysics: function() {
         if(!this.blue || !this.orange) return;
-
-        // Check objects
         WG.objects.forEach(obj => {
             if(obj.body.type === CANNON.Body.STATIC) return;
             this.checkCrossing(obj.body, this.blue, this.orange);
             this.checkCrossing(obj.body, this.orange, this.blue);
         });
-
-        // Check player
         this.checkCrossing(WG.Player.body, this.blue, this.orange, true);
         this.checkCrossing(WG.Player.body, this.orange, this.blue, true);
     },
 
     checkCrossing: function(body, src, dest, isPlayer=false) {
-        // Simple distance and dot product check
-        if(body.position.distanceTo(src.pos) < this.width / 1.5) {
+        // Distance check needs to be forgiving enough for vertical entry too
+        if(body.position.distanceTo(src.pos) < this.height / 1.2) {
             const vel = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
             if(vel.lengthSq() < 0.1 && !isPlayer) return;
 
             vel.normalize();
-            // If moving INTO the portal
             if(vel.dot(src.normal) < 0) {
-                
-                // Math transforms
                 const qSrcInv = src.quat.clone().invert();
                 const qY180 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
                 const qTotal = new THREE.Quaternion().multiplyQuaternions(qY180, dest.quat).multiply(qSrcInv);
 
-                // Transform Pos
                 let posOffset = new THREE.Vector3().copy(body.position).sub(src.pos);
                 posOffset.applyQuaternion(qTotal);
                 body.position.copy(dest.pos).vadd(posOffset, body.position);
                 
-                // Push slightly forward to avoid getting stuck in destination plane
-                const push = new CANNON.Vec3(dest.normal.x, dest.normal.y, dest.normal.z).scale(1.5);
+                const push = new CANNON.Vec3(dest.normal.x, dest.normal.y, dest.normal.z).scale(isPlayer ? 2.5 : 2.0);
                 body.position.vadd(push, body.position);
 
-                // Transform Velocity
                 let v = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
                 v.applyQuaternion(qTotal);
                 body.velocity.set(v.x, v.y, v.z);
 
                 if(!isPlayer) {
-                    // Transform Rotation
                     let q = new THREE.Quaternion(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
                     q.premultiply(qTotal);
                     body.quaternion.set(q.x, q.y, q.z, q.w);
                 } else {
-                    // Rotate Player Camera Yaw
                     let playerQ = WG.Player.yaw.quaternion.clone();
                     playerQ.premultiply(qTotal);
-                    
-                    // Convert back to euler Y for the FPS controller
                     const euler = new THREE.Euler().setFromQuaternion(playerQ, 'YXZ');
                     WG.Player.yaw.rotation.y = euler.y;
                 }
@@ -922,9 +1118,28 @@ WG.Portals = {
 // ========================================================
 WG.UI = {
     isOpen: false,
+    isConsoleOpen: false,
     
     init: function() {
         document.addEventListener('contextmenu', e => e.preventDefault());
+        this.MM.init(); 
+
+        const cin = document.getElementById('console-input');
+        cin.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') {
+                const val = e.target.value;
+                WG.Mod.API.print("> " + val, '#aaa');
+                try {
+                    // Evaluate in global context but provide API mapping visually
+                    const API = WG.Mod.API;
+                    const res = eval(val);
+                    if(res !== undefined) WG.Mod.API.print(res, '#5eead4');
+                } catch(err) {
+                    WG.Mod.API.print(err.message, '#f87171');
+                }
+                e.target.value = '';
+            }
+        });
     },
 
     toggleQMenu: function(show) {
@@ -939,55 +1154,131 @@ WG.UI = {
         }
     },
 
+    toggleConsole: function() {
+        this.isConsoleOpen = !this.isConsoleOpen;
+        const c = document.getElementById('console');
+        if(this.isConsoleOpen) {
+            document.exitPointerLock();
+            c.classList.remove('hidden');
+            document.getElementById('console-input').focus();
+        } else {
+            c.classList.add('hidden');
+            WG.lockPointer();
+        }
+    },
+
     switchTab: function(tab) {
         const c = document.getElementById('q-content');
         if(tab === 'primitives') {
             c.innerHTML = `
-                <h3 class="text-white text-xl font-bold mb-4">Primitives</h3>
-                <div class="grid grid-cols-4 gap-4">
-                    <button class="bg-gray-700 hover:bg-gray-600 p-4 rounded-xl border border-gray-600 flex flex-col items-center shadow-lg transition" onclick="WG.UI.spawn('box')">
-                        <div class="w-12 h-12 bg-blue-500 mb-2 border-2 border-black rounded-sm"></div>
-                        <span class="text-white font-bold">Cube</span>
+                <h3 class="text-xl font-bold mb-4 border-b border-gray-400 pb-1">Spawn Primitives & Props</h3>
+                <div class="grid grid-cols-4 gap-3">
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawn('box')">
+                        <div class="w-10 h-10 bg-blue-500 mb-1 border border-black rounded-sm"></div>
+                        <span class="text-[10px]">Cube</span>
                     </button>
-                    <button class="bg-gray-700 hover:bg-gray-600 p-4 rounded-xl border border-gray-600 flex flex-col items-center shadow-lg transition" onclick="WG.UI.spawn('sphere')">
-                        <div class="w-12 h-12 bg-red-500 mb-2 border-2 border-black rounded-full"></div>
-                        <span class="text-white font-bold">Sphere</span>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawn('sphere')">
+                        <div class="w-10 h-10 bg-red-500 mb-1 border border-black rounded-full"></div>
+                        <span class="text-[10px]">Sphere</span>
                     </button>
-                    <button class="bg-gray-700 hover:bg-gray-600 p-4 rounded-xl border border-gray-600 flex flex-col items-center shadow-lg transition" onclick="WG.UI.spawn('cylinder')">
-                        <div class="w-10 h-12 bg-green-500 mb-2 border-2 border-black rounded-md"></div>
-                        <span class="text-white font-bold">Cylinder</span>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawn('cylinder')">
+                        <div class="w-8 h-10 bg-green-500 mb-1 border border-black rounded-sm"></div>
+                        <span class="text-[10px]">Cylinder</span>
+                    </button>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawnSpecial('bouncy')">
+                        <span class="text-2xl mb-1">🟢</span>
+                        <span class="text-[10px]">Bouncy Ball</span>
+                    </button>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawnSpecial('heavy')">
+                        <span class="text-2xl mb-1">🪨</span>
+                        <span class="text-[10px]">Heavy Crate</span>
+                    </button>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawnSpecial('plank')">
+                        <span class="text-2xl mb-1">🪵</span>
+                        <span class="text-[10px]">Plank</span>
+                    </button>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawnSpecial('thruster')">
+                        <span class="text-2xl mb-1">🔥</span>
+                        <span class="text-[10px]">Thruster (T)</span>
+                    </button>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawnSpecial('balloon')">
+                        <span class="text-2xl mb-1">🎈</span>
+                        <span class="text-[10px]">Balloon</span>
                     </button>
                 </div>
             `;
         } else if (tab === 'custom') {
-            let html = `<h3 class="text-white text-xl font-bold mb-4">Custom Library</h3><div class="grid grid-cols-4 gap-4">`;
+            let html = `<h3 class="text-xl font-bold mb-4 border-b border-gray-400 pb-1">Custom Library</h3><div class="grid grid-cols-4 gap-3">`;
             const keys = Object.keys(WG.customModels);
             if(keys.length === 0) {
-                html += `<div class="col-span-4 text-gray-400 text-center mt-10">No custom models. Create one in the Model Maker!</div>`;
+                html += `<div class="col-span-4 text-center mt-10">Library is empty. Create models in the Model Maker!</div>`;
             } else {
                 keys.forEach(k => {
                     html += `
-                    <button class="bg-gray-700 hover:bg-gray-600 p-4 rounded-xl border border-purple-500 flex flex-col items-center shadow-lg transition" onclick="WG.UI.spawnCustom('${k}')">
-                        <span class="text-4xl mb-2">📦</span>
-                        <span class="text-white font-bold truncate w-full text-center text-sm">${k}</span>
+                    <button class="retro-button p-2 flex flex-col items-center" onclick="WG.UI.spawnCustom('${k}')">
+                        <span class="text-2xl mb-1">📦</span>
+                        <span class="text-xs truncate w-full text-center">${k}</span>
                     </button>`;
                 });
             }
             c.innerHTML = html + '</div>';
+        } else if (tab === 'settings') {
+            c.innerHTML = `
+                <h3 class="text-xl font-bold mb-4 border-b border-gray-400 pb-1">World Settings</h3>
+                <div class="space-y-4 max-w-sm">
+                    <div class="flex flex-col">
+                        <label class="text-sm font-bold">Gravity (Y Axis)</label>
+                        <input type="number" id="set-grav" value="${WG.gravity}" class="retro-inset px-2 py-1">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-sm font-bold">Atmosphere Color</label>
+                        <input type="color" id="set-sky" value="#7ec0ee" class="h-10 w-full cursor-pointer">
+                    </div>
+                    <button class="retro-button py-2 w-full mt-4" onclick="WG.UI.applySettings()">Apply Settings</button>
+                </div>
+            `;
         }
     },
 
+    applySettings: function() {
+        const grav = parseFloat(document.getElementById('set-grav').value);
+        const sky = document.getElementById('set-sky').value;
+        WG.world.gravity.set(0, grav, 0);
+        WG.gravity = grav;
+        WG.scene.background = new THREE.Color(sky);
+        WG.scene.fog.color = new THREE.Color(sky);
+        WG.Mod.API.print("Settings Applied.", '#4ade80');
+    },
+
+    getSpawnPos: function() {
+        const camPos = new THREE.Vector3();
+        WG.camera.getWorldPosition(camPos);
+        const lookDir = new THREE.Vector3();
+        WG.camera.getWorldDirection(lookDir); 
+        return camPos.add(lookDir.multiplyScalar(8));
+    },
+
     spawn: function(type) {
-        const dir = WG.Player.getLookDir();
-        const pos = WG.camera.getWorldPosition(new THREE.Vector3()).add(dir.multiplyScalar(6));
+        const pos = this.getSpawnPos();
         WG.spawnPrimitive(type, pos.x, pos.y, pos.z);
         this.toggleQMenu(false);
         WG.lockPointer();
     },
 
+    spawnSpecial: function(special) {
+        const pos = this.getSpawnPos();
+        if(special === 'bouncy') WG.spawnPrimitive('sphere', pos.x, pos.y, pos.z, { size: [3], bouncy: true, mass: 2, color: '#00ffaa' });
+        if(special === 'heavy') WG.spawnPrimitive('box', pos.x, pos.y, pos.z, { size: [4,4,4], mass: 100, color: '#444444' });
+        if(special === 'plank') WG.spawnPrimitive('box', pos.x, pos.y, pos.z, { size: [15, 0.5, 3], mass: 5, color: '#c19a6b' });
+        if(special === 'thruster') WG.spawnPrimitive('cylinder', pos.x, pos.y, pos.z, { size: [2, 4], mass: 2, color: '#ffaa00', isThruster: true });
+        if(special === 'balloon') WG.spawnPrimitive('sphere', pos.x, pos.y, pos.z, { size: [4], mass: 0.5, color: '#ff66b2', isBalloon: true });
+
+        this.toggleQMenu(false);
+        WG.lockPointer();
+    },
+
     spawnCustom: function(name) {
-        const dir = WG.Player.getLookDir();
-        const pos = WG.camera.getWorldPosition(new THREE.Vector3()).add(dir.multiplyScalar(6));
+        const pos = this.getSpawnPos();
         WG.spawnCustomModel(name, pos.x, pos.y, pos.z);
         this.toggleQMenu(false);
         WG.lockPointer();
@@ -998,51 +1289,105 @@ WG.UI = {
                !document.getElementById('mod-creator').classList.contains('hidden');
     },
 
-    openModelMaker: function() { document.getElementById('model-maker').classList.remove('hidden'); },
+    hideAll: function() {
+        this.toggleQMenu(false);
+        this.closeModals();
+        if(this.isConsoleOpen) this.toggleConsole();
+    },
+
+    openModelMaker: function() { document.getElementById('model-maker').classList.remove('hidden'); this.MM.isOpen = true; this.MM.rebuildPreview(); },
     openModCreator: function() { document.getElementById('mod-creator').classList.remove('hidden'); },
     closeModals: function() {
         document.getElementById('model-maker').classList.add('hidden');
         document.getElementById('mod-creator').classList.add('hidden');
+        this.MM.isOpen = false;
     },
 
-    // Model Maker Logic
+    // Visual Model Maker
     MM: {
-        parts: [],
+        parts: [], isOpen: false,
+        scene: null, camera: null, renderer: null, group: null,
+
+        init: function() {
+            const canvas = document.getElementById('mm-canvas');
+            this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x333333);
+            
+            this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+            this.camera.position.set(10, 10, 10);
+            this.camera.lookAt(0,0,0);
+
+            this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const light = new THREE.DirectionalLight(0xffffff, 0.8);
+            light.position.set(10, 20, 10);
+            this.scene.add(light);
+            this.scene.add(new THREE.GridHelper(20, 20, 0x555555, 0x444444));
+
+            this.group = new THREE.Group();
+            this.scene.add(this.group);
+        },
+
+        renderPreview: function() {
+            if(!this.isOpen) return;
+            const canvas = this.renderer.domElement;
+            const parent = canvas.parentElement;
+            if(canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                this.renderer.setSize(parent.clientWidth, parent.clientHeight, false);
+                this.camera.aspect = parent.clientWidth / parent.clientHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.group.rotation.y += 0.01;
+            this.renderer.render(this.scene, this.camera);
+        },
+
+        rebuildPreview: function() {
+            while(this.group.children.length > 0) this.group.remove(this.group.children[0]); 
+            const isBouncy = document.getElementById('mm-bouncy').checked;
+            this.parts.forEach(part => {
+                let sz = part.size.map(Number); let off = part.offset.map(Number);
+                let geo = part.type === 'box' ? new THREE.BoxGeometry(sz[0], sz[1], sz[2]) : new THREE.SphereGeometry(sz[0]/2, 16, 16);
+                let mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: part.color, roughness: isBouncy?0.2:0.7 }));
+                mesh.position.set(off[0], off[1], off[2]);
+                this.group.add(mesh);
+            });
+        },
+
         addPart: function() {
             this.parts.push({ type: 'box', size: [2,2,2], offset: [0,0,0], color: '#ffffff' });
-            this.render();
+            this.renderUI(); this.rebuildPreview();
         },
-        render: function() {
+
+        renderUI: function() {
             const c = document.getElementById('mm-parts');
             c.innerHTML = '';
             this.parts.forEach((p, i) => {
                 c.innerHTML += `
-                <div class="bg-gray-800 p-3 rounded-lg flex items-center space-x-4 border border-gray-600 shadow-sm">
-                    <select class="bg-gray-900 text-white rounded p-1 border border-gray-600" onchange="WG.UI.MM.upd(${i}, 'type', this.value)">
+                <div class="bg-white p-2 flex items-center space-x-2 border border-gray-400">
+                    <select class="retro-inset p-1 text-xs w-20" onchange="WG.UI.MM.upd(${i}, 'type', this.value)">
                         <option value="box" ${p.type==='box'?'selected':''}>Box</option>
                         <option value="sphere" ${p.type==='sphere'?'selected':''}>Sphere</option>
                     </select>
-                    <div class="flex items-center space-x-1">
-                        <span class="text-gray-400 text-xs">Size</span>
-                        <input type="text" value="${p.size.join(',')}" class="w-16 bg-gray-900 text-white p-1 rounded border border-gray-600 text-xs" onchange="WG.UI.MM.upd(${i}, 'size', this.value.split(','))">
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <span class="text-gray-400 text-xs">Off</span>
-                        <input type="text" value="${p.offset.join(',')}" class="w-16 bg-gray-900 text-white p-1 rounded border border-gray-600 text-xs" onchange="WG.UI.MM.upd(${i}, 'offset', this.value.split(','))">
+                    <div class="flex flex-col space-y-1 flex-1 text-xs">
+                        <div class="flex items-center space-x-1"><span class="w-8">Size</span><input type="text" value="${p.size.join(',')}" class="w-full retro-inset px-1" onchange="WG.UI.MM.upd(${i}, 'size', this.value.split(','))"></div>
+                        <div class="flex items-center space-x-1"><span class="w-8">Pos</span><input type="text" value="${p.offset.join(',')}" class="w-full retro-inset px-1" onchange="WG.UI.MM.upd(${i}, 'offset', this.value.split(','))"></div>
                     </div>
                     <input type="color" value="${p.color}" onchange="WG.UI.MM.upd(${i}, 'color', this.value)" class="h-6 w-6 cursor-pointer">
-                    <button class="text-red-400 hover:text-red-300 font-bold ml-auto bg-gray-700 px-2 py-1 rounded" onclick="WG.UI.MM.rem(${i})">X</button>
+                    <button class="retro-button w-6 h-6 text-red-700 leading-none pb-1" onclick="WG.UI.MM.rem(${i})">X</button>
                 </div>`;
             });
         },
-        upd: function(i, k, v) { this.parts[i][k] = v; },
-        rem: function(i) { this.parts.splice(i, 1); this.render(); },
+        upd: function(i, k, v) { this.parts[i][k] = v; this.rebuildPreview(); },
+        rem: function(i) { this.parts.splice(i, 1); this.renderUI(); this.rebuildPreview(); },
         save: function() {
             const name = document.getElementById('mm-name').value.trim() || "Prop_" + Math.floor(Math.random()*1000);
             if(this.parts.length === 0) return alert("Need at least 1 part!");
-            WG.customModels[name] = { name: name, parts: JSON.parse(JSON.stringify(this.parts)) };
+            WG.customModels[name] = { 
+                name: name, parts: JSON.parse(JSON.stringify(this.parts)),
+                bouncy: document.getElementById('mm-bouncy').checked, mass: parseFloat(document.getElementById('mm-mass').value) || 5
+            };
             WG.Data.saveModel(name, WG.customModels[name]);
-            alert("Model Saved!");
+            alert("Model Saved.");
             WG.UI.closeModals();
             WG.UI.switchTab('custom');
         }
@@ -1050,57 +1395,198 @@ WG.UI = {
 };
 
 // ========================================================
-// MOD API
+// MOD API & EXAMPLES 
 // ========================================================
 WG.Mod = {
     hooks: { onTick: [] },
+    currency: 0,
+    isGameOver: false,
+    savedScripts: [],
     
+    init: function() {
+        // Collisions handled per body in spawnPrimitive now.
+    },
+
     API: {
         spawn: (t, x, y, z, opts) => WG.spawnPrimitive(t, x, y, z, opts),
         onTick: (fn) => WG.Mod.hooks.onTick.push(fn),
-        setGravity: (y) => WG.world.gravity.y = y,
-        log: (msg) => console.log("[ModAPI]", msg)
+        onCollide: (fn) => WG.Mod.hooks.onCollide = fn,
+        getPlayerPos: () => ({x: WG.Player.body.position.x, y: WG.Player.body.position.y, z: WG.Player.body.position.z}),
+        
+        // Game State APIs
+        setCurrency: (val) => { 
+            WG.Mod.currency = val; 
+            document.getElementById('currency-ui').classList.remove('hidden');
+            document.getElementById('currency-val').innerText = val;
+        },
+        addCurrency: (val) => { 
+            WG.Mod.currency += val; 
+            document.getElementById('currency-val').innerText = WG.Mod.currency;
+        },
+        gameOver: (msg) => {
+            WG.Mod.isGameOver = true;
+            document.exitPointerLock();
+            document.getElementById('game-over-ui').classList.remove('hidden');
+            document.getElementById('game-over-msg').innerText = msg || "You Lose!";
+        },
+        print: (msg, color='#fff') => {
+            const log = document.getElementById('console-output');
+            const span = document.createElement('div');
+            span.style.color = color;
+            span.innerText = typeof msg === 'object' ? JSON.stringify(msg) : msg;
+            log.appendChild(span);
+            log.scrollTop = log.scrollHeight;
+        },
+        // Dynamic UI 
+        createButton: (id, text, x, y, onClick) => {
+            const container = document.getElementById('dynamic-ui');
+            let el = document.getElementById(id);
+            if(el) el.remove();
+            el = document.createElement('button');
+            el.id = id; el.className = 'dyn-element retro-button px-4 py-2';
+            el.style.left = x + 'px'; el.style.top = y + 'px';
+            el.innerText = text; el.onclick = onClick;
+            container.appendChild(el);
+        },
+        createText: (id, text, x, y, color) => {
+            const container = document.getElementById('dynamic-ui');
+            let el = document.getElementById(id);
+            if(el) el.remove();
+            el = document.createElement('div');
+            el.id = id; el.className = 'dyn-element font-bold font-mono text-xl drop-shadow-md';
+            el.style.color = color || 'white';
+            el.style.left = x + 'px'; el.style.top = y + 'px';
+            el.innerText = text;
+            container.appendChild(el);
+        },
+        clearUI: () => {
+            document.getElementById('dynamic-ui').innerHTML = '';
+        }
+    },
+
+    loadExample: function(type) {
+        const ta = document.getElementById('mod-code');
+        if(type === 'minigame') {
+            ta.value = `// Mini-Game: Dodge the Anvil!
+API.setCurrency(0);
+
+let timer = 0;
+API.onTick((delta) => {
+    timer += delta;
+    if(timer > 1.5) { 
+        let pos = API.getPlayerPos();
+        API.addCurrency(10); 
+        API.spawn('box', pos.x, pos.y + 40, pos.z, { 
+            size: [4,4,4], color: 0xff0000, mass: 200, modTag: 'danger' 
+        });
+        timer = 0;
+    }
+});
+
+API.onCollide((a, b) => {
+    if((a === 'player' && b === 'danger') || (b === 'player' && a === 'danger')) {
+        API.gameOver("SQUISHED! Final Score: " + document.getElementById('currency-val').innerText);
+    }
+});`;
+        } else if (type === 'clicker') {
+            ta.value = `// Coin Collector
+API.setCurrency(0);
+
+for(let i=0; i<10; i++) {
+    API.spawn('cylinder', Math.random()*50-25, 2, Math.random()*50-25, { 
+        size: [2, 0.5], color: 0xffd700, mass: 1, bouncy: true, modTag: 'coin'
+    });
+}
+
+API.onCollide((a, b) => {
+    if(a === 'player' && b === 'coin' || b === 'player' && a === 'coin') {
+        API.addCurrency(1);
+        // Note: For simplicity, we just look for coin count.
+        // You'd normally delete the coin object via custom engine loops.
+        if(document.getElementById('currency-val').innerText == "10") {
+            API.gameOver("ALL COINS COLLECTED!");
+        }
+    }
+});`;
+        } else if (type === 'ui') {
+            ta.value = `// Dynamic UI & Interactions
+API.clearUI();
+
+API.createText('mytext', 'Welcome to the Moon', 20, 100, '#00ffff');
+
+API.createButton('mybtn', 'Toggle Low Gravity', 20, 140, () => {
+    API.print("Gravity changed!");
+    if(WG.world.gravity.y === -25) {
+        API.setGravity(-4);
+    } else {
+        API.setGravity(-25);
+    }
+});`;
+        }
     },
 
     execute: function() {
+        this.clear();
         const code = document.getElementById('mod-code').value;
+        this.savedScripts.push(code);
         try {
             const fn = new Function('API', code);
             fn(this.API);
-            alert("Mod Executed Successfully!");
+            this.API.print("Script Injected Successfully!", '#4ade80');
             WG.UI.closeModals();
+            WG.lockPointer();
         } catch(e) {
-            alert("Script Error:\n" + e.message);
+            alert("Script Compile Error:\n" + e.message);
         }
     },
     
     clear: function() {
         this.hooks.onTick = [];
-        WG.world.gravity.set(0, -15, 0); // Reset grav
+        this.hooks.onCollide = null;
+        this.isGameOver = false;
+        this.savedScripts = [];
+        document.getElementById('currency-ui').classList.add('hidden');
+        document.getElementById('game-over-ui').classList.add('hidden');
+        this.API.clearUI();
+    },
+
+    resetGame: function() {
+        this.isGameOver = false;
+        document.getElementById('game-over-ui').classList.add('hidden');
+        WG.clearWorld();
+        WG.buildBlank();
+        
+        // Re-execute saved scripts
+        let tempScripts = [...this.savedScripts];
+        this.clear(); // clears savedScripts too
+        tempScripts.forEach(script => {
+            this.savedScripts.push(script);
+            try { const fn = new Function('API', script); fn(this.API); } catch(e){}
+        });
+        
+        WG.lockPointer();
     },
 
     update: function(delta) {
-        this.hooks.onTick.forEach(fn => {
-            try { fn(delta); } catch(e){}
-        });
+        this.hooks.onTick.forEach(fn => { try { fn(delta); } catch(e){} });
     }
 };
 
 // ========================================================
-// DATA PERSISTENCE
+// DATA PERSISTENCE (Exports scripts & mode toggles)
 // ========================================================
 WG.Data = {
-    db: null,
+    db: null, importedState: null,
     
     initDB: function() {
         return new Promise((resolve) => {
-            const req = indexedDB.open("WebGMOD", 1);
+            const req = indexedDB.open("PhysicsEngineDB", 1);
             req.onupgradeneeded = e => {
                 let db = e.target.result;
                 if(!db.objectStoreNames.contains('models')) db.createObjectStore('models');
             };
             req.onsuccess = e => { this.db = e.target.result; resolve(); };
-            req.onerror = () => resolve(); // Ignore errors, run memory only
+            req.onerror = () => resolve(); 
         });
     },
 
@@ -1132,9 +1618,10 @@ WG.Data = {
     },
 
     serialize: function() {
-        const state = { objects: [] };
+        const state = { objects: [], scripts: WG.Mod.savedScripts };
         WG.objects.forEach(obj => {
-            if(obj.type === 'static' || !obj.body) return; // Ignore ground
+            if(obj.opts && obj.opts.isGround) return; 
+            if(obj.type === 'static' || !obj.body) return; 
             state.objects.push({
                 type: obj.type, subType: obj.subType, modelName: obj.modelName,
                 opts: obj.opts,
@@ -1146,17 +1633,7 @@ WG.Data = {
     },
 
     deserialize: function(state) {
-        WG.clearWorld();
-        // Re-add ground
-        const groundGeo = new THREE.PlaneGeometry(500, 500);
-        const groundMesh = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({color:0x3d5a40}));
-        groundMesh.rotation.x = -Math.PI / 2;
-        WG.scene.add(groundMesh);
-        const gBody = new CANNON.Body({ mass: 0, material: WG.materials.standard, shape: new CANNON.Plane() });
-        gBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
-        WG.world.addBody(gBody);
-        WG.objects.push({ type: 'static', mesh: groundMesh, body: gBody });
-
+        WG.buildBlank(); 
         state.objects.forEach(data => {
             if(data.type === 'primitive') {
                 WG.spawnPrimitive(data.subType, data.pos[0], data.pos[1], data.pos[2], Object.assign({}, data.opts, {rotation: data.quat}));
@@ -1164,19 +1641,22 @@ WG.Data = {
                 WG.spawnCustomModel(data.modelName, data.pos[0], data.pos[1], data.pos[2], data.quat);
             }
         });
-    },
 
-    saveSlot: function() {
-        const str = JSON.stringify(this.serialize());
-        localStorage.setItem('webgmod_save', str);
-        alert("World state saved to LocalStorage!");
+        // Run imported scripts
+        if(state.scripts) {
+            WG.Mod.clear();
+            state.scripts.forEach(script => {
+                WG.Mod.savedScripts.push(script);
+                try { const fn = new Function('API', script); fn(WG.Mod.API); } catch(e){}
+            });
+        }
     },
 
     exportFile: function() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.serialize()));
         const a = document.createElement('a');
         a.href = dataStr;
-        a.download = "webgmod_world.json";
+        a.download = "physics_world.json";
         a.click();
     },
 
@@ -1187,17 +1667,27 @@ WG.Data = {
             const reader = new FileReader();
             reader.onload = ev => {
                 try {
-                    const state = JSON.parse(ev.target.result);
-                    WG.launch('blank', 'sandbox');
-                    setTimeout(() => WG.Data.deserialize(state), 500);
-                } catch(err) { alert("Invalid save file."); }
+                    this.importedState = JSON.parse(ev.target.result);
+                    document.getElementById('launch-screen').classList.add('hidden');
+                    document.getElementById('import-mode-screen').classList.remove('hidden');
+                } catch(err) { alert("Corrupt Save File."); }
             };
             reader.readAsText(e.target.files[0]);
         };
         input.click();
+    },
+
+    resumeImport: function(mode) {
+        document.getElementById('import-mode-screen').classList.add('hidden');
+        if(this.importedState) {
+            WG.launch('blank', mode);
+            setTimeout(() => {
+                this.deserialize(this.importedState);
+                this.importedState = null;
+            }, 100);
+        }
     }
 };
 </script>
 </body>
-
 </html>
