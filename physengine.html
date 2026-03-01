@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physics Engine</title>
-    <link rel="icon" type="image/x-icon" href="physics.ico">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OBJ Loader for custom model importing -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <!-- Cannon.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
     
@@ -80,7 +81,7 @@
             <div class="mt-3 flex justify-end gap-2 text-xs font-bold text-gray-400">
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">1: Physgun</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">2: Portal Gun</span>
-                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">3: Link/Weld</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">3: Anchor</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-yellow-400">T: Thrusters</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">Q/Esc: Menu</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">~: Console</span>
@@ -100,6 +101,7 @@
             </div>
         </div>
 
+        <script>window.WG = window.WG || {};</script>
         <!-- Retro Launch Screen -->
         <div id="launch-screen" class="interactive absolute inset-0 bg-teal-800 flex items-center justify-center z-[100]">
             <div class="retro-panel w-full max-w-3xl flex flex-col shadow-2xl">
@@ -111,12 +113,15 @@
                     <!-- Retro Info -->
                     <div class="flex-1 retro-inset p-4 text-sm flex flex-col justify-between">
                         <div>
-                            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 pb-1">System Instructions</h2>
+                            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 pb-1">Instructions</h2>
                             <ul class="space-y-2 text-gray-800">
                                 <li><b>W A S D</b> - Traverse environment</li>
                                 <li><b>Space</b> - Execute Jump</li>
                                 <li><b>Q / Esc</b> - Toggle Main Interface</li>
+                                    <li><b>U</b> - Unlock / Lock Mouse</li>
                                 <li><b>1 / 2 / 3</b> - Select Active Device</li>
+                                <li><b>Z / X / C</b> - Rotate Object</li>
+                                <li><b>PLEASE</b> Ignore portals when they bug out.</li>
                             </ul>
                         </div>
                         <div class="mt-4 pt-2 border-t border-gray-400 text-xs text-gray-600">
@@ -131,14 +136,17 @@
                             <h1 class="text-4xl font-black text-gray-800 tracking-tighter">Physics Engine</h1>
                         </div>
                         
-                        <button class="retro-button w-full py-4 text-lg" onclick="WG.launch('blank', 'sandbox')">
+                        <button id="launch-blank" class="retro-button w-full py-4 text-lg">
                             Load Blank Canvas
                         </button>
-                        <button class="retro-button w-full py-4 text-lg" onclick="WG.launch('premade', 'sandbox')">
+                        <button id="launch-demo" class="retro-button w-full py-4 text-lg">
                             Load Demo World
                         </button>
                         <button class="retro-button w-full py-2 text-sm mt-4" onclick="WG.Data.importFile()">
                             Import Save File (.json)
+                        </button>
+                        <button class="retro-button w-full py-2 text-sm mt-2 bg-red-200 text-red-900" onclick="WG.Data.clearAll()">
+                            Clear Saved Data
                         </button>
                     </div>
                 </div>
@@ -176,6 +184,7 @@
                         <div class="space-y-2 pt-4 border-t border-gray-500">
                             <button class="retro-button w-full py-2 bg-purple-200" onclick="WG.UI.openModelMaker()">Model Maker</button>
                             <button class="retro-button w-full py-2 bg-blue-200" onclick="WG.UI.openModCreator()">Mod API Editor</button>
+                            <button class="retro-button w-full py-2 bg-green-200" onclick="WG.UI.openMaterialEditor()">Material Editor</button>
                         </div>
                         <div class="space-y-2 pt-4 border-t border-gray-500 mt-4">
                             <button class="retro-button w-full py-1 text-sm" onclick="WG.Data.exportFile()">Export World & Scripts</button>
@@ -223,6 +232,25 @@
             </div>
         </div>
 
+        <!-- Material Editor Modal -->
+        <div id="material-editor" class="interactive hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div class="retro-panel w-[500px] h-[220px] flex flex-col shadow-2xl">
+                <div class="retro-title flex justify-between">
+                    <span>Material Editor</span>
+                    <button class="bg-gray-300 text-black px-1 border border-gray-100 border-b-gray-600 border-r-gray-600 text-xs cursor-pointer font-bold leading-none flex items-center" onclick="document.getElementById('material-editor').classList.add('hidden')">&times;</button>
+                </div>
+                <div class="p-4 flex flex-col gap-3">
+                    <p class="text-sm">Click an object in the scene to select it, then choose a color.</p>
+                    <div class="flex gap-2 items-center">
+                        <input type="color" id="mat-color" value="#ffffff" class="h-10 w-12">
+                        <button class="retro-button px-4 py-2" onclick="WG.UI.applyMaterialToSelection()">Apply Color</button>
+                        <button class="retro-button px-4 py-2" onclick="WG.UI.selectMaterialFromPointer()">Select From Pointer</button>
+                    </div>
+                    <div class="text-xs text-gray-600">Selected object id: <span id="mat-selected">none</span></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Mod Creator Modal -->
         <div id="mod-creator" class="interactive hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
             <div class="retro-panel w-[1000px] h-[700px] flex flex-col shadow-2xl">
@@ -256,6 +284,18 @@
                                 <strong>API.gameOver(message)</strong><br>
                                 <strong>API.print(message)</strong> - Writes to Console
                             </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.onKeyDown(fn) / API.onKeyUp(fn)</strong><br>
+                                Register keyboard event callbacks for mods
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.freezePermanent(objectId)</strong><br>
+                                Permanently freeze an object in-place until unfrozen by API
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.setGravity(value)</strong><br>
+                                Adjust world gravity (negative values pull down)
+                            </div>
                             
                             <hr class="border-gray-500 my-2">
                             <h3 class="font-bold mb-1">Load Templates</h3>
@@ -274,6 +314,8 @@ API.print("Script Loaded!");
                 </div>
 
                 <div class="p-3 border-t border-gray-500 flex justify-end space-x-2 bg-[#d4d0c8]">
+                    <button class="retro-button px-6 py-1 text-gray-800" onclick="WG.Mod.importScript()">Import Script (.js)</button>
+                    <button class="retro-button px-6 py-1 text-gray-800" onclick="WG.Mod.exportScript()">Export Script (.js)</button>
                     <button class="retro-button px-6 py-1 text-red-800" onclick="WG.Mod.clear()">Clear Scripts</button>
                     <button class="retro-button px-6 py-1 font-bold text-blue-900" onclick="WG.Mod.execute()">Inject & Run Script</button>
                 </div>
@@ -296,46 +338,59 @@ window.WG = {
     isRunning: false,
     keys: { w: false, a: false, s: false, d: false, space: false, t: false },
     thrustersActive: false,
+    timeScale: 1,
+    _suppressMenuOnUnlock: false,
     
     terminalVelocityDown: -50,
     gravity: -25,
 
-    launch: async function(template, mode) {
-        this.mode = mode || 'sandbox';
-        
-        try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); } catch(e) {}
-
-        document.getElementById('launch-screen').classList.add('hidden');
-        document.getElementById('crosshair').classList.remove('hidden');
-        
-        if(this.mode === 'sandbox') {
-            document.getElementById('hud').classList.remove('hidden');
-        } else {
-            document.getElementById('hud').classList.add('hidden');
-            // Hide tool visuals in play mode
-            WG.Tools.equip('none');
-        }
-
-        await this.Data.initDB();
-        
-        if(!this.scene) { 
-            this.initEngine();
-            this.Player.init();
-            this.Tools.init();
-            this.Portals.init();
-            this.UI.init();
-            this.Mod.init();
-        }
-
-        await this.Data.loadCustomModels();
-
-        if (template === 'premade') this.buildPremade();
-        else if (template === 'blank') this.buildBlank();
-
-        this.isRunning = true;
-        this.animate();
-        this.lockPointer();
+    tryLaunch: function(template) {
+        console.log("tryLaunch", template);
+        try { WG.launch(template, 'sandbox'); } catch(e) { console.error('launch error', e); }
     },
+    launch: async function(template, mode) {
+        console.log("WG.launch called", template, mode);
+        try {
+            this.mode = mode || 'sandbox';
+            try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); } catch(e) {}
+
+            document.getElementById('launch-screen').classList.add('hidden');
+            document.getElementById('crosshair').classList.remove('hidden');
+            
+            if(this.mode === 'sandbox') {
+                document.getElementById('hud').classList.remove('hidden');
+            } else {
+                document.getElementById('hud').classList.add('hidden');
+                // Hide tool visuals in play mode
+                WG.Tools.equip('none');
+            }
+
+            await this.Data.initDB();
+            
+            if(!this.scene) { 
+                this.initEngine();
+                this.Player.init();
+                this.Tools.init();
+                this.Portals.init();
+                this.UI.init();
+                this.Mod.init();
+            }
+
+            await this.Data.loadCustomModels();
+
+            if (template === 'premade') this.buildPremade();
+            else if (template === 'blank') this.buildBlank();
+
+            this.isRunning = true;
+            this.animate();
+            this.lockPointer();
+        } catch(err) {
+            console.error("Error during launch", err);
+            alert("Failed to start: " + err.message);
+            document.getElementById('launch-screen').classList.remove('hidden');
+        }
+    },
+
 
     exitToMainMenu: function() {
         this.isRunning = false;
@@ -391,6 +446,11 @@ window.WG = {
         this.world.addContactMaterial(bouncyMat);
 
         this.clock = new THREE.Clock();
+
+        // Initialize input subsystem for API key listeners
+        if(!this.Input) this.Input = {};
+        if(typeof this.Input.init === 'function') this.Input.init();
+        if(WG.System && WG.System.Sound && typeof WG.System.Sound.init === 'function') WG.System.Sound.init();
 
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -473,6 +533,8 @@ window.WG = {
         this.spawnPrimitive('sphere', -10, 5, 10, { size: [4], color: '#ff66b2', mass: 0.5, isBalloon: true });
     },
 
+    // buildTerrain removed — terrain gamemode deprecated and removed
+
     spawnPrimitive: function(type, x, y, z, opts = {}) {
         let size = opts.size || [2, 2, 2];
         let color = opts.color || Math.floor(Math.random() * 0xffffff);
@@ -501,6 +563,10 @@ window.WG = {
             material: matType,
             position: new CANNON.Vec3(x, y, z)
         });
+        // Enable sleeping to reduce CPU for idle objects
+        body.allowSleep = true;
+        body.sleepSpeedLimit = 0.1;
+        body.sleepTimeLimit = 1;
         
         if(type === 'cylinder') {
             let q = new CANNON.Quaternion();
@@ -547,6 +613,9 @@ window.WG = {
 
         const body = new CANNON.Body({ mass: totalMass, material: matType, position: new CANNON.Vec3(x, y, z) });
         body.velocity.set(0,0,0);
+        body.allowSleep = true;
+        body.sleepSpeedLimit = 0.1;
+        body.sleepTimeLimit = 1;
 
         def.parts.forEach(part => {
             let geo, shape;
@@ -615,12 +684,13 @@ window.WG = {
 
         if(this.Mod.isGameOver) return; 
 
-        const delta = Math.min(this.clock.getDelta(), 0.1);
+        const rawDelta = Math.min(this.clock.getDelta(), 0.1);
+        const delta = rawDelta * (this.timeScale || 1);
 
         this.Player.update(delta);
         this.Tools.update(delta);
         this.Mod.update(delta);
-        
+
         this.world.step(1/60, delta, 3);
         this.syncPhysics();
         this.Portals.updatePhysics();
@@ -636,6 +706,62 @@ window.WG = {
         document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
         document.body.requestPointerLock();
     }
+};
+
+// Input subsystem: key listeners and API hook support
+WG.Input = {
+    keys: {},
+    keyDownListeners: [],
+    keyUpListeners: [],
+    init: function() {
+        window.addEventListener('keydown', (e) => {
+            const code = e.code || '';
+            this.keys[code] = true;
+            // Global convenience bindings
+            if(code === 'KeyU') {
+                try {
+                    if(document.pointerLockElement === document.body) {
+                        WG._suppressMenuOnUnlock = true;
+                        document.exitPointerLock();
+                    } else {
+                        WG._suppressMenuOnUnlock = false;
+                        document.body.requestPointerLock();
+                    }
+                } catch(e){}
+            }
+            if(code === 'KeyR') { // Throw if holding
+                if(WG.Tools && WG.Tools.heldBody) {
+                    const camDir = new THREE.Vector3(); WG.camera.getWorldDirection(camDir);
+                    const impulse = new CANNON.Vec3(camDir.x * 30 * (WG.Tools.heldBody.mass||1), camDir.y * 30 * (WG.Tools.heldBody.mass||1), camDir.z * 30 * (WG.Tools.heldBody.mass||1));
+                    WG.Tools.heldBody.velocity.vadd(impulse, WG.Tools.heldBody.velocity);
+                    WG.Tools.pgUp();
+                }
+            }
+
+            // Rotation shortcuts while holding: Z/X/C
+            if((code === 'KeyZ' || code === 'KeyX' || code === 'KeyC') && WG.Tools && WG.Tools.heldBody) {
+                const axisMap = { 'KeyZ': new CANNON.Vec3(0,0,1), 'KeyX': new CANNON.Vec3(1,0,0), 'KeyC': new CANNON.Vec3(0,1,0) };
+                const axis = axisMap[code];
+                const q = new CANNON.Quaternion();
+                q.setFromAxisAngle(axis, Math.PI/2);
+                WG.Tools.heldBody.quaternion = WG.Tools.heldBody.quaternion.mult(q);
+                // update visual
+                const obj = WG.objects.find(o => o.body === WG.Tools.heldBody);
+                if(obj && obj.mesh) obj.mesh.quaternion.copy(WG.Tools.heldBody.quaternion);
+            }
+
+            // dispatch to registered listeners
+            this.keyDownListeners.forEach(fn => { try{ fn(e); }catch(e){} });
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const code = e.code || '';
+            this.keys[code] = false;
+            this.keyUpListeners.forEach(fn => { try{ fn(e); }catch(e){} });
+        });
+    },
+    onKeyDown: function(fn) { this.keyDownListeners.push(fn); },
+    onKeyUp: function(fn) { this.keyUpListeners.push(fn); }
 };
 
 // ========================================================
@@ -685,6 +811,11 @@ WG.Player = {
 
         document.addEventListener('pointerlockchange', () => {
             if(document.pointerLockElement !== document.body) {
+                // If we programmatically unlocked because user pressed U, don't open the menu.
+                if(WG._suppressMenuOnUnlock) {
+                    WG._suppressMenuOnUnlock = false;
+                    return;
+                }
                 if(!WG.UI.modalsOpen() && WG.isRunning && !WG.Mod.isGameOver && !WG.UI.isConsoleOpen) {
                     WG.UI.toggleQMenu(true);
                 }
@@ -730,12 +861,13 @@ WG.Player = {
 
         // Accurate Jump Raycast directly below
         const pos = this.body.position;
-        const start = new CANNON.Vec3(pos.x, pos.y - this.radius + 0.1, pos.z);
-        const end = new CANNON.Vec3(pos.x, pos.y - this.radius - 0.25, pos.z);
+        const start = new CANNON.Vec3(pos.x, pos.y - this.radius + 0.12, pos.z);
+        // Extend ray further down to reliably detect standing on props/objects
+        const end = new CANNON.Vec3(pos.x, pos.y - this.radius - 0.6, pos.z);
         const ray = new CANNON.Ray(start, end);
         
         const hasHit = ray.intersectWorld(WG.world, { mode: CANNON.Ray.CLOSEST });
-        this.canJump = (hasHit && ray.result.body !== this.body);
+        this.canJump = (hasHit && ray.result && ray.result.body && ray.result.body !== this.body);
 
         // Completely stop receiving input if pointer is not locked (e.g., in menu)
         if (document.pointerLockElement !== document.body) {
@@ -794,6 +926,7 @@ WG.Tools = {
         document.addEventListener('mousedown', (e) => {
             if(document.pointerLockElement !== document.body || WG.mode !== 'sandbox') return;
             if(this.active === 'physgun') this.pgDown(e);
+            if(this.active === 'raygun') this.rgFire(e);
             if(this.active === 'portal') WG.Portals.shoot(e);
             if(this.active === 'constraint') this.cnDown(e);
         });
@@ -810,6 +943,7 @@ WG.Tools = {
         document.addEventListener('keydown', (e) => {
             if(document.pointerLockElement !== document.body) return;
             if(e.code === 'KeyE' && this.active === 'physgun') this.pgUnfreeze();
+            // expose rotate/throw/unlock handled in WG.Input; keep this for compatibility
         });
     },
 
@@ -827,12 +961,27 @@ WG.Tools = {
             hTool.innerText = "PORTALGUN"; hTool.className = "text-4xl font-extrabold italic text-orange-500 tracking-wider";
             hDesc.innerText = "LMB: Blue Portal | RMB: Orange Portal";
         } else if (tool === 'constraint') {
-            hTool.innerText = "WELD TOOL"; hTool.className = "text-4xl font-extrabold italic text-yellow-400 tracking-wider";
-            hDesc.innerText = "LMB: Link Obj A to Obj B | RMB: Clear Selection";
+            hTool.innerText = "ANCHOR"; hTool.className = "text-4xl font-extrabold italic text-yellow-400 tracking-wider";
+            hDesc.innerText = "LMB: Toggle Anchor (permanent). RMB: Clear Selection";
             this.cNodeA = null;
+        } else if (tool === 'raygun') {
+            hTool.innerText = "RAY GUN"; hTool.className = "text-4xl font-extrabold italic text-pink-400 tracking-wider";
+            hDesc.innerText = "LMB: Fire ray (applies impulse)";
         } else {
             hTool.innerText = ""; hDesc.innerText = "";
         }
+    },
+
+    rgFire: function(e) {
+        const hits = this.raycastObjects();
+        if(hits.length === 0) return;
+        const hit = hits[0];
+        const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+        if(!obj || !obj.body) return;
+        const dir = new CANNON.Vec3(hit.point.x - WG.camera.position.x, hit.point.y - WG.camera.position.y, hit.point.z - WG.camera.position.z);
+        dir.normalize(); dir.scale(60 * (obj.body.mass || 1), dir);
+        obj.body.applyImpulse(dir, obj.body.position);
+        WG.System.Sound.playSine(600, 0.08, 0.04);
     },
 
     raycastObjects: function() {
@@ -857,6 +1006,9 @@ WG.Tools = {
             this.marker.visible = true;
             document.getElementById('crosshair').classList.add('active');
 
+            // highlight held object
+            this._setHighlight(obj, true);
+
             if(this.heldBody.type === CANNON.Body.STATIC) {
                 this.heldBody.type = CANNON.Body.DYNAMIC;
                 this.heldBody.mass = obj.opts ? obj.opts.mass : 5;
@@ -871,6 +1023,11 @@ WG.Tools = {
         }
     },
     pgUp: function() {
+        // clear highlight
+        if(this.heldBody) {
+            const obj = WG.objects.find(o => o.body === this.heldBody);
+            if(obj) this._setHighlight(obj, false);
+        }
         this.heldBody = null;
         this.marker.visible = false;
         document.getElementById('crosshair').classList.remove('active');
@@ -894,9 +1051,10 @@ WG.Tools = {
 
     // Constraint Tool Logic
     cnDown: function(e) {
-        if(e.button === 2) { // Cancel
+        // Right-click cancels
+        if(e.button === 2) {
             this.cNodeA = null;
-            WG.Mod.API.print("Weld selection cleared.", '#fbbf24');
+            WG.Mod.API.print("Anchor selection cleared.", '#fbbf24');
             return;
         }
 
@@ -906,24 +1064,21 @@ WG.Tools = {
         const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
         if(!obj) return;
 
-        if(!this.cNodeA) {
-            this.cNodeA = obj.body;
-            WG.Mod.API.print("Node A selected. Click another object.", '#fbbf24');
+        // Toggle anchor state: permanently keep the object in place until toggled again
+        if(!obj.opts) obj.opts = {};
+        if(obj.opts.anchored) {
+            obj.opts.anchored = false;
+            // restore to dynamic with original mass
+            obj.body.type = CANNON.Body.DYNAMIC;
+            obj.body.mass = obj.opts.mass || 5;
+            obj.body.updateMassProperties();
+            obj.body.wakeUp();
+            WG.Mod.API.print('Object unanchored.', '#fb7185');
         } else {
-            if(this.cNodeA !== obj.body) {
-                // Create Distance constraint (Weld)
-                const dist = this.cNodeA.position.distanceTo(obj.body.position);
-                const constraint = new CANNON.DistanceConstraint(this.cNodeA, obj.body, dist);
-                WG.world.addConstraint(constraint);
-                WG.constraints.push(constraint); // Track to clear later
-                
-                // Wake both up
-                if(this.cNodeA.type === CANNON.Body.STATIC && this.cNodeA.mass !== 0) { this.cNodeA.type = CANNON.Body.DYNAMIC; this.cNodeA.updateMassProperties(); }
-                if(obj.body.type === CANNON.Body.STATIC && obj.body.mass !== 0) { obj.body.type = CANNON.Body.DYNAMIC; obj.body.updateMassProperties(); }
-                
-                WG.Mod.API.print("Objects Welded!", '#4ade80');
-            }
-            this.cNodeA = null;
+            obj.opts.anchored = true;
+            obj.body.velocity.set(0,0,0); obj.body.angularVelocity.set(0,0,0);
+            obj.body.type = CANNON.Body.STATIC; obj.body.mass = 0; obj.body.updateMassProperties();
+            WG.Mod.API.print('Object anchored permanently.', '#4ade80');
         }
     },
 
@@ -953,13 +1108,33 @@ WG.Tools = {
             this.heldBody.angularVelocity.scale(0.8, this.heldBody.angularVelocity); 
         }
     }
+
+    ,
+
+    _setHighlight: function(obj, on) {
+        if(!obj || !obj.mesh) return;
+        const apply = (mesh, on) => {
+            if(!mesh.material) return;
+            if(on) {
+                if(!mesh.userData._origEmissive) mesh.userData._origEmissive = mesh.material.emissive ? mesh.material.emissive.clone() : new THREE.Color(0x000000);
+                if(!mesh.material.emissive) mesh.material.emissive = new THREE.Color(0x00ff00);
+                mesh.material.emissive.setHex(0x00ff00);
+            } else {
+                if(mesh.userData._origEmissive) mesh.material.emissive.copy(mesh.userData._origEmissive);
+            }
+        };
+
+        if(obj.mesh.type === 'Group') {
+            obj.mesh.traverse(m => { if(m.isMesh) apply(m, on); });
+        } else if (obj.mesh.isMesh) apply(obj.mesh, on);
+    }
 };
 
 // ========================================================
 // PORTALS SYSTEM (Floor Fixes)
 // ========================================================
 WG.Portals = {
-    blue: null, orange: null, width: 4, height: 6,
+    blue: null, orange: null, width: 4, height: 6, offset: 0.3, // distance from surface
 
     init: function() {
         this.rtBlue = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
@@ -1001,7 +1176,7 @@ WG.Portals = {
         this.blue = null; this.orange = null;
     },
 
-    shoot: function(e) {
+        shoot: function(e) {
         if(e.button !== 0 && e.button !== 2) return;
         const hits = WG.Tools.raycastObjects();
         if(hits.length === 0) return;
@@ -1013,19 +1188,33 @@ WG.Portals = {
         if(!obj || obj.body.type !== CANNON.Body.STATIC) return; 
 
         const mesh = isBlue ? this.meshBlue : this.meshOrange;
-        mesh.position.copy(hit.point).add(hit.face.normal.clone().multiplyScalar(0.05));
-        
-        // Critical fix for floor/ceiling portals to prevent flipping/singularity
-        if (Math.abs(hit.face.normal.y) > 0.99) {
-            mesh.up.set(0, 0, 1);
-        } else {
-            mesh.up.set(0, 1, 0);
-        }
-        const lookPt = mesh.position.clone().add(hit.face.normal);
-        mesh.lookAt(lookPt);
+        // Compute world-space surface normal (faces in mesh local space)
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+        let normal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+        // ensure portal faces the camera: flip if necessary
+        const camVec = WG.camera.position.clone().sub(hit.point);
+        if(camVec.dot(normal) < 0) normal.negate();
+        // place portal slightly off the surface so it's visually flush
+        const off = typeof this.offset === 'number' ? this.offset : 0.1;
+        mesh.position.copy(hit.point).add(normal.clone().multiplyScalar(off));
+
+        // calculate rotation based on camera pitch snapped to 90° increments and build a local portal basis
+        const camForward = new THREE.Vector3(); WG.camera.getWorldDirection(camForward);
+        const camPitch = Math.asin(camForward.y);
+        const snap = Math.round(camPitch / (Math.PI / 2)) * (Math.PI / 2);
+        // rotate the world-up vector around the surface normal by the snapped pitch
+        let portalUp = new THREE.Vector3(0, 1, 0).clone()
+            .applyQuaternion(new THREE.Quaternion().setFromAxisAngle(normal, snap));
+        // tangent lies along portal plane perpendicular to normal
+        let tangent = new THREE.Vector3().crossVectors(portalUp, normal).normalize();
+        const bitangent = normal.clone().cross(tangent).normalize();
+
+        const m = new THREE.Matrix4();
+        m.makeBasis(tangent, bitangent, normal);
+        mesh.quaternion.setFromRotationMatrix(m);
         mesh.visible = true;
 
-        const pData = { pos: mesh.position.clone(), quat: mesh.quaternion.clone(), normal: hit.face.normal.clone() };
+        const pData = { pos: mesh.position.clone(), quat: mesh.quaternion.clone(), normal: normal.clone() };
         if(isBlue) this.blue = pData; else this.orange = pData;
     },
 
@@ -1077,23 +1266,27 @@ WG.Portals = {
     },
 
     checkCrossing: function(body, src, dest, isPlayer=false) {
-        // Distance check needs to be forgiving enough for vertical entry too
-        if(body.position.distanceTo(src.pos) < this.height / 1.2) {
-            const vel = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
-            if(vel.lengthSq() < 0.1 && !isPlayer) return;
+        // box bounds check: convert body position to portal-local coordinates
+        // src.pos and body.position are THREE.Vector3 and CANNON.Vec3; normalize both
+        const rel = new THREE.Vector3(body.position.x, body.position.y, body.position.z).sub(src.pos);
+        let qInv = src.quat.clone().invert();
+        rel.applyQuaternion(qInv);
+        // very tight bounds: must be nearly centered on portal to cross
+        if(Math.abs(rel.x) > this.width/3.5 || Math.abs(rel.y) > this.height/3.5) return;
 
-            vel.normalize();
-            if(vel.dot(src.normal) < 0) {
-                const qSrcInv = src.quat.clone().invert();
-                const qY180 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
-                const qTotal = new THREE.Quaternion().multiplyQuaternions(qY180, dest.quat).multiply(qSrcInv);
+        const vel = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
+        if(vel.lengthSq() < 0.1 && !isPlayer) return;
+
+        vel.normalize();
+        if(vel.dot(src.normal) < 0) {
+            const qSrcInv = src.quat.clone().invert();
+            const qY180 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
+            const qTotal = new THREE.Quaternion().multiplyQuaternions(qY180, dest.quat).multiply(qSrcInv);
 
                 let posOffset = new THREE.Vector3().copy(body.position).sub(src.pos);
                 posOffset.applyQuaternion(qTotal);
-                body.position.copy(dest.pos).vadd(posOffset, body.position);
-                
-                const push = new CANNON.Vec3(dest.normal.x, dest.normal.y, dest.normal.z).scale(isPlayer ? 2.5 : 2.0);
-                body.position.vadd(push, body.position);
+                // place at destination with small clearance to avoid re-triggering
+                body.position.copy(dest.pos).add(posOffset).add(dest.normal.clone().multiplyScalar(0.1));
 
                 let v = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
                 v.applyQuaternion(qTotal);
@@ -1111,7 +1304,6 @@ WG.Portals = {
                 }
             }
         }
-    }
 };
 
 // ========================================================
@@ -1209,7 +1401,12 @@ WG.UI = {
                 </div>
             `;
         } else if (tab === 'custom') {
-            let html = `<h3 class="text-xl font-bold mb-4 border-b border-gray-400 pb-1">Custom Library</h3><div class="grid grid-cols-4 gap-3">`;
+            let html = `<h3 class="text-xl font-bold mb-4 border-b border-gray-400 pb-1">Custom Library</h3>
+            <div class="flex gap-2 mb-4">
+                <button class="retro-button py-2 px-3 text-sm" onclick="WG.UI.exportModels()">Export Models (JSON)</button>
+                <button class="retro-button py-2 px-3 text-sm" onclick="WG.UI.importModels()">Import Models (JSON)</button>
+            </div>
+            <div class="grid grid-cols-4 gap-3">`;
             const keys = Object.keys(WG.customModels);
             if(keys.length === 0) {
                 html += `<div class="col-span-4 text-center mt-10">Library is empty. Create models in the Model Maker!</div>`;
@@ -1235,6 +1432,13 @@ WG.UI = {
                         <label class="text-sm font-bold">Atmosphere Color</label>
                         <input type="color" id="set-sky" value="#7ec0ee" class="h-10 w-full cursor-pointer">
                     </div>
+                    <div class="flex flex-col">
+                        <label class="text-sm font-bold">UI Theme</label>
+                        <div class="flex gap-2">
+                            <button class="retro-button py-2 px-3" onclick="WG.UI.toggleDarkMode(true)">Dark Mode</button>
+                            <button class="retro-button py-2 px-3" onclick="WG.UI.toggleDarkMode(false)">Light Mode</button>
+                        </div>
+                    </div>
                     <button class="retro-button py-2 w-full mt-4" onclick="WG.UI.applySettings()">Apply Settings</button>
                 </div>
             `;
@@ -1249,6 +1453,72 @@ WG.UI = {
         WG.scene.background = new THREE.Color(sky);
         WG.scene.fog.color = new THREE.Color(sky);
         WG.Mod.API.print("Settings Applied.", '#4ade80');
+    },
+
+    toggleDarkMode: function(enable) {
+        if(enable) document.body.classList.add('wg-dark');
+        else document.body.classList.remove('wg-dark');
+        // Simple CSS tweak for retro panels
+        const style = document.getElementById('wg-dark-style') || document.createElement('style');
+        style.id = 'wg-dark-style';
+        style.innerHTML = enable ? `body.wg-dark { background:#0b0b0b; color: #ddd } .retro-panel { background:#222 !important; color:#ddd } .retro-inset{background:#111 !important; color:#ddd}` : '';
+        document.head.appendChild(style);
+    },
+
+    exportModels: function() {
+        const json = JSON.stringify(WG.customModels);
+        const blob = new Blob([json], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'models.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        WG.Mod.API.print('Models exported as JSON', '#4ade80');
+    },
+
+    importModels: function() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = e => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const loaded = JSON.parse(ev.target.result);
+                    Object.assign(WG.customModels, loaded);
+                    WG.Data.saveModel('bulk_import', loaded);
+                    WG.UI.switchTab('custom');
+                    WG.Mod.API.print('Models imported successfully', '#4ade80');
+                } catch(err) { 
+                    alert('Invalid JSON file: ' + err.message); 
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        };
+        input.click();
+    },
+
+    // Material Editor helpers
+    matSelectionId: null,
+    openMaterialEditor: function() { document.getElementById('material-editor').classList.remove('hidden'); document.getElementById('mat-selected').innerText = this.matSelectionId || 'none'; },
+    applyMaterialToSelection: function() {
+        const id = this.matSelectionId;
+        const color = document.getElementById('mat-color').value;
+        if(!id) return alert('No object selected');
+        const obj = WG.objects.find(o => o.id === id);
+        if(!obj) return alert('Object not found');
+        const apply = (m) => { if(m.material) { m.material.color = new THREE.Color(color); m.material.needsUpdate = true; } };
+        if(obj.mesh.type === 'Group') obj.mesh.traverse(m => { if(m.isMesh) apply(m); }); else if(obj.mesh.isMesh) apply(obj.mesh);
+        WG.Mod.API.print('Material applied to ' + id, '#93c5fd');
+    },
+    selectMaterialFromPointer: function() {
+        const hits = WG.Tools.raycastObjects();
+        if(hits.length === 0) return alert('No object under pointer');
+        const hit = hits[0];
+        const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+        if(!obj) return alert('No object match');
+        this.matSelectionId = obj.id; document.getElementById('mat-selected').innerText = obj.id;
     },
 
     getSpawnPos: function() {
@@ -1463,6 +1733,57 @@ WG.Mod = {
         clearUI: () => {
             document.getElementById('dynamic-ui').innerHTML = '';
         }
+        ,
+        // Key event hooks for mods
+        onKeyDown: (fn) => { WG.Input.onKeyDown(fn); },
+        onKeyUp: (fn) => { WG.Input.onKeyUp(fn); },
+        // Permanently freeze an object by id (or body) so it never simulates until unfrozen
+        freezePermanent: (idOrBody) => {
+            let obj = null;
+            if(typeof idOrBody === 'string') obj = WG.objects.find(o => o.id === idOrBody);
+            else obj = WG.objects.find(o => o.body === idOrBody) || WG.objects.find(o => o === idOrBody);
+            if(!obj) return false;
+            obj.opts.permanentFrozen = true;
+            obj.body.velocity.set(0,0,0); obj.body.angularVelocity.set(0,0,0);
+            obj.body.type = CANNON.Body.STATIC; obj.body.mass = 0; obj.body.updateMassProperties();
+            return true;
+        },
+        // World controls
+        setGravity: (val) => { WG.world.gravity.set(0, val, 0); WG.gravity = val; },
+        // Export a single model (primitive or custom) as JSON
+        exportModel: (id) => {
+            const obj = WG.objects.find(o => o.id === id);
+            if(!obj) return null;
+            const out = { id: obj.id, type: obj.type, subType: obj.subType, modelName: obj.modelName, opts: obj.opts };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(out, null, 2));
+            const a = document.createElement('a'); a.href = dataStr; a.download = (obj.modelName||obj.subType||'model') + '.json'; a.click();
+            return out;
+        },
+        // Import OBJ file (File object) into custom models and save to DB
+        importOBJ: (file, name) => {
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const loader = new THREE.OBJLoader();
+                    const obj = loader.parse(ev.target.result);
+                    // Simple conversion: store geometry chunk list and material color
+                    const parts = [];
+                    obj.traverse((m) => {
+                        if(m.isMesh) {
+                            const bbox = new THREE.Box3().setFromObject(m);
+                            const size = bbox.getSize(new THREE.Vector3());
+                            parts.push({ type: 'box', size: [size.x, size.y, size.z], offset: [m.position.x, m.position.y, m.position.z], color: (m.material && m.material.color)? '#' + m.material.color.getHexString() : '#ffffff' });
+                        }
+                    });
+                    const modelName = name || (file.name ? file.name.replace(/\.obj$/i,'') : 'imported');
+                    WG.customModels[modelName] = { name: modelName, parts: parts, bouncy: false, mass: 5 };
+                    WG.Data.saveModel(modelName, WG.customModels[modelName]);
+                    WG.Mod.API.print('OBJ imported as model: ' + modelName, '#4ade80');
+                } catch(err) { WG.Mod.API.print('OBJ import failed: ' + err.message, '#f87171'); }
+            };
+            reader.readAsText(file);
+        }
     },
 
     loadExample: function(type) {
@@ -1551,6 +1872,38 @@ API.createButton('mybtn', 'Toggle Low Gravity', 20, 140, () => {
         this.API.clearUI();
     },
 
+    exportScript: function() {
+        const code = document.getElementById('mod-code').value;
+        const blob = new Blob([code], {type: 'text/javascript'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mod_script.js';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.API.print('Script exported as .js file', '#4ade80');
+    },
+
+    importScript: function() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.js';
+        input.onchange = e => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const code = ev.target.result;
+                    document.getElementById('mod-code').value = code;
+                    this.API.print('Script imported successfully', '#4ade80');
+                } catch(err) { 
+                    alert('Error reading file: ' + err.message); 
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        };
+        input.click();
+    },
+
     resetGame: function() {
         this.isGameOver = false;
         document.getElementById('game-over-ui').classList.add('hidden');
@@ -1576,6 +1929,42 @@ API.createButton('mybtn', 'Toggle Low Gravity', 20, 140, () => {
 // ========================================================
 // DATA PERSISTENCE (Exports scripts & mode toggles)
 // ========================================================
+// System utilities: sound, explosives, time scaling, and helpers
+WG.System = {
+    Sound: {
+        // stub - audio context and simple play function
+        ctx: null,
+        init: function() { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.ctx = null; } },
+        playSine: function(freq, duration=0.2, vol=0.1) {
+            if(!this.ctx) { WG.Mod.API.print('Audio unavailable', '#f59e0b'); return; }
+            const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+            o.type = 'sine'; o.frequency.value = freq; g.gain.value = vol;
+            o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime + duration);
+        }
+    },
+    Explosives: {
+        spawn: function(x,y,z, opts={radius:8,force:200}) {
+            const e = WG.spawnPrimitive('sphere', x,y,z, { size: [1], mass: 1, color: '#ff3300' });
+            // blast nearby
+            WG.objects.forEach(o => {
+                if(!o.body || o.body.type === CANNON.Body.STATIC) return;
+                const d = o.body.position.distanceTo(new CANNON.Vec3(x,y,z));
+                if(d < opts.radius) {
+                    const dir = new CANNON.Vec3(o.body.position.x - x, o.body.position.y - y, o.body.position.z - z);
+                    dir.normalize(); dir.scale(opts.force * (1 - d/opts.radius), dir);
+                    o.body.applyImpulse(dir, o.body.position);
+                }
+            });
+        }
+    },
+    Time: {
+        setScale: function(s) { WG.timeScale = Math.max(0, Math.min(5, s)); }
+    }
+};
+
+// Mod script helper functions
+WG.Mod.saveScript = function(name, code) { WG.Data.savedScripts = WG.Data.savedScripts || {}; WG.Data.savedScripts[name] = code; WG.Mod.API.print('Script saved: '+name, '#93c5fd'); };
+WG.Mod.loadScript = function(name) { return (WG.Data.savedScripts && WG.Data.savedScripts[name]) || null; };
 WG.Data = {
     db: null, importedState: null,
     
@@ -1619,7 +2008,9 @@ WG.Data = {
     },
 
     serialize: function() {
-        const state = { objects: [], scripts: WG.Mod.savedScripts };
+        const state = { objects: [], scripts: WG.Mod.savedScripts, gravity: WG.gravity, background: WG.scene.background ? WG.scene.background.getHex() : 0x7ec0ee, fogDensity: (WG.scene.fog && WG.scene.fog.density) ? WG.scene.fog.density : null, models: WG.customModels };
+        if(WG.Portals && WG.Portals.blue) state.portalBlue = { pos: [WG.Portals.blue.pos.x, WG.Portals.blue.pos.y, WG.Portals.blue.pos.z], quat: [WG.Portals.blue.quat.x, WG.Portals.blue.quat.y, WG.Portals.blue.quat.z, WG.Portals.blue.quat.w], normal: [WG.Portals.blue.normal.x, WG.Portals.blue.normal.y, WG.Portals.blue.normal.z] };
+        if(WG.Portals && WG.Portals.orange) state.portalOrange = { pos: [WG.Portals.orange.pos.x, WG.Portals.orange.pos.y, WG.Portals.orange.pos.z], quat: [WG.Portals.orange.quat.x, WG.Portals.orange.quat.y, WG.Portals.orange.quat.z, WG.Portals.orange.quat.w], normal: [WG.Portals.orange.normal.x, WG.Portals.orange.normal.y, WG.Portals.orange.normal.z] };
         WG.objects.forEach(obj => {
             if(obj.opts && obj.opts.isGround) return; 
             if(obj.type === 'static' || !obj.body) return; 
@@ -1635,6 +2026,8 @@ WG.Data = {
 
     deserialize: function(state) {
         WG.buildBlank(); 
+        // restore custom models if present
+        if(state.models) WG.customModels = Object.assign({}, WG.customModels, state.models);
         state.objects.forEach(data => {
             if(data.type === 'primitive') {
                 WG.spawnPrimitive(data.subType, data.pos[0], data.pos[1], data.pos[2], Object.assign({}, data.opts, {rotation: data.quat}));
@@ -1642,6 +2035,16 @@ WG.Data = {
                 WG.spawnCustomModel(data.modelName, data.pos[0], data.pos[1], data.pos[2], data.quat);
             }
         });
+
+        // restore portals if included
+        if(state.portalBlue) {
+            WG.Portals.blue = { pos: new THREE.Vector3(state.portalBlue.pos[0], state.portalBlue.pos[1], state.portalBlue.pos[2]), quat: new THREE.Quaternion(state.portalBlue.quat[0], state.portalBlue.quat[1], state.portalBlue.quat[2], state.portalBlue.quat[3]), normal: new THREE.Vector3(state.portalBlue.normal[0], state.portalBlue.normal[1], state.portalBlue.normal[2]) };
+            WG.Portals.meshBlue.position.copy(WG.Portals.blue.pos); WG.Portals.meshBlue.quaternion.copy(WG.Portals.blue.quat); WG.Portals.meshBlue.visible = true;
+        }
+        if(state.portalOrange) {
+            WG.Portals.orange = { pos: new THREE.Vector3(state.portalOrange.pos[0], state.portalOrange.pos[1], state.portalOrange.pos[2]), quat: new THREE.Quaternion(state.portalOrange.quat[0], state.portalOrange.quat[1], state.portalOrange.quat[2], state.portalOrange.quat[3]), normal: new THREE.Vector3(state.portalOrange.normal[0], state.portalOrange.normal[1], state.portalOrange.normal[2]) };
+            WG.Portals.meshOrange.position.copy(WG.Portals.orange.pos); WG.Portals.meshOrange.quaternion.copy(WG.Portals.orange.quat); WG.Portals.meshOrange.visible = true;
+        }
 
         // Run imported scripts
         if(state.scripts) {
@@ -1687,9 +2090,41 @@ WG.Data = {
                 this.importedState = null;
             }, 100);
         }
+    },
+
+    clearAll: async function() {
+        if(!confirm('Delete all saved models and data? This cannot be undone.')) return;
+        
+        if(!this.db) await this.initDB();
+
+        // Clear IndexedDB
+        if(this.db) {
+            const tx = this.db.transaction('models', 'readwrite');
+            tx.objectStore('models').clear();
+        }
+        // Clear in-memory models
+        WG.customModels = {};
+        if(WG.Mod && WG.Mod.API) WG.Mod.API.print('All saved data cleared', '#4ade80');
+        alert('Saved data cleared!');
     }
 };
+
+// ensure launch buttons respond even if inline handlers fail
+(function(){
+    const b1 = document.getElementById('launch-blank');
+    const b2 = document.getElementById('launch-demo');
+    if(b1) b1.addEventListener('click', () => {
+        console.log('blank button clicked');
+        if(window.WG && WG.tryLaunch) WG.tryLaunch('blank');
+        else console.warn('WG not ready for blank launch');
+    });
+    if(b2) b2.addEventListener('click', () => {
+        console.log('demo button clicked');
+        if(window.WG && WG.tryLaunch) WG.tryLaunch('premade');
+        else console.warn('WG not ready for demo launch');
+    });
+    document.addEventListener('click', e => { console.log('global click', e.target); });
+})();
 </script>
 </body>
 </html>
-
