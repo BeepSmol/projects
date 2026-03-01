@@ -82,6 +82,11 @@
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">1: Physgun</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">2: Portal Gun</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">3: Anchor</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">4: Connector</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-red-400">5: Boom</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-red-600">6: Delete</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-red-400">7: Laser</span>
+                <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-purple-400">G: Slo-Mo</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600 text-yellow-400">T: Thrusters</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">Q/Esc: Menu</span>
                 <span class="bg-gray-800 bg-opacity-70 px-2 py-1 border border-gray-600">~: Console</span>
@@ -268,24 +273,38 @@
                                 Opts: {size:[w,h,d], color:hex, mass:int, modTag:'name'}
                             </div>
                             <div class="bg-white border border-gray-400 p-1">
-                                <strong>API.onTick( callback(delta) )</strong>
+                                <strong>API.removeObject(id)</strong><br>
+                                <strong>API.getObject(id) / API.getObjects()</strong>
                             </div>
                             <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.onTick( callback(delta) )</strong>
                                 <strong>API.onCollide( callback(objA, objB) )</strong><br>
                                 Passes string tags (e.g. 'player', 'danger', 'coin')
                             </div>
                             <div class="bg-white border border-gray-400 p-1">
-                                <strong>API.createButton(id, text, x, y, onClick)</strong><br>
-                                <strong>API.createText(id, text, x, y, color)</strong><br>
-                                <strong>API.clearUI()</strong>
+                                <strong>API.getPlayerPos()</strong><br>
+                                <strong>API.setPlayerPos(x, y, z)</strong><br>
+                                <strong>API.setVelocity(id, x, y, z)</strong><br>
+                                <strong>API.applyForce(id, x, y, z)</strong>
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.raycast()</strong> -> {hasHit, point, objectId, tag}<br>
+                                <strong>API.playSound(freq, type, dur)</strong>
+                            </div>
+                            <div class="bg-white border border-gray-400 p-1">
+                                <strong>API.createButton(id, txt, x, y, fn)</strong><br>
+                                <strong>API.createText(id, txt, x, y, col)</strong><br>
+                                <strong>API.removeUI(id) / API.clearUI()</strong>
                             </div>
                             <div class="bg-white border border-gray-400 p-1 text-blue-800">
-                                <strong>API.setCurrency(val) / API.addCurrency(val)</strong><br>
-                                <strong>API.gameOver(message)</strong><br>
-                                <strong>API.print(message)</strong> - Writes to Console
+                                <strong>API.setCurrency(v) / API.addCurrency(v)</strong><br>
+                                <strong>API.getCurrency()</strong><br>
+                                <strong>API.gameOver(msg)</strong><br>
+                                <strong>API.print(msg)</strong>
                             </div>
                             <div class="bg-white border border-gray-400 p-1">
                                 <strong>API.onKeyDown(fn) / API.onKeyUp(fn)</strong><br>
+                                <strong>API.onMouseDown(fn(button))</strong><br>
                                 Register keyboard event callbacks for mods
                             </div>
                             <div class="bg-white border border-gray-400 p-1">
@@ -294,6 +313,7 @@
                             </div>
                             <div class="bg-white border border-gray-400 p-1">
                                 <strong>API.setGravity(value)</strong><br>
+                                <strong>API.setSkyColor(hex)</strong><br>
                                 Adjust world gravity (negative values pull down)
                             </div>
                             
@@ -301,6 +321,8 @@
                             <h3 class="font-bold mb-1">Load Templates</h3>
                             <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('minigame')">"Dodge the Anvil" (Game)</button>
                             <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('clicker')">"Coin Collector" (Game)</button>
+                            <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('shooter')">"Target Practice" (FPS)</button>
+                            <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('platformer')">"Platformer" (Gen)</button>
                             <button class="retro-button w-full py-1 text-xs mb-1" onclick="WG.Mod.loadExample('ui')">"Custom UI & Gravity" (Tool)</button>
                         </div>
                     </div>
@@ -713,6 +735,7 @@ WG.Input = {
     keys: {},
     keyDownListeners: [],
     keyUpListeners: [],
+    mouseDownListeners: [],
     init: function() {
         window.addEventListener('keydown', (e) => {
             const code = e.code || '';
@@ -759,9 +782,16 @@ WG.Input = {
             this.keys[code] = false;
             this.keyUpListeners.forEach(fn => { try{ fn(e); }catch(e){} });
         });
+
+        document.addEventListener('mousedown', (e) => {
+            if(document.pointerLockElement === document.body) {
+                this.mouseDownListeners.forEach(fn => { try{ fn(e.button); }catch(e){} });
+            }
+        });
     },
     onKeyDown: function(fn) { this.keyDownListeners.push(fn); },
-    onKeyUp: function(fn) { this.keyUpListeners.push(fn); }
+    onKeyUp: function(fn) { this.keyUpListeners.push(fn); },
+    onMouseDown: function(fn) { this.mouseDownListeners.push(fn); }
 };
 
 // ========================================================
@@ -834,11 +864,20 @@ WG.Player = {
             if(e.code === 'Space' && this.canJump) {
                 this.body.velocity.y = 15; 
                 this.canJump = false;
+                WG.System.Sound.playTone(150, 'sine', 0.2, 0.1, 300);
             }
             if(WG.mode === 'sandbox') {
                 if(e.code === 'Digit1') WG.Tools.equip('physgun');
                 if(e.code === 'Digit2') WG.Tools.equip('portal');
                 if(e.code === 'Digit3') WG.Tools.equip('constraint');
+                if(e.code === 'Digit4') WG.Tools.equip('connector');
+                if(e.code === 'Digit5') WG.Tools.equip('explosion');
+                if(e.code === 'Digit6') WG.Tools.equip('delete');
+                if(e.code === 'Digit7') WG.Tools.equip('laser');
+                if(e.code === 'KeyG') {
+                    WG.timeScale = WG.timeScale === 1 ? 0.2 : 1;
+                    WG.Mod.API.print(WG.timeScale === 1 ? "Time: Normal" : "Time: Slow Motion", '#a78bfa');
+                }
             }
         }
 
@@ -929,6 +968,10 @@ WG.Tools = {
             if(this.active === 'raygun') this.rgFire(e);
             if(this.active === 'portal') WG.Portals.shoot(e);
             if(this.active === 'constraint') this.cnDown(e);
+            if(this.active === 'connector') this.connectDown(e);
+            if(this.active === 'explosion') this.explodeDown(e);
+            if(this.active === 'delete') this.deleteDown(e);
+            if(this.active === 'laser') this.laserFire(e);
         });
         document.addEventListener('mouseup', (e) => {
             if(this.active === 'physgun' && e.button === 0) this.pgUp();
@@ -963,6 +1006,22 @@ WG.Tools = {
         } else if (tool === 'constraint') {
             hTool.innerText = "ANCHOR"; hTool.className = "text-4xl font-extrabold italic text-yellow-400 tracking-wider";
             hDesc.innerText = "LMB: Toggle Anchor (permanent). RMB: Clear Selection";
+            this.cNodeA = null;
+        } else if (tool === 'connector') {
+            hTool.innerText = "CONNECTOR"; hTool.className = "text-4xl font-extrabold italic text-green-400 tracking-wider";
+            hDesc.innerText = "LMB: Click two objects to link them. RMB: Cancel.";
+            this.cNodeA = null;
+        } else if (tool === 'explosion') {
+            hTool.innerText = "EXPLOSION"; hTool.className = "text-4xl font-extrabold italic text-red-500 tracking-wider";
+            hDesc.innerText = "LMB: Create explosion at cursor.";
+            this.cNodeA = null;
+        } else if (tool === 'delete') {
+            hTool.innerText = "DELETE"; hTool.className = "text-4xl font-extrabold italic text-red-600 tracking-wider";
+            hDesc.innerText = "LMB: Remove object.";
+            this.cNodeA = null;
+        } else if (tool === 'laser') {
+            hTool.innerText = "LASER"; hTool.className = "text-4xl font-extrabold italic text-red-500 tracking-wider";
+            hDesc.innerText = "LMB: Shoot to push objects";
             this.cNodeA = null;
         } else if (tool === 'raygun') {
             hTool.innerText = "RAY GUN"; hTool.className = "text-4xl font-extrabold italic text-pink-400 tracking-wider";
@@ -1017,6 +1076,7 @@ WG.Tools = {
             
             const hitPoint = new CANNON.Vec3(hit.point.x, hit.point.y, hit.point.z);
             this.heldBody.pointToLocalFrame(hitPoint, this.heldOffset);
+            WG.System.Sound.playTone(400, 'sine', 0.1, 0.1, 600);
         } else if (e.button === 2) { 
             if(this.heldBody) { this.freezeBody(this.heldBody); this.pgUp(); } 
             else if (obj.type !== 'static') this.freezeBody(obj.body);
@@ -1027,6 +1087,7 @@ WG.Tools = {
         if(this.heldBody) {
             const obj = WG.objects.find(o => o.body === this.heldBody);
             if(obj) this._setHighlight(obj, false);
+            WG.System.Sound.playTone(600, 'sine', 0.1, 0.1, 400);
         }
         this.heldBody = null;
         this.marker.visible = false;
@@ -1047,6 +1108,7 @@ WG.Tools = {
     freezeBody: function(body) {
         body.velocity.set(0,0,0); body.angularVelocity.set(0,0,0);
         body.type = CANNON.Body.STATIC; body.mass = 0; body.updateMassProperties();
+        WG.System.Sound.playTone(880, 'square', 0.1, 0.05);
     },
 
     // Constraint Tool Logic
@@ -1074,12 +1136,127 @@ WG.Tools = {
             obj.body.updateMassProperties();
             obj.body.wakeUp();
             WG.Mod.API.print('Object unanchored.', '#fb7185');
+            WG.System.Sound.playTone(300, 'triangle', 0.1, 0.1);
         } else {
             obj.opts.anchored = true;
             obj.body.velocity.set(0,0,0); obj.body.angularVelocity.set(0,0,0);
             obj.body.type = CANNON.Body.STATIC; obj.body.mass = 0; obj.body.updateMassProperties();
             WG.Mod.API.print('Object anchored permanently.', '#4ade80');
+            WG.System.Sound.playTone(200, 'triangle', 0.1, 0.2);
         }
+    },
+
+    // Connector Tool (Weld/Link)
+    connectDown: function(e) {
+        if(e.button === 2) {
+            this.cNodeA = null;
+            WG.Mod.API.print("Connection selection cleared.", '#fbbf24');
+            return;
+        }
+        const hits = this.raycastObjects();
+        if(hits.length === 0) return;
+        const hit = hits[0];
+        const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+        if(!obj || !obj.body) return;
+
+        const point = new CANNON.Vec3(hit.point.x, hit.point.y, hit.point.z);
+
+        if(!this.cNodeA) {
+            this.cNodeA = { body: obj.body, point: point };
+            WG.Mod.API.print("First point selected. Click another object.", '#fbbf24');
+            WG.System.Sound.playTone(400, 'sine', 0.1, 0.1);
+        } else {
+            const bodyA = this.cNodeA.body;
+            const bodyB = obj.body;
+            if(bodyA === bodyB) return;
+
+            const pivotA = new CANNON.Vec3();
+            const pivotB = new CANNON.Vec3();
+            bodyA.pointToLocalFrame(this.cNodeA.point, pivotA);
+            bodyB.pointToLocalFrame(point, pivotB);
+
+            const constraint = new CANNON.PointToPointConstraint(bodyA, pivotA, bodyB, pivotB);
+            WG.world.addConstraint(constraint);
+            WG.constraints.push(constraint);
+            
+            WG.Mod.API.print("Objects connected!", '#4ade80');
+            WG.System.Sound.playTone(400, 'sawtooth', 0.15, 0.1);
+            this.cNodeA = null;
+        }
+    },
+
+    // Explosion Tool
+    explodeDown: function(e) {
+        const hits = this.raycastObjects();
+        if(hits.length === 0) return;
+        const hit = hits[0];
+        const point = hit.point;
+
+        // Visual Effect
+        const geo = new THREE.SphereGeometry(1, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.8 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(point);
+        WG.scene.add(mesh);
+
+        // Animate explosion visual
+        let s = 1;
+        const anim = () => {
+            s += 0.5;
+            mesh.scale.set(s,s,s);
+            mesh.material.opacity -= 0.02;
+            if(mesh.material.opacity > 0) requestAnimationFrame(anim);
+            else WG.scene.remove(mesh);
+        };
+        anim();
+
+        WG.System.Explosives.spawn(point.x, point.y, point.z, {radius: 11, force: 500, visual: false});
+        WG.System.Sound.playTone(100, 'sawtooth', 0.5, 0.3, 10);
+    },
+
+    // Delete Tool
+    deleteDown: function(e) {
+        const hits = this.raycastObjects();
+        if(hits.length === 0) return;
+        const hit = hits[0];
+        const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+        
+        if(obj) {
+            if(obj.type === 'static' && obj.body.mass === 0) return; // Don't delete ground
+            
+            WG.scene.remove(obj.mesh);
+            WG.world.remove(obj.body);
+            WG.objects = WG.objects.filter(o => o !== obj);
+            
+            WG.Mod.API.print("Object deleted.", '#ef4444');
+            WG.System.Sound.playTone(600, 'square', 0.15, 0.1, 100);
+        }
+    },
+
+    // Laser Tool
+    laserFire: function(e) {
+        const hits = this.raycastObjects();
+        if(hits.length === 0) return;
+        const hit = hits[0];
+        
+        // Visual Beam
+        const start = new THREE.Vector3(0.5, -0.5, -1).applyQuaternion(WG.camera.quaternion).add(WG.camera.position);
+        const points = [start, hit.point];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
+        const line = new THREE.Line(geometry, material);
+        WG.scene.add(line);
+        setTimeout(() => WG.scene.remove(line), 100);
+
+        // Physics Impulse
+        const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+        if(obj && obj.body) {
+            const dir = new CANNON.Vec3(hit.point.x - start.x, hit.point.y - start.y, hit.point.z - start.z).unit();
+            const force = dir.scale(100 * (obj.body.mass || 1));
+            obj.body.applyImpulse(force, new CANNON.Vec3(hit.point.x, hit.point.y, hit.point.z));
+            obj.body.wakeUp();
+        }
+        WG.System.Sound.playSine(880, 0.1, 0.1);
     },
 
     update: function() {
@@ -1216,6 +1393,7 @@ WG.Portals = {
 
         const pData = { pos: mesh.position.clone(), quat: mesh.quaternion.clone(), normal: normal.clone() };
         if(isBlue) this.blue = pData; else this.orange = pData;
+        WG.System.Sound.playTone(300, 'sine', 0.3, 0.1, 800);
     },
 
     renderViews: function() {
@@ -1271,22 +1449,27 @@ WG.Portals = {
         const rel = new THREE.Vector3(body.position.x, body.position.y, body.position.z).sub(src.pos);
         let qInv = src.quat.clone().invert();
         rel.applyQuaternion(qInv);
-        // very tight bounds: must be nearly centered on portal to cross
-        if(Math.abs(rel.x) > this.width/3.5 || Math.abs(rel.y) > this.height/3.5) return;
+        
+        // Improved bounds check (wider acceptance)
+        if(Math.abs(rel.x) > this.width/2 - 0.2 || Math.abs(rel.y) > this.height/2 - 0.2) return;
+
+        // Distance check: trigger before hitting the wall (radius approx 1.0)
+        if (rel.z > 2.0 || rel.z < -1.0) return;
 
         const vel = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
-        if(vel.lengthSq() < 0.1 && !isPlayer) return;
+        const localVel = vel.clone().applyQuaternion(qInv);
 
-        vel.normalize();
-        if(vel.dot(src.normal) < 0) {
+        // Check if moving INTO the portal (negative Z in local space)
+        if(localVel.z < -0.1 || (isPlayer && localVel.z < 0.0)) {
             const qSrcInv = src.quat.clone().invert();
             const qY180 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
-            const qTotal = new THREE.Quaternion().multiplyQuaternions(qY180, dest.quat).multiply(qSrcInv);
+            // Corrected rotation order: Dest * 180 * SrcInv
+            const qTotal = new THREE.Quaternion().multiplyQuaternions(dest.quat, qY180).multiply(qSrcInv);
 
                 let posOffset = new THREE.Vector3().copy(body.position).sub(src.pos);
                 posOffset.applyQuaternion(qTotal);
-                // place at destination with small clearance to avoid re-triggering
-                body.position.copy(dest.pos).add(posOffset).add(dest.normal.clone().multiplyScalar(0.1));
+                // Push out further (1.5 units) to ensure we clear the destination wall/floor
+                body.position.copy(dest.pos).add(posOffset).add(dest.normal.clone().multiplyScalar(1.5));
 
                 let v = new THREE.Vector3(body.velocity.x, body.velocity.y, body.velocity.z);
                 v.applyQuaternion(qTotal);
@@ -1755,9 +1938,31 @@ WG.Mod = {
 
     API: {
         spawn: (t, x, y, z, opts) => WG.spawnPrimitive(t, x, y, z, opts),
+        removeObject: (id) => {
+            const obj = WG.objects.find(o => o.id === id || o === id);
+            if(obj) {
+                if(obj.mesh) WG.scene.remove(obj.mesh);
+                if(obj.body) WG.world.remove(obj.body);
+                WG.objects = WG.objects.filter(o => o !== obj);
+            }
+        },
+        getObject: (id) => WG.objects.find(o => o.id === id),
+        getObjects: () => WG.objects.map(o => ({id:o.id, pos:o.body.position, type:o.subType, tag:o.opts.modTag})),
+        
         onTick: (fn) => WG.Mod.hooks.onTick.push(fn),
         onCollide: (fn) => WG.Mod.hooks.onCollide = fn,
+        
         getPlayerPos: () => ({x: WG.Player.body.position.x, y: WG.Player.body.position.y, z: WG.Player.body.position.z}),
+        setPlayerPos: (x, y, z) => { WG.Player.body.position.set(x, y, z); WG.Player.body.velocity.set(0,0,0); },
+        
+        setVelocity: (id, x, y, z) => {
+            const obj = WG.objects.find(o => o.id === id);
+            if(obj && obj.body) { obj.body.velocity.set(x, y, z); obj.body.wakeUp(); }
+        },
+        applyForce: (id, x, y, z) => {
+            const obj = WG.objects.find(o => o.id === id);
+            if(obj && obj.body) { obj.body.applyImpulse(new CANNON.Vec3(x,y,z), obj.body.position); obj.body.wakeUp(); }
+        },
         
         // Game State APIs
         setCurrency: (val) => { 
@@ -1769,6 +1974,7 @@ WG.Mod = {
             WG.Mod.currency += val; 
             document.getElementById('currency-val').innerText = WG.Mod.currency;
         },
+        getCurrency: () => WG.Mod.currency,
         gameOver: (msg) => {
             WG.Mod.isGameOver = true;
             document.exitPointerLock();
@@ -1805,13 +2011,20 @@ WG.Mod = {
             el.innerText = text;
             container.appendChild(el);
         },
+        removeUI: (id) => {
+            const el = document.getElementById(id);
+            if(el) el.remove();
+        },
         clearUI: () => {
             document.getElementById('dynamic-ui').innerHTML = '';
-        }
-        ,
+        },
+        
         // Key event hooks for mods
         onKeyDown: (fn) => { WG.Input.onKeyDown(fn); },
         onKeyUp: (fn) => { WG.Input.onKeyUp(fn); },
+        onMouseDown: (fn) => { WG.Input.onMouseDown(fn); },
+        playSound: (freq, type='sine', dur=0.1) => WG.System.Sound.playTone(freq, type, dur, 0.1),
+        
         // Permanently freeze an object by id (or body) so it never simulates until unfrozen
         freezePermanent: (idOrBody) => {
             let obj = null;
@@ -1825,6 +2038,20 @@ WG.Mod = {
         },
         // World controls
         setGravity: (val) => { WG.world.gravity.set(0, val, 0); WG.gravity = val; },
+        setSkyColor: (hex) => {
+            WG.scene.background = new THREE.Color(hex);
+            WG.scene.fog.color = new THREE.Color(hex);
+        },
+        raycast: () => {
+            const hits = WG.Tools.raycastObjects();
+            if(hits.length > 0) {
+                const hit = hits[0];
+                const obj = WG.objects.find(o => o.mesh === hit.object || (o.mesh.type === 'Group' && o.mesh.children.includes(hit.object)));
+                return { hasHit: true, point: hit.point, distance: hit.distance, objectId: obj ? obj.id : null, tag: obj ? obj.opts.modTag : null };
+            }
+            return { hasHit: false };
+        },
+        
         // Export a single model (primitive or custom) as JSON
         exportModel: (id) => {
             const obj = WG.objects.find(o => o.id === id);
@@ -1866,6 +2093,7 @@ WG.Mod = {
         if(type === 'minigame') {
             ta.value = `// Mini-Game: Dodge the Anvil!
 API.setCurrency(0);
+API.setPlayerPos(0, 10, 0);
 
 let timer = 0;
 API.onTick((delta) => {
@@ -1888,6 +2116,7 @@ API.onCollide((a, b) => {
         } else if (type === 'clicker') {
             ta.value = `// Coin Collector
 API.setCurrency(0);
+API.setPlayerPos(0, 10, 0);
 
 for(let i=0; i<10; i++) {
     API.spawn('cylinder', Math.random()*50-25, 2, Math.random()*50-25, { 
@@ -1898,11 +2127,71 @@ for(let i=0; i<10; i++) {
 API.onCollide((a, b) => {
     if(a === 'player' && b === 'coin' || b === 'player' && a === 'coin') {
         API.addCurrency(1);
-        // Note: For simplicity, we just look for coin count.
-        // You'd normally delete the coin object via custom engine loops.
+        // We need to find which coin it was to remove it.
+        // In this simple example we just remove nearby coins.
+        let objs = API.getObjects();
+        let p = API.getPlayerPos();
+        objs.forEach(o => {
+            if(o.tag === 'coin' && Math.abs(o.pos.x - p.x) < 3 && Math.abs(o.pos.z - p.z) < 3) {
+                API.removeObject(o.id);
+                API.playSound(880, 'sine', 0.1);
+            }
+        });
+
         if(document.getElementById('currency-val').innerText == "10") {
             API.gameOver("ALL COINS COLLECTED!");
         }
+    }
+});`;
+        } else if (type === 'shooter') {
+            ta.value = `// Target Practice (FPS)
+API.setCurrency(0);
+API.clearUI();
+API.setPlayerPos(0, 5, 20);
+API.createText('score', 'Score: 0', 20, 20, '#00ff00');
+
+function spawnTarget() {
+    let x = Math.random() * 40 - 20;
+    let y = Math.random() * 10 + 5;
+    API.spawn('box', x, y, -20, { size:[2,2,2], color: '#ff0000', mass: 1, modTag: 'target' });
+}
+for(let i=0; i<5; i++) spawnTarget();
+
+API.onMouseDown((btn) => {
+    if(btn === 0) { // Left Click
+        API.playSound(400, 'sawtooth', 0.1);
+        let hit = API.raycast();
+        if(hit.hasHit && hit.tag === 'target') {
+            API.removeObject(hit.objectId);
+            API.addCurrency(100);
+            API.createButton('score', 'Score: ' + API.getCurrency(), 20, 20, null);
+            API.playSound(800, 'square', 0.1);
+            spawnTarget();
+        }
+    }
+});`;
+        } else if (type === 'platformer') {
+            ta.value = `// Procedural Platformer
+API.setCurrency(0);
+API.setPlayerPos(0, 5, 0);
+API.setGravity(-30);
+API.setSkyColor('#87CEEB');
+
+let lastZ = 0;
+for(let i=0; i<20; i++) {
+    let z = lastZ - (8 + Math.random() * 5);
+    let x = Math.random() * 10 - 5;
+    let y = Math.random() * 5;
+    API.spawn('box', x, y, z, { size:[4, 1, 4], color: '#228B22', mass: 0, modTag: 'platform' });
+    lastZ = z;
+}
+API.spawn('box', 0, 0, -lastZ - 10, {size:[10,1,10], color:'#FFD700', mass:0, modTag:'goal'});
+
+API.onTick(() => {
+    let pos = API.getPlayerPos();
+    if(pos.y < -20) {
+        API.setPlayerPos(0, 5, 0);
+        API.print("Fell off! Resetting...");
     }
 });`;
         } else if (type === 'ui') {
@@ -2010,16 +2299,27 @@ WG.System = {
         // stub - audio context and simple play function
         ctx: null,
         init: function() { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.ctx = null; } },
-        playSine: function(freq, duration=0.2, vol=0.1) {
-            if(!this.ctx) { WG.Mod.API.print('Audio unavailable', '#f59e0b'); return; }
-            const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
-            o.type = 'sine'; o.frequency.value = freq; g.gain.value = vol;
-            o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime + duration);
+        playSine: function(freq, duration=0.2, vol=0.1) { this.playTone(freq, 'sine', duration, vol); },
+        playTone: function(freq, type='sine', duration=0.1, vol=0.1, slideTo=null) {
+            if(!this.ctx) return;
+            if(this.ctx.state === 'suspended') this.ctx.resume();
+            const o = this.ctx.createOscillator(); 
+            const g = this.ctx.createGain();
+            o.type = type; 
+            o.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            if(slideTo) {
+                o.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+            }
+            g.gain.setValueAtTime(vol, this.ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+            
+            o.connect(g); g.connect(this.ctx.destination); 
+            o.start(); o.stop(this.ctx.currentTime + duration);
         }
     },
     Explosives: {
-        spawn: function(x,y,z, opts={radius:8,force:200}) {
-            const e = WG.spawnPrimitive('sphere', x,y,z, { size: [1], mass: 1, color: '#ff3300' });
+        spawn: function(x,y,z, opts={radius:8,force:200, visual:true}) {
+            if(opts.visual !== false) WG.spawnPrimitive('sphere', x,y,z, { size: [1], mass: 1, color: '#ff3300' });
             // blast nearby
             WG.objects.forEach(o => {
                 if(!o.body || o.body.type === CANNON.Body.STATIC) return;
