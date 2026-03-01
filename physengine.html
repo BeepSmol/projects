@@ -1317,6 +1317,11 @@ WG.UI = {
         document.addEventListener('contextmenu', e => e.preventDefault());
         this.MM.init(); 
 
+        // Load Dark Mode preference
+        if(localStorage.getItem('wg_dark_mode') === 'true') {
+            this.toggleDarkMode(true);
+        }
+
         const cin = document.getElementById('console-input');
         cin.addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
@@ -1458,11 +1463,81 @@ WG.UI = {
     toggleDarkMode: function(enable) {
         if(enable) document.body.classList.add('wg-dark');
         else document.body.classList.remove('wg-dark');
-        // Simple CSS tweak for retro panels
+        
+        localStorage.setItem('wg_dark_mode', enable);
+
         const style = document.getElementById('wg-dark-style') || document.createElement('style');
         style.id = 'wg-dark-style';
-        style.innerHTML = enable ? `body.wg-dark { background:#0b0b0b; color: #ddd } .retro-panel { background:#222 !important; color:#ddd } .retro-inset{background:#111 !important; color:#ddd}` : '';
-        document.head.appendChild(style);
+        
+        if (enable) {
+            style.innerHTML = `
+                body.wg-dark { background-color: #121212; color: #e0e0e0; }
+                
+                /* Panels & Windows */
+                body.wg-dark .retro-panel { 
+                    background-color: #2d2d2d !important; 
+                    border-top-color: #4a4a4a !important; 
+                    border-left-color: #4a4a4a !important; 
+                    border-bottom-color: #1a1a1a !important; 
+                    border-right-color: #1a1a1a !important; 
+                    color: #e0e0e0 !important; 
+                }
+                
+                /* Insets (Content Areas) */
+                body.wg-dark .retro-inset { 
+                    background-color: #1a1a1a !important; 
+                    border-top-color: #000 !important; 
+                    border-left-color: #000 !important; 
+                    border-bottom-color: #4a4a4a !important; 
+                    border-right-color: #4a4a4a !important;
+                    color: #e0e0e0 !important;
+                }
+                
+                /* Buttons */
+                body.wg-dark .retro-button { 
+                    background-color: #3d3d3d !important; 
+                    border-top-color: #5a5a5a !important; 
+                    border-left-color: #5a5a5a !important; 
+                    border-bottom-color: #1a1a1a !important; 
+                    border-right-color: #1a1a1a !important; 
+                    color: #fff !important; 
+                }
+                body.wg-dark .retro-button:active {
+                    border-top-color: #1a1a1a !important; 
+                    border-left-color: #1a1a1a !important; 
+                    border-bottom-color: #5a5a5a !important; 
+                    border-right-color: #5a5a5a !important;
+                }
+                
+                /* Inputs */
+                body.wg-dark input, body.wg-dark select, body.wg-dark textarea {
+                    background-color: #1a1a1a !important;
+                    color: #fff !important;
+                    border: 1px solid #4a4a4a !important;
+                }
+                
+                /* Scrollbars */
+                body.wg-dark ::-webkit-scrollbar-track { background: #2d2d2d; border-left: 1px solid #444; }
+                body.wg-dark ::-webkit-scrollbar-thumb { background: #555; border: 1px solid #2d2d2d; }
+                
+                /* Tailwind Overrides for Hardcoded Colors */
+                body.wg-dark .bg-gray-100 { background-color: #1a1a1a !important; }
+                body.wg-dark .bg-\\[\\#d4d0c8\\] { background-color: #2d2d2d !important; }
+                body.wg-dark .text-black { color: #e0e0e0 !important; }
+                body.wg-dark .text-gray-800 { color: #ccc !important; }
+                body.wg-dark .text-gray-600 { color: #aaa !important; }
+                body.wg-dark .bg-white { background-color: #222 !important; color: #eee !important; border-color: #444 !important; }
+                
+                /* Title Bar */
+                body.wg-dark .retro-title {
+                    background: linear-gradient(90deg, #3700b3, #6200ea) !important;
+                }
+            `;
+        } else {
+            style.innerHTML = '';
+        }
+        
+        if (!document.getElementById('wg-dark-style')) document.head.appendChild(style);
     },
 
     exportModels: function() {
