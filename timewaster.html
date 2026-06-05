@@ -617,15 +617,6 @@
     <!-- Tutorial Modal -->
     <div id="tutorialModal" class="modal">
         <div class="modal-content border-green-500">
-            <div id="tutorialWelcome" class="hidden text-center">
-                <h2 class="text-3xl font-bold text-green-400 mb-4 border-b border-green-500 pb-2">WELCOME, INITIATE</h2>
-                <p class="mb-6 text-gray-300">Time is stopping. You must waste it to maintain universal entropy. Shall we begin your training?</p>
-                <div class="flex gap-4">
-                    <button onclick="startLiveGuide()" class="btn flex-grow border-green-500 text-green-500">START LIVE GUIDE</button>
-                    <button onclick="skipTutorial()" class="btn flex-grow border-red-500 text-red-500">SKIP</button>
-                </div>
-            </div>
-
             <div id="tutorialRundown">
                 <h2 class="text-3xl font-bold text-green-400 mb-4 border-b border-green-500 pb-2">THE SURVIVAL GUIDE</h2>
             <div class="space-y-4 text-sm leading-relaxed">
@@ -656,12 +647,12 @@
 
     <!-- Live Guide Overlay -->
     <div id="guideOverlay" class="hidden fixed inset-0 z-[2000] pointer-events-none">
-        <div id="guideBox" class="fixed bg-black border-2 border-green-500 p-4 rounded shadow-[0_0_15px_rgba(34,197,94,0.3)] pointer-events-auto max-w-xs transition-all duration-300">
+        <div id="guideBox" class="fixed bg-black border-2 border-green-500 p-4 rounded shadow-[0_0_15px_rgba(34,197,94,0.3)] pointer-events-auto max-w-xs transition-all duration-300 relative">
             <p id="guideText" class="text-sm font-bold text-white mb-4"></p>
             <div class="flex gap-2">
                 <button id="guideNext" class="btn text-[10px] py-1 flex-grow border-green-500 text-green-500">NEXT</button>
-                <button onclick="skipTutorial()" class="btn text-[10px] py-1 border-red-500 text-red-500">SKIP</button>
             </div>
+            <button onclick="skipTutorial()" class="absolute bottom-1 right-2 text-[8px] text-gray-800 opacity-10 hover:opacity-50 transition-opacity">SKIP</button>
         </div>
     </div>
 
@@ -1792,10 +1783,12 @@
         }
 
         window.openTutorial = function(isAuto = false) {
-            const welcome = document.getElementById('tutorialWelcome');
+            if (isAuto) {
+                startLiveGuide();
+                return;
+            }
             const rundown = document.getElementById('tutorialRundown');
-            if (isAuto) { welcome.classList.remove('hidden'); rundown.classList.add('hidden'); }
-            else { welcome.classList.add('hidden'); rundown.classList.remove('hidden'); }
+            if (rundown) rundown.classList.remove('hidden');
             openModal('tutorialModal');
         };
 
