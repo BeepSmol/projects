@@ -553,9 +553,12 @@
                 <div class="w-full bg-gray-900 h-1 mb-2">
                     <div id="clickProgressBar" class="bg-red-600 h-full transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) shadow-[0_0_12px_rgba(220,38,38,0.6)]" style="width: 0%"></div>
                 </div>
-                <button id="entropyBtn" onclick="handleEntropyClick(event)" class="btn w-full py-2 border-red-500 text-red-500 text-sm flex justify-between px-4">
-                    <span>AGITATE TIME</span>
-                    <span id="totalClicksDisplay">0</span>
+                <button id="entropyBtn" onclick="handleEntropyClick(event)" class="relative btn w-full py-2 border-red-500 text-red-500 text-sm overflow-hidden group">
+                    <div id="entropyProgressBar" class="absolute top-0 left-0 h-full bg-red-600/30 transition-all duration-100 ease-linear pointer-events-none" style="width: 0%"></div>
+                    <div class="relative z-10 flex justify-between w-full px-4">
+                        <span>AGITATE TIME</span>
+                        <span id="totalClicksDisplay">0</span>
+                    </div>
                 </button>
             </div>
             <div class="flex gap-2 w-full mb-2">
@@ -985,6 +988,7 @@
             entropyCap: document.getElementById('entropyCapDisplay'),
             totalClicks: document.getElementById('totalClicksDisplay'),
             clickProgress: document.getElementById('clickProgressBar'),
+            entropyBar: document.getElementById('entropyProgressBar'),
             nextGoalDisplay: document.getElementById('nextGoalDisplay'),
             cardGrid: document.getElementById('cardGrid'),
             boredomMsg: document.getElementById('boredomDiscountMsg')
@@ -1191,6 +1195,9 @@
             els.entropy.innerText = state.entropyMultiplier.toFixed(1);
             els.entropyCap.innerText = state.entropyCap.toFixed(1);
             els.totalClicks.innerText = formatNum(state.totalClicks);
+            
+            const multPct = ((state.entropyMultiplier - 1) / (state.entropyCap - 1)) * 100;
+            if (els.entropyBar) els.entropyBar.style.width = `${Math.max(0, Math.min(100, multPct))}%`;
             
             // Notifications and non-optimized UI updates
             const hasDoneQuests = (state.quests || []).some(q => q.done && !q.claimed);
