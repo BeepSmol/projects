@@ -196,6 +196,20 @@
         .flash-effect { animation: flash 0.3s ease-out; }
         .flash-effect-strong { animation: flash 0.2s ease-out; }
 
+        /* Notification Dot */
+        .notif-dot {
+            width: 10px;
+            height: 10px;
+            background: #ff4444;
+            border-radius: 50%;
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            border: 2px solid #000;
+            box-shadow: 0 0 8px #ff4444;
+            z-index: 30;
+        }
+
         /* Modals */
         .modal {
             position: fixed;
@@ -449,16 +463,25 @@
   <div class="w-full max-w-[1500px] flex flex-col xl:flex-row gap-6 items-start justify-center relative z-10 px-4">
     <!-- LEFT SIDEBAR: QUESTS & SHOP -->
     <div class="w-full xl:w-64 xl:sticky xl:top-4 flex flex-col gap-4 shrink-0">
-        <button id="questMenuBtn" onclick="openModal('questModal')" class="btn w-full border-blue-500 text-blue-400 py-4 text-lg shadow-[4px_4px_0px_#1e3a8a] lbl-quests-btn">OPEN QUEST MENU</button>
+        <button id="questMenuBtn" onclick="openModal('questModal')" class="relative btn w-full border-blue-500 text-blue-400 py-4 text-lg shadow-[4px_4px_0px_#1e3a8a] lbl-quests-btn">
+            <div id="questNotif" class="notif-dot hidden"></div>
+            OPEN QUEST MENU
+        </button>
         <div class="w-full">
             <div class="flex flex-col border-b-2 border-white mb-2 pb-1 bg-white/5">
                 <div class="flex justify-between items-center">
-                    <button onclick="changeShopPage(-1)" class="btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">◀</button>
+                    <button onclick="changeShopPage(-1)" class="relative btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">
+                        <div id="shopLeftNotif" class="notif-dot hidden"></div>
+                        ◀
+                    </button>
                     <div class="flex flex-col items-center">
                         <span class="text-[8px] text-gray-500 font-bold mb-[-2px] uppercase tracking-tighter">Shop Pages</span>
                         <h2 class="font-bold text-sm tracking-tighter text-center" id="shopPageTitle">SECONDS SHOP</h2>
                     </div>
-                    <button onclick="changeShopPage(1)" class="btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">▶</button>
+                    <button onclick="changeShopPage(1)" class="relative btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">
+                        <div id="shopRightNotif" class="notif-dot hidden"></div>
+                        ▶
+                    </button>
                 </div>
                 <div id="shopPageIndicator" class="text-[9px] text-center text-gray-500 font-bold mt-1 uppercase tracking-widest">Page 1 / 4</div>
             </div>
@@ -827,6 +850,8 @@
             entropyMultiplier: 1.0, entropyCap: 1.5, totalClicks: 0,
             tutorialSeen: false,
             cards: [], knowledgeMult: 1.0, 
+            pageAffordability: [false, false, false, false],
+            checkedShopPages: [true, false, false, false],
             shopPage: 0,
             lastRank: "NOVICE",
             quests: [], lastQuestDate: null,
@@ -1030,6 +1055,16 @@
             
             if (finalRate >= 100) unlockAchievement(ACHIEVEMENTS.find(a=>a.id==='turbulence'));
 
+            // Guided Tutorial Logic
+            if (state.tutorialSeen && !document.getElementById('guideOverlay').classList.contains('hidden')) {
+                const step = guideSteps[currentGuideStep];
+                if (step && step.check && step.check()) {
+                    currentGuideStep++;
+                    if (currentGuideStep < guideSteps.length) showGuideStep();
+                    else skipTutorial();
+                }
+            }
+
             checkRankUp();
 
             // Quests Refresh & Progress (Throttled for performance)
@@ -1206,6 +1241,11 @@
                     '.lbl-quests-title': "DAILY QUESTS"
                 };
 
+                // Notifications
+                const hasDoneQuests = state.quests.some(q => q.done && !q.claimed);
+                document.getElementById('questNotif').classList.toggle('hidden', !hasDoneQuests);
+                checkShopNotifications();
+
                 for (const [selector, text] of Object.entries(labels)) {
                     document.querySelectorAll(selector).forEach(el => el.innerText = getText(text));
                 }
@@ -1313,6 +1353,41 @@
             }[t];
         }
 
+        function checkShopNotifications() {
+            const boredomDiscount = getBoredomDiscount();
+            let anyNewAffordable = false;
+
+            for (let p = 0; p < 4; p++) {
+                const isAffordable = isSomethingAffordableOnPage(p, boredomDiscount);
+                // If it just became affordable, reset "checked" status
+                if (isAffordable && !state.pageAffordability[p]) {
+                    state.checkedShopPages[p] = false;
+                }
+                state.pageAffordability[p] = isAffordable;
+                
+                if (p !== state.shopPage && isAffordable && !state.checkedShopPages[p]) {
+                    anyNewAffordable = true;
+                }
+            }
+
+            document.getElementById('shopLeftNotif').classList.toggle('hidden', !anyNewAffordable);
+            document.getElementById('shopRightNotif').classList.toggle('hidden', !anyNewAffordable);
+        }
+
+        function isSomethingAffordableOnPage(p, discount) {
+            if (p < 3) {
+                const catIds = ["seconds", "agitation", "clocks"];
+                const activeCat = catIds[p];
+                return SHOP_ITEMS.filter(i => i.category === activeCat).some(item => {
+                    const count = state.shopCounts[item.id] || 0;
+                    let price = (item.cost + (count * item.cost)) * (state.skills.cheap_shop ? 0.95 : 1) * (state.activeTheme === 'blood' ? 0.8 : 1) * discount;
+                    return !item.special && state.clocks >= Math.floor(price);
+                });
+            } else {
+                return DISTRACTIONS.some(d => !state.unlocks[d.id] && (d.curr === 'k' ? state.chronotons >= d.cost : state.clocks >= d.cost));
+            }
+        }
+
         function getRankTitle() {
             const rank = RANKS.findLast(r => state.totalSecondsWasted >= r.t) || RANKS[0];
             return rank.title;
@@ -1322,6 +1397,7 @@
             state.shopPage += delta;
             if (state.shopPage < 0) state.shopPage = 3;
             if (state.shopPage > 3) state.shopPage = 0;
+            state.checkedShopPages[state.shopPage] = true;
             shopGenerated = false;
             const grid = document.getElementById('shopGrid');
             grid.style.opacity = '0';
@@ -1713,11 +1789,31 @@
 
         let currentGuideStep = 0;
         const guideSteps = [
-            { id: 'entropyBtn', text: "This is your primary tool. Click it (or press Space) to agitate time and increase your speed multiplier." },
-            { id: 'convertBtn', text: "Seconds are useless artifacts. Convert them into Clocks here to buy better distractions." },
-            { id: 'shopGrid', text: "The Shop has moved! Flip through pages to find generators, tools, and boredom breakers." },
-            { id: 'cardMenuBtn', text: "Collect rare cards to earn Knowledge. Every unique card boosts your production permanently." },
-            { id: 'rankTitle', text: "Keep wasting time to increase your Rank. New tiers of technology unlock as you progress." }
+            { 
+                id: 'entropyBtn', 
+                text: "Time is leaking! Click the red button to agitate time and reach 10 seconds.",
+                check: () => state.seconds >= 10
+            },
+            { 
+                id: 'convertBtn', 
+                text: "Good. Now convert those 10 seconds into your first CLOCK.",
+                check: () => state.clocks >= 1
+            },
+            { 
+                id: 'shopGrid', 
+                text: "Shop is open. Buy RUSTY GEARS to start generating seconds automatically.",
+                check: () => state.shopCounts.gears > 0
+            },
+            { 
+                id: 'convertBtn', 
+                text: "Excellent. Automate more! Keep agitating and converting until you have 50 Clocks.",
+                check: () => state.clocks >= 50
+            },
+            { 
+                id: 'cardMenuBtn', 
+                text: "Artifacts grant Knowledge. Open the CARD MENU and buy your first pack for 50 Clocks!",
+                check: () => state.cards.length >= 5
+            }
         ];
 
         window.startLiveGuide = function() {
@@ -1732,6 +1828,9 @@
             const step = guideSteps[currentGuideStep];
             const box = document.getElementById('guideBox');
             const target = document.getElementById(step.id);
+            const btnNext = document.getElementById('guideNext');
+            
+            btnNext.style.display = step.check ? "none" : "block";
             document.getElementById('guideText').innerText = getText(step.text);
             if (target) {
                 const rect = target.getBoundingClientRect();
