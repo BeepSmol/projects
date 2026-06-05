@@ -652,9 +652,12 @@
             <div id="rollContainer" class="hidden rolling-overlay">
                 <div id="rollingDisplay">ROLLING...</div>
             </div>
-            <div class="mb-4 bg-black p-4 border border-yellow-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="mb-4 bg-black p-4 border border-yellow-900 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <div class="text-xs text-gray-400">Collect artifacts to boost your knowledge of time.</div>
-                <button onclick="buyCardPack()" class="btn border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">BUY PACK (50 CLOCKS)</button>
+                <div class="flex gap-2">
+                    <button onclick="buyCardPack()" class="btn border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">BUY PACK (50C)</button>
+                    <button onclick="sellAllDuplicates()" class="btn border-red-500 text-red-500 hover:bg-red-500 hover:text-black">SELL ALL DUPS</button>
+                </div>
             </div>
             <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[50vh] overflow-y-auto pr-2"></div>
             <button onclick="closeModal('cardModal')" class="btn mt-6 w-full">CLOSE</button>
@@ -790,7 +793,9 @@
             OFFLINE_RATE: 5, 
             CHRONO_THRESHOLD: 25000,
             CHRONO_SCALE: 100, 
-            SAVE_KEY: 'timeWaster_v6_entropy'
+            SAVE_KEY: 'timeWaster_v6_entropy',
+            CARD_SELL_PRICES: { 'common': 2, 'rare': 20, 'exotic': 120 },
+            ENTROPY_GOALS: [50, 250, 500, 2500, 5000, 25000]
         };
 
         const CARDS = [
@@ -1161,7 +1166,7 @@
             els.entropyCap.innerText = state.entropyCap.toFixed(1);
             els.totalClicks.innerText = formatNum(state.totalClicks);
             
-            const goals = [100, 500, 1000, 5000, 10000, 50000];
+            const goals = CONFIG.ENTROPY_GOALS;
             const nextGoal = goals.find(g => g > state.totalClicks) || 999999;
             els.nextGoalDisplay.innerText = formatNum(nextGoal);
             const prevGoal = goals[goals.indexOf(nextGoal) - 1] || 0;
@@ -1264,8 +1269,7 @@
 
         function calculateEntropyCap() {
             let cap = 1.5;
-            const goals = [100, 500, 1000, 5000, 10000];
-            goals.forEach(g => {
+            CONFIG.ENTROPY_GOALS.slice(0, 5).forEach(g => {
                 if (state.totalClicks >= g) cap += 0.5;
             });
             state.entropyCap = cap;
@@ -1475,8 +1479,7 @@
             state.timers.lastInput = Date.now();
             
             // Goal Check
-            const goals = [100, 500, 1000, 5000, 10000];
-            goals.forEach(g => {
+            CONFIG.ENTROPY_GOALS.slice(0, 5).forEach(g => {
                 if(state.totalClicks === g) {
                     calculateEntropyCap();
                     log(`CLICK GOAL REACHED! CAP INCREASED TO ${state.entropyCap.toFixed(1)}x`);
@@ -1810,9 +1813,7 @@
                     
                     const card = pool[Math.floor(Math.random() * pool.length)];
                     
-                    if(!state.cards.some(c => c.id === card.id)) {
-                        state.cards.push(card);
-                    }
+                    state.cards.push(card);
                     log(`PACK: FOUND [${card.name}] (${card.rarity.toUpperCase()})`);
                 }
                 calculateCardBonus();
@@ -1828,16 +1829,25 @@
         }
         
         function calculateCardBonus() {
-            // Each unique card gives +0.02x to production
+            // Every card held gives +0.02x to production
             state.knowledgeMult = 1.0 + (state.cards.length * 0.02);
         }
 
         function renderCards() {
             els.cardGrid.innerHTML = '';
-            state.cards.forEach(c => {
+            
+            // Sort cards by rarity then name to group duplicates
+            const rarityOrder = { exotic: 0, rare: 1, common: 2 };
+            const sortedCards = [...state.cards].sort((a, b) => {
+                if (rarityOrder[a.rarity] !== rarityOrder[b.rarity]) 
+                    return rarityOrder[a.rarity] - rarityOrder[b.rarity];
+                return a.name.localeCompare(b.name);
+            });
+
+            sortedCards.forEach(c => {
                 const div = document.createElement('div');
                 div.className = `game-card card-${c.rarity}`;
-                const sellPrice = { 'common': 2, 'rare': 20, 'exotic': 120 }[c.rarity];
+                const sellPrice = CONFIG.CARD_SELL_PRICES[c.rarity];
                 div.innerHTML = `
                     <div class="font-black underline mb-1 text-sm">${c.name || c.id}</div>
                     <div class="text-[10px] italic opacity-70 mb-2">${c.desc || 'A mysterious artifact.'}</div>
@@ -1853,7 +1863,7 @@
             if (cardIndex === -1) return;
             
             const card = state.cards[cardIndex];
-            const sellPrice = { 'common': 2, 'rare': 20, 'exotic': 120 }[card.rarity];
+            const sellPrice = CONFIG.CARD_SELL_PRICES[card.rarity];
             
             if (confirm(`Sell ${card.name} for ${sellPrice} Clocks? You will lose the Knowledge bonus.`)) {
                 state.clocks += sellPrice;
@@ -1864,6 +1874,38 @@
                 renderCards();
                 saveGame();
                 updateUI(0, 1 + state.chronotons * 100);
+            }
+        }
+
+        window.sellAllDuplicates = function() {
+            if (state.cards.length === 0) return;
+            
+            const seen = new Set();
+            const uniqueCards = [];
+            let totalGain = 0;
+            
+            state.cards.forEach(card => {
+                if (!seen.has(card.id)) {
+                    seen.add(card.id);
+                    uniqueCards.push(card);
+                } else {
+                    totalGain += CONFIG.CARD_SELL_PRICES[card.rarity];
+                }
+            });
+            
+            if (totalGain > 0) {
+                if (confirm(`Sell all duplicates for ${totalGain} Clocks?`)) {
+                    state.clocks += totalGain;
+                    state.cards = uniqueCards;
+                    calculateCardBonus();
+                    SFX.play('convert');
+                    log(`SOLD ALL DUPLICATES FOR ${totalGain} CLOCKS.`);
+                    renderCards();
+                    saveGame();
+                    updateUI(0, 1 + state.chronotons * 100);
+                }
+            } else {
+                alert("No duplicates to sell!");
             }
         }
 
