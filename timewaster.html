@@ -1201,12 +1201,24 @@
             els.entropyCap.innerText = state.entropyCap.toFixed(1);
             els.totalClicks.innerText = formatNum(state.totalClicks);
             
+            // Notifications and non-optimized UI updates
+            const hasDoneQuests = (state.quests || []).some(q => q.done && !q.claimed);
+            const questNotif = document.getElementById('questNotif');
+            if (questNotif) questNotif.classList.toggle('hidden', !hasDoneQuests);
+            checkShopNotifications();
+
             const goals = CONFIG.ENTROPY_GOALS;
             const nextGoal = goals.find(g => g > state.totalClicks) || 999999;
             els.nextGoalDisplay.innerText = formatNum(nextGoal);
             const prevGoal = goals[goals.indexOf(nextGoal) - 1] || 0;
             const goalProgress = ((state.totalClicks - prevGoal) / (nextGoal - prevGoal)) * 100;
             els.clickProgress.style.width = `${goalProgress}%`;
+
+            // Calc and display rate
+            const prestigeMult = 1 + ((Number(state.chronotons) || 0) * 100);
+            els.sec.innerText = formatNum(state.seconds);
+            els.clk.innerText = formatNum(state.clocks);
+            els.rate.innerText = `+${formatNum(rate)}/s`;
 
             // Static Labels - Dynamic Update
             
@@ -1240,11 +1252,6 @@
                     '.lbl-quests-btn': "OPEN QUEST MENU",
                     '.lbl-quests-title': "DAILY QUESTS"
                 };
-
-                // Notifications
-                const hasDoneQuests = state.quests.some(q => q.done && !q.claimed);
-                document.getElementById('questNotif').classList.toggle('hidden', !hasDoneQuests);
-                checkShopNotifications();
 
                 for (const [selector, text] of Object.entries(labels)) {
                     document.querySelectorAll(selector).forEach(el => el.innerText = getText(text));
@@ -1390,7 +1397,10 @@
         }
 
         function getRankTitle() {
-            const rank = RANKS.findLast(r => state.totalSecondsWasted >= r.t) || RANKS[0];
+            let rank = RANKS[0];
+            for (let i = RANKS.length - 1; i >= 0; i--) {
+                if (state.totalSecondsWasted >= RANKS[i].t) { rank = RANKS[i]; break; }
+            }
             return rank.title;
         }
 
@@ -1515,7 +1525,8 @@
 
         // --- Formatting ---
         function formatNum(num) {
-            if (num < 1000) return Math.floor(num * 10) / 10;
+            if (isNaN(num) || num === null) return "0";
+            if (num < 1000) return (Math.floor(num * 10) / 10).toString();
             const suffixes = ["", "k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
             const suffixNum = Math.floor(Math.log10(num) / 3);
             if (suffixNum === 0) return Math.floor(num * 10) / 10; 
@@ -2724,11 +2735,15 @@
                             state[k] = Number(state[k]) || 0;
                         }
                     });
-
+                
+                // Re-validate sub-objects
+                state.shopCounts = (typeof state.shopCounts === 'object' && state.shopCounts !== null) ? state.shopCounts : {};
+                state.skills = (typeof state.skills === 'object' && state.skills !== null) ? state.skills : {};
+                state.unlocks = (typeof state.unlocks === 'object' && state.unlocks !== null) ? state.unlocks : {};
+                
                     if (!state.checkedShopPages || state.checkedShopPages.length !== 4) state.checkedShopPages = [true, false, false, false];
                     if (!state.pageAffordability || state.pageAffordability.length !== 4) state.pageAffordability = [false, false, false, false];
 
-                    calculateEntropyCap();
                     calculateCardBonus();
                     const now = Date.now();
                     const diffMins = Math.floor((now - (state.lastSaveTime || now)) / 60000);
