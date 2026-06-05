@@ -537,7 +537,7 @@
             </div>
             <div class="flex gap-2 w-full mb-2">
                 <button id="convertBtn" class="btn flex-grow py-4 text-lg border-dashed">
-                    <span class="lbl-convert">CONVERT</span> <span id="convertCost">60</span>s -> 1 <span class="lbl-clk-sing">CLOCK</span>
+                    <span class="lbl-convert">CONVERT</span> <span id="convertCost">10</span>s -> 1 <span class="lbl-clk-sing">CLOCK</span>
                 </button>
                 <button id="bulkConvertBtn" onclick="bulkConvert()" class="btn w-20 text-xs border-dashed flex flex-col items-center justify-center" title="Convert Max (25% Penalty)">
                     <span class="lbl-bulk">BULK</span>
@@ -785,7 +785,7 @@
         };
 
         const CONFIG = {
-            BASE_CONVERSION: 60,
+            BASE_CONVERSION: 10,
             CONVERSION_SCALE: 1.01,
             OFFLINE_RATE: 5, 
             CHRONO_THRESHOLD: 25000,
