@@ -1209,10 +1209,10 @@
             els.clickProgress.style.width = `${goalProgress}%`;
 
             // Static Labels - Dynamic Update
-            document.getElementById('mainTitle').innerText = getText("THE TIME WASTER");
-            document.getElementById('rankTitle').innerText = `RANK: ${getText(getRankTitle())}`;
             
             if (Math.random() < 0.05) { // Optimization: update labels less frequently
+                document.getElementById('mainTitle').innerText = getText("THE TIME WASTER");
+                document.getElementById('rankTitle').innerText = `RANK: ${getText(getRankTitle())}`;
                 const labels = {
                     '.lbl-life': "LIFETIME",
                     '.lbl-run': "TOTAL (THIS RUN)",
@@ -1355,23 +1355,24 @@
 
         function checkShopNotifications() {
             const boredomDiscount = getBoredomDiscount();
-            let anyNewAffordable = false;
+            let leftNotif = false;
+            let rightNotif = false;
 
             for (let p = 0; p < 4; p++) {
                 const isAffordable = isSomethingAffordableOnPage(p, boredomDiscount);
-                // If it just became affordable, reset "checked" status
                 if (isAffordable && !state.pageAffordability[p]) {
                     state.checkedShopPages[p] = false;
                 }
                 state.pageAffordability[p] = isAffordable;
                 
                 if (p !== state.shopPage && isAffordable && !state.checkedShopPages[p]) {
-                    anyNewAffordable = true;
+                    if (p < state.shopPage) leftNotif = true;
+                    else rightNotif = true;
                 }
             }
 
-            document.getElementById('shopLeftNotif').classList.toggle('hidden', !anyNewAffordable);
-            document.getElementById('shopRightNotif').classList.toggle('hidden', !anyNewAffordable);
+            document.getElementById('shopLeftNotif').classList.toggle('hidden', !leftNotif);
+            document.getElementById('shopRightNotif').classList.toggle('hidden', !rightNotif);
         }
 
         function isSomethingAffordableOnPage(p, discount) {
@@ -1938,9 +1939,11 @@
             // Sort cards by rarity then name to group duplicates
             const rarityOrder = { exotic: 0, rare: 1, common: 2 };
             const sortedCards = [...state.cards].sort((a, b) => {
-                if (rarityOrder[a.rarity] !== rarityOrder[b.rarity]) 
-                    return rarityOrder[a.rarity] - rarityOrder[b.rarity];
-                return a.name.localeCompare(b.name);
+                const rA = a?.rarity || 'common';
+                const rB = b?.rarity || 'common';
+                if (rarityOrder[rA] !== rarityOrder[rB]) 
+                    return rarityOrder[rA] - rarityOrder[rB];
+                return (a?.name || "").localeCompare(b?.name || "");
             });
 
             sortedCards.forEach(c => {
@@ -2706,11 +2709,24 @@
                         }
                     }
                     state.bjGameOver = true; // Ensure minigame is reset
+                    
+                    // Migration: Convert old string-ID cards to objects
+                    if (state.cards && state.cards.length > 0 && typeof state.cards[0] === 'string') {
+                        state.cards = state.cards.map(id => CARDS.find(c => c.id === id)).filter(c => c);
+                    }
                     state.cards = Array.isArray(state.cards) ? state.cards : [];
-                    // Sanitize critical multipliers
-                    ['seconds', 'clocks', 'fragments', 'chronotons', 'prestigeCount', 'totalSecondsWasted', 'runSecondsWasted', 'conversions', 'totalClicks', 'knowledgeMult'].forEach(k => {
-                        state[k] = Number(state[k]) || (k === 'knowledgeMult' || k === 'entropyMultiplier' ? 1.0 : 0);
+                    
+                    // Sanitize critical multipliers and pagination state
+                    ['seconds', 'clocks', 'fragments', 'chronotons', 'prestigeCount', 'totalSecondsWasted', 'runSecondsWasted', 'conversions', 'totalClicks', 'knowledgeMult', 'entropyMultiplier'].forEach(k => {
+                        if (k === 'knowledgeMult' || k === 'entropyMultiplier') {
+                            state[k] = Number(state[k]) || 1.0;
+                        } else {
+                            state[k] = Number(state[k]) || 0;
+                        }
                     });
+
+                    if (!state.checkedShopPages || state.checkedShopPages.length !== 4) state.checkedShopPages = [true, false, false, false];
+                    if (!state.pageAffordability || state.pageAffordability.length !== 4) state.pageAffordability = [false, false, false, false];
 
                     calculateEntropyCap();
                     calculateCardBonus();
