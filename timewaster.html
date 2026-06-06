@@ -672,7 +672,7 @@
             <p class="text-xs mb-4">
                 <span class="lbl-machine-desc">The machine hums. Reset run for Chronotons.</span>
                 <br>REQ: <span id="nextChronoReq">25,000</span> LIFETIME SECONDS.
-                <br>EFFECT: x100 SPEED per Chronoton.
+                <br>EFFECT: x100 SPEED & x10 COST per Chronoton (EXPONENTIAL).
             </p>
             <div id="potentialChrono" class="text-lg mb-4 text-white">REWARD: 0 CHRONOTONS</div>
             <button onclick="prestige()" class="btn w-full border-purple-500 text-purple-400 hover:bg-purple-900 lbl-activate">[ACTIVATE TIME MACHINE]</button>
@@ -837,6 +837,13 @@
                         <div class="text-[10px] text-gray-400">No animations.</div>
                     </div>
                     <input type="checkbox" id="motionCheck" class="w-6 h-6" onchange="updateSettings()">
+                </div>
+            </div>
+            <div class="mb-6 border-t border-gray-700 pt-4 flex flex-col gap-2">
+                <div class="font-bold text-yellow-400 text-xs mb-1">DATA MANAGEMENT</div>
+                <div class="flex gap-2">
+                    <button onclick="exportSave()" class="btn text-[10px] py-1 flex-grow border-yellow-500 text-yellow-500">EXPORT SAVE</button>
+                    <button onclick="importSave()" class="btn text-[10px] py-1 flex-grow border-blue-500 text-blue-400">IMPORT SAVE</button>
                 </div>
             </div>
             <button onclick="closeModal('settingsModal')" class="btn mt-4 w-full">CLOSE</button>
@@ -1167,7 +1174,7 @@
             // Theme Buffs
             if(state.activeTheme === 'matrix') baseRate *= 1.1;
             
-            const prestigeMult = Math.max(1, (Number(state.chronotons) || 0) * 100); 
+            const prestigeMult = Math.pow(100, state.chronotons);
             const realWorldMult = getRealWorldMult();
             let finalRate = baseRate * prestigeMult * realWorldMult * state.entropyMultiplier;
 
@@ -1331,7 +1338,7 @@
          function updateUI(rate) {
             const lol = state.settings.lolcat;
             const boredomDiscount = getBoredomDiscount();
-            const pMult = Math.max(1, (Number(state.chronotons) || 0) * 100);
+            const pMult = Math.pow(100, state.chronotons);
 
             els.entropy.innerText = state.entropyMultiplier.toFixed(1);
             els.entropyCap.innerText = state.entropyCap.toFixed(1);
@@ -1533,11 +1540,11 @@
                 const activeCat = catIds[p];
                 return SHOP_ITEMS.filter(i => i.category === activeCat).some(item => {
                     const count = state.shopCounts[item.id] || 0;
-                    let price = (item.cost + (count * item.cost)) * (state.skills.cheap_shop ? 0.95 : 1) * (state.activeTheme === 'blood' ? 0.8 : 1) * discount;
+                    let price = (item.cost + (count * item.cost)) * Math.pow(10, state.chronotons) * (state.skills.cheap_shop ? 0.95 : 1) * (state.activeTheme === 'blood' ? 0.8 : 1) * discount;
                     return !item.special && state.clocks >= Math.floor(price);
                 });
             } else {
-                return DISTRACTIONS.some(d => !state.unlocks[d.id] && (d.curr === 'k' ? state.chronotons >= d.cost : state.clocks >= d.cost));
+                return DISTRACTIONS.some(d => !state.unlocks[d.id] && (d.curr === 'k' ? state.chronotons >= d.cost : state.clocks >= (d.cost * Math.pow(10, state.chronotons))));
             }
         }
 
@@ -1565,7 +1572,7 @@
         function renderShopUI() {
             const grid = document.getElementById('shopGrid');
             const currentBoredomDiscount = getBoredomDiscount();
-            const pMult = Math.max(1, (Number(state.chronotons) || 0) * 100);
+            const pMult = Math.pow(100, state.chronotons);
             const cats = ["SECONDS SHOP", "AGITATION SHOP", "CLOCK SHOP", "BOREDOM SHOP"];
             const catIds = ["seconds", "agitation", "clocks", "boredom"];
             
@@ -1638,7 +1645,7 @@
                     div.querySelector('.shop-item-desc').innerText = getText(displayDesc);
                     div.querySelector('.shop-item-owned').innerText = `${getText("OWNED")}: ${count}`;
 
-                    let price = item.cost + (count * item.cost);
+                    let price = (item.cost + (count * item.cost)) * Math.pow(10, state.chronotons);
                     if(state.skills.cheap_shop) price = Math.floor(price * 0.95);
                     if(state.activeTheme === 'blood') price = Math.floor(price * 0.8);
                     price = Math.floor(price * currentBoredomDiscount);
@@ -1661,11 +1668,12 @@
                     div.querySelector('.dist-item-desc').innerText = getText(d.desc);
                     
                     div.className = `flex justify-between items-center box p-2 bg-gray-900 mb-1 ${unlocked ? 'border-blue-500' : 'border-gray-700'}`;
-                    const canAfford = d.curr === 'k' ? state.chronotons >= d.cost : state.clocks >= d.cost;
+                    const price = d.curr === 'k' ? d.cost : d.cost * Math.pow(10, state.chronotons);
+                    const canAfford = d.curr === 'k' ? state.chronotons >= price : state.clocks >= price;
                     
                     btn.className = `btn text-[9px] py-1 px-2 ${unlocked ? 'border-blue-500' : 'border-gray-500'}`;
                     btn.disabled = !unlocked && !canAfford;
-                    btn.innerText = unlocked ? getText("LAUNCH") : (d.curr === 'k' ? `${d.cost}K` : `${d.cost}C`);
+                    btn.innerText = unlocked ? getText("LAUNCH") : (d.curr === 'k' ? `${price}K` : `${formatNum(price)}C`);
                     btn.onclick = () => {
                         if (unlocked) triggerDist(d.id);
                         else buyDist(d.id);
@@ -1803,7 +1811,7 @@
         window.buy = function(id) {
             const item = SHOP_ITEMS.find(i => i.id === id);
             const count = state.shopCounts[id] || 0;
-            let price = item.cost + (count * item.cost);
+            let price = (item.cost + (count * item.cost)) * Math.pow(10, state.chronotons);
             if(state.skills.cheap_shop) price = Math.floor(price * 0.95);
             if(state.activeTheme === 'blood') price = Math.floor(price * 0.8);
             price = Math.floor(price * getBoredomDiscount());
@@ -1834,10 +1842,11 @@
         window.buyDist = function(id) {
             const d = DISTRACTIONS.find(x => x.id === id);
             let success = false;
+            const price = d.curr === 'k' ? d.cost : d.cost * Math.pow(10, state.chronotons);
             if (d.curr === 'k') {
-                if (state.chronotons >= d.cost) { state.chronotons -= d.cost; success = true; }
+                if (state.chronotons >= price) { state.chronotons -= price; success = true; }
             } else {
-                if (state.clocks >= d.cost) { state.clocks -= d.cost; success = true; }
+                if (state.clocks >= price) { state.clocks -= price; success = true; }
             }
             if (success) {
                 state.unlocks[id] = true;
@@ -3073,6 +3082,27 @@
                 console.error("Save failed:", e);
             }
         }
+
+        window.exportSave = function() {
+            const data = localStorage.getItem(CONFIG.SAVE_KEY);
+            if (!data) return;
+            const encoded = btoa(data);
+            navigator.clipboard.writeText(encoded).then(() => {
+                alert("Encoded save data copied to clipboard.");
+            });
+        }
+
+        window.importSave = function() {
+            const input = prompt("Paste your encoded save data:");
+            if (!input) return;
+            try {
+                const decoded = atob(input);
+                JSON.parse(decoded);
+                localStorage.setItem(CONFIG.SAVE_KEY, decoded);
+                location.reload();
+            } catch (e) { alert("Invalid save data!"); }
+        }
+
         function loadGame() {
             const raw = localStorage.getItem(CONFIG.SAVE_KEY);
             if (raw) {
