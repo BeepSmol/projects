@@ -237,6 +237,7 @@
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 8px 8px 0px #555;
+            position: relative;
         }
 
         /* Devtools Panel */
@@ -301,6 +302,78 @@
         .card-rare { border-color: #3b82f6; color: #60a5fa; box-shadow: inset 0 0 5px #3b82f6; }
         .card-exotic { border-color: #a855f7; color: #c084fc; box-shadow: inset 0 0 10px #a855f7; animation: exotic-glow 2s infinite alternate; }
         @keyframes exotic-glow { from { box-shadow: inset 0 0 5px #a855f7; } to { box-shadow: inset 0 0 20px #a855f7; } }
+
+        .card-mysterious { 
+            border-color: #ff00ff; 
+            color: #ff00ff; 
+            box-shadow: inset 0 0 15px #ff00ff, 0 0 10px #ff00ff; 
+            animation: mysterious-glitch 0.2s infinite alternate; 
+        }
+        @keyframes mysterious-glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            60% { transform: translate(1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+            100% { transform: translate(0); }
+        }
+        
+        /* Cutscene Enhancements */
+        @keyframes cutscene-float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(15px, -15px) rotate(1.5deg); }
+            66% { transform: translate(-15px, 15px) rotate(-1.5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .cutscene-particle {
+            position: absolute;
+            background: #ff00ff;
+            width: 3px; height: 3px;
+            pointer-events: none;
+            filter: blur(1px);
+        }
+        #cutsceneTitle.show {
+            opacity: 1;
+            transform: scale(1);
+            animation: mysterious-glitch 0.3s infinite alternate;
+        }
+        #cutsceneText {
+            white-space: pre-wrap;
+        }
+        .cinematic-vignette {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle, transparent 40%, black 150%);
+            pointer-events: none; z-index: 12;
+        }
+        .scanline {
+            width: 100%; height: 50px;
+            z-index: 15;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0) 100%);
+            position: absolute; bottom: 100%;
+            pointer-events: none;
+            animation: scanline-move 6s linear infinite;
+        }
+        @keyframes scanline-move { 0% { bottom: 100%; } 100% { bottom: -100px; } }
+
+        @keyframes cinematic-flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.98; }
+            100% { opacity: 1; }
+        }
+        .cinematic-flicker {
+            animation: cinematic-flicker 0.15s infinite;
+        }
+        .letterbox-top, .letterbox-bottom {
+            position: absolute;
+            left: 0; width: 100%; height: 0;
+            background: #000; z-index: 11;
+            transition: height 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .modal.active .letterbox-top, .modal.active .letterbox-bottom {
+            height: 60px;
+        }
+        .letterbox-top { top: 0; border-bottom: 1px solid #ff00ff22; }
+        .letterbox-bottom { bottom: 0; border-top: 1px solid #ff00ff22; }
 
         .rolling-overlay {
             background: #111; border: 2px dashed #ffd700; height: 160px;
@@ -423,6 +496,24 @@
             font-weight: bold;
             z-index: 10;
         }
+
+        @keyframes tutorial-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .tutorial-arrow {
+            animation: tutorial-bounce 1s infinite;
+        }
+
+        .tutorial-glow {
+            box-shadow: 0 0 15px 5px rgba(34, 197, 94, 0.8) !important;
+            border-color: #22c55e !important;
+            z-index: 2001;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px 5px rgba(34, 197, 94, 0.7); }
+            50% { box-shadow: 0 0 25px 8px rgba(34, 197, 94, 0.9); }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
@@ -449,6 +540,8 @@
       <button onclick="devAddSec()" class="btn text-xs w-full mb-1 border-green-500 text-green-500">+10k Seconds</button>
       <button onclick="devAddClk()" class="btn text-xs w-full mb-1 border-green-500 text-green-500">+1k Clocks</button>
       <button onclick="devAddChr()" class="btn text-xs w-full mb-1 border-green-500 text-green-500">+5 Chronotons</button>
+      <button onclick="devUnlockRareCards()" class="btn text-xs w-full mb-1 border-green-500 text-green-500">Unlock Rare Cards</button>
+      <button onclick="devPlayRandomCutscene()" class="btn text-xs w-full mb-1 border-green-500 text-green-500">Play Random Cutscene</button>
       <button onclick="devUnlockAll()" class="btn text-xs w-full mb-1 border-green-500 text-green-500">Unlock All Achievements</button>
       <button onclick="document.getElementById('devtoolsPanel').style.display='none'" class="btn text-xs w-full border-red-500 text-red-500">CLOSE</button>
   </div>
@@ -506,8 +599,8 @@
             <div class="flex flex-wrap justify-center gap-2 mt-4 transition-all duration-300">
                 <button onclick="toggleMusic()" class="btn text-xs lbl-music">[TOGGLE MUSIC]</button>
                 <button onclick="openTutorial(false)" class="btn text-xs border-green-500 text-green-500">[TUTORIAL]</button>
-                <button onclick="openModal('settingsModal')" class="btn text-xs border-gray-400 text-gray-400 lbl-settings">[SETTINGS]</button>
-                <button onclick="openModal('achieveModal')" class="btn text-xs border-yellow-500 text-yellow-500 lbl-shame">[HALL OF SHAME]</button>
+                <button id="settingsMenuBtn" onclick="openModal('settingsModal')" class="btn text-xs border-gray-400 text-gray-400 lbl-settings">[SETTINGS]</button>
+                <button id="achieveMenuBtn" onclick="openModal('achieveModal')" class="btn text-xs border-yellow-500 text-yellow-500 lbl-shame">[HALL OF SHAME]</button>
                 <button onclick="triggerReset()" class="btn text-xs hover:bg-red-600 hover:text-white border-red-500 text-red-500 lbl-reset">[HARD RESET]</button>
             </div>
             <div id="offlineBadge" class="hidden mt-4 border border-green-500 text-green-500 p-2 text-xs">
@@ -553,8 +646,8 @@
                 <div class="w-full bg-gray-900 h-1 mb-2">
                     <div id="clickProgressBar" class="bg-red-600 h-full transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) shadow-[0_0_12px_rgba(220,38,38,0.6)]" style="width: 0%"></div>
                 </div>
-                <button id="entropyBtn" onclick="handleEntropyClick(event)" class="relative btn w-full py-2 border-red-500 text-red-500 text-sm overflow-hidden group">
-                    <div id="entropyProgressBar" class="absolute top-0 left-0 h-full bg-red-600/30 transition-all duration-100 ease-linear pointer-events-none" style="width: 0%"></div>
+                <button id="entropyBtn" onclick="handleEntropyClick(event)" class="relative btn w-full py-2 border-red-500 text-red-500 text-sm overflow-hidden group shadow-inner">
+                    <div id="entropyProgressBar" class="absolute top-0 left-0 h-full bg-red-600/40 transition-all duration-100 ease-linear pointer-events-none" style="width: 0%; z-index: 1;"></div>
                     <div class="relative z-10 flex justify-between w-full px-4">
                         <span>AGITATE TIME</span>
                         <span id="totalClicksDisplay">0</span>
@@ -579,7 +672,7 @@
             <p class="text-xs mb-4">
                 <span class="lbl-machine-desc">The machine hums. Reset run for Chronotons.</span>
                 <br>REQ: <span id="nextChronoReq">25,000</span> LIFETIME SECONDS.
-                <br>EFFECT: +100% SPEED.
+                <br>EFFECT: x100 SPEED per Chronoton.
             </p>
             <div id="potentialChrono" class="text-lg mb-4 text-white">REWARD: 0 CHRONOTONS</div>
             <button onclick="prestige()" class="btn w-full border-purple-500 text-purple-400 hover:bg-purple-900 lbl-activate">[ACTIVATE TIME MACHINE]</button>
@@ -611,6 +704,7 @@
     <!-- Quest Modal -->
     <div id="questModal" class="modal">
         <div class="modal-content border-blue-500">
+            <div class="minigame-close" onclick="closeModal('questModal')">X</div>
             <h2 class="text-2xl font-bold text-blue-400 mb-4 border-b border-blue-500 pb-2 lbl-quests-title">DAILY QUESTS</h2>
             <div id="questList" class="space-y-4"></div>
             <button onclick="closeModal('questModal')" class="btn mt-6 w-full">CLOSE</button>
@@ -620,6 +714,7 @@
     <!-- Tutorial Modal -->
     <div id="tutorialModal" class="modal">
         <div class="modal-content border-green-500">
+            <div class="minigame-close" onclick="closeModal('tutorialModal')">X</div>
             <div id="tutorialRundown">
                 <h2 class="text-3xl font-bold text-green-400 mb-4 border-b border-green-500 pb-2">THE SURVIVAL GUIDE</h2>
             <div class="space-y-4 text-sm leading-relaxed">
@@ -650,6 +745,7 @@
 
     <!-- Live Guide Overlay -->
     <div id="guideOverlay" class="hidden fixed inset-0 z-[2000] pointer-events-none">
+        <div id="tutorialArrow" class="fixed text-green-500 text-4xl font-bold transition-all duration-300 pointer-events-none tutorial-arrow" style="text-shadow: 0 0 10px #00ff00; display: none;">⬇</div>
         <div id="guideBox" class="fixed bg-black border-2 border-green-500 p-4 rounded shadow-[0_0_15px_rgba(34,197,94,0.3)] pointer-events-auto max-w-xs transition-all duration-300 relative">
             <p id="guideText" class="text-sm font-bold text-white mb-4"></p>
             <div class="flex gap-2">
@@ -662,6 +758,7 @@
     <!-- Card Collection Modal -->
     <div id="cardModal" class="modal">
         <div class="modal-content border-yellow-500">
+            <div class="minigame-close" onclick="closeModal('cardModal')">X</div>
             <div class="flex justify-between items-center border-b border-yellow-500 mb-4 pb-2">
                 <h2 class="text-3xl font-bold text-yellow-400">CARD COLLECTION</h2>
                 <div id="cardStats" class="text-sm font-bold bg-yellow-950/40 px-3 py-1">0 FOUND</div>
@@ -672,7 +769,7 @@
             <div class="mb-4 bg-black p-4 border border-yellow-900 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <div class="text-xs text-gray-400">Collect artifacts to boost your knowledge of time.</div>
                 <div class="flex gap-2">
-                    <button onclick="buyCardPack()" class="btn border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">BUY PACK (50C)</button>
+                    <button id="buyPackBtn" onclick="buyCardPack()" class="btn border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">BUY PACK (10C)</button>
                     <button onclick="sellAllDuplicates()" class="btn border-red-500 text-red-500 hover:bg-red-500 hover:text-black">SELL ALL DUPS</button>
                 </div>
             </div>
@@ -681,9 +778,24 @@
         </div>
     </div>
 
+    <!-- Cutscene Modal -->
+    <div id="cutsceneModal" class="modal">
+        <div class="modal-content border-purple-500 text-center relative overflow-hidden min-h-[400px] flex flex-col justify-center items-center">
+            <div class="cinematic-vignette"></div>
+            <div class="scanline"></div>
+            <div class="letterbox-top"></div>
+            <div class="letterbox-bottom"></div>
+            <div id="cutsceneBg" class="absolute inset-0 pointer-events-none opacity-20"></div>
+            <div id="cutsceneTitle" class="text-5xl font-black mb-6 z-10 opacity-0 transform scale-150 transition-all duration-1000 text-purple-500 italic uppercase tracking-widest" style="text-shadow: 0 0 20px #ff00ff;"></div>
+            <div id="cutsceneText" class="text-xl font-bold mb-10 z-10 relative px-6 leading-relaxed text-gray-300 min-h-[1.5em]"></div>
+            <button onclick="closeModal('cutsceneModal')" class="btn w-full z-20">BACK TO REALITY</button>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settingsModal" class="modal">
         <div class="modal-content border-gray-400">
+            <div class="minigame-close" onclick="closeModal('settingsModal')">X</div>
             <h2 class="text-2xl font-bold text-gray-300 mb-4 border-b border-gray-500 pb-2 lbl-settings">SETTINGS</h2>
             <div class="mb-6 space-y-4">
                 <div>
@@ -734,6 +846,7 @@
     <!-- Skill Tree Modal -->
     <div id="skillModal" class="modal">
         <div class="modal-content border-green-500 h-full max-h-screen flex flex-col">
+            <div class="minigame-close" onclick="closeModal('skillModal')">X</div>
             <h2 class="text-2xl font-bold text-green-400 mb-4 border-b border-green-500 pb-2 lbl-tablet">ANCIENT TABLET</h2>
             <div class="flex justify-between mb-4 bg-black py-2 border-b border-gray-800 shrink-0">
                 <span class="text-green-300">FRAGMENTS: <span id="fragDisplay">0</span></span>
@@ -749,6 +862,7 @@
     <!-- Hall of Shame Modal -->
     <div id="achieveModal" class="modal">
         <div class="modal-content border-yellow-500">
+            <div class="minigame-close" onclick="closeModal('achieveModal')">X</div>
             <h2 class="text-2xl font-bold text-yellow-400 mb-4 border-b border-yellow-500 pb-2 lbl-shame-title">REGISTRY OF HEROES</h2>
             <div class="mb-2 text-xs text-right" id="achieveCount">0 / 0</div>
             <div id="achieveList" class="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto pr-2">
@@ -811,7 +925,7 @@
             CHRONO_THRESHOLD: 25000,
             CHRONO_SCALE: 100, 
             SAVE_KEY: 'timeWaster_v6_entropy',
-            CARD_SELL_PRICES: { 'common': 2, 'rare': 20, 'exotic': 120 },
+            CARD_SELL_PRICES: { 'common': 1, 'rare': 5, 'exotic': 50, 'mysterious': 500 },
             ENTROPY_GOALS: [50, 250, 500, 2500, 5000, 25000]
         };
 
@@ -831,13 +945,17 @@
             { id: 'c13', name: 'Void Essence', desc: 'Pure nothingness.', rarity: 'exotic' },
             { id: 'c14', name: 'Infinite Loop', desc: 'Again and again.', rarity: 'exotic' },
             { id: 'c15', name: 'Golden Second', desc: 'The perfect moment.', rarity: 'exotic' },
-            { id: 'c16', name: 'Paradox Core', desc: 'This shouldn\'t exist.', rarity: 'exotic' }
+            { id: 'c16', name: 'Paradox Core', desc: 'This shouldn\'t exist.', rarity: 'exotic' },
+            { id: 'c17', name: 'The First Glitch', desc: 'An error in reality.', rarity: 'mysterious', cutscene: 'The screen flickers as you hold the card.\n\nYou see a glimpse of the void...\n\nIt is cold, quiet, and perfectly still.' },
+            { id: 'c18', name: 'Entity\'s Whisper', desc: 'It knows you are here.', rarity: 'mysterious', cutscene: 'A static noise fills your ears.\n\nA distorted voice whispers:\n\n"Why do you waste your time?\nThe Janitor is watching."' }
         ];
 
         const assets = { dvd: new Image(), music: document.getElementById('bgMusic') };
         assets.dvd.src = 'dvdlogo.png';
         
         let cheatsEnabled = false;
+        let cutsceneAudio = null;
+        let musicWasPlayingBeforeCutscene = false;
         let state = {
             seconds: 0, clocks: 0, fragments: 0, chronotons: 0, prestigeCount: 0,
             totalSecondsWasted: 0, runSecondsWasted: 0, conversions: 0,
@@ -857,7 +975,7 @@
             settings: { sfxVol: 1, musicVol: 1, hardMode: false, lolcat: false, comicSans: false, reduceMotion: false, shopCollapsed: false },
             shopCounts: { gears: 0, chrono: 0, machine: 0, dilator: 0, toaster: 0, field: 0, trash: 0, dissolver: 0, engine: 0, skill_key: 0 },
             skills: { accel_pulse: false, shiny_magnet: false, eff_expert: false, deep_focus: false, time_warp: false, compound: false, cheap_shop: false, auto_conv: false },
-            achievements: [],
+            achievements: [], claimedAchievements: [],
             unlocks: { bg: false, dvd: false, chat: false, rock: false, mushroom: false, bubble: false, draw: false, unsorter: false, todo: false, waitroom: false, almost: false, dontclick: false, sub_box: false, netflix: false, miniclick: false },
             stats: { rockFed: 0, bubblesPopped: 0, bgChanges: 0, fakeClicks: 0, convertSpree: 0, almostFail: 0, chatMsgs: 0, unaffordableTry: 0, miniClicks: 0 },
             timers: { lastInput: Date.now() },
@@ -875,41 +993,41 @@
         ];
 
         const ACHIEVEMENTS = [
-            { id: 'anyone', title: "Is anyone there?", desc: "Waste 24 hours total (86400s).", check: (s) => s.totalSecondsWasted >= 86400 },
-            { id: 'missed', title: "Missed Opportunity", desc: "Let a Golden Second float away.", manual: true },
-            { id: 'collector', title: "Collector of Nothing", desc: "Hold 1,000 Clocks at once.", check: (s) => s.clocks >= 1000 },
-            { id: 'pointless', title: "Pointless Endeavor", desc: "Feed the Pet Rock 100 times.", check: (s) => s.stats.rockFed >= 100 },
-            { id: 'bubbles', title: "Master of Bubbles", desc: "Pop 1,200 Bubbles total.", check: (s) => s.stats.bubblesPopped >= 1200 },
-            { id: 'rebel', title: "Respect the Button", desc: "Click the 'Don't Click' button.", manual: true },
-            { id: 'traveler', title: "Time Traveler", desc: "Prestige for the first time.", check: (s) => s.prestigeCount >= 1 },
-            { id: 'efficient', title: "Efficiency Is Boring", desc: "Buy the Procrastinator's Engine.", check: (s) => s.shopCounts.engine >= 1 },
-            { id: 'online', title: "Chronically Online", desc: "Accumulate 1 Week of time wasted.", check: (s) => s.totalSecondsWasted >= 604800 },
-            { id: 'productive', title: "Actually Productive", desc: "Close the game for > 48 hours.", manual: true },
-            { id: 'speed_demon', title: "Speed Demon", desc: "Convert 10 times in 5 seconds.", manual: true },
-            { id: 'indecisive', title: "Indecisive", desc: "Change BG 20 times in 1 minute.", manual: true },
-            { id: 'wait_what', title: "Wait, what?", desc: "Find the secret button in Chat.", manual: true },
-            { id: 'max_effort', title: "Maximum Effort", desc: "1M Lifetime Secs, 0 Shop items.", check: (s) => s.totalSecondsWasted >= 1000000 && Object.values(s.shopCounts).reduce((a,b)=>a+b,0) === 0 },
-            { id: 'the_one_percent', title: "The 1%", desc: "Watch 'Almost Bar' fail.", manual: true },
-            { id: 'waiter', title: "Professional Waiter", desc: "Get number called in Waiting Room.", manual: true },
-            { id: 'paradox', title: "Paradox", desc: "Prestige with exactly 0 Seconds.", manual: true },
-            { id: 'clickbait', title: "Clickbait Victim", desc: "Click Fake Update 5 times.", check: (s) => s.stats.fakeClicks >= 5 },
-            { id: 'zen', title: "Zen Master", desc: "No mouse move for 5 mins.", manual: true },
-            { id: 'budgeting', title: "Budgeting", desc: "Try to buy item when 1 Clock short.", manual: true },
-            { id: 'long_dist', title: "Long Distance", desc: "DVD logo hit 4 corners.", manual: true },
-            { id: 'heist', title: "Time Heist", desc: "Capture 5 Golden Seconds in 1 min.", manual: true },
-            { id: 'completionist', title: "The Completionist", desc: "Unlock all Boredom items.", check: (s) => Object.values(s.unlocks).every(u => u) },
-            { id: 'regret', title: "Infinite Regret", desc: "Reset save after reaching highest rank.", manual: true },
-            { id: 'persistence', title: "Persistence", desc: "Try buy unaffordable 50 times.", check: (s) => s.stats.unaffordableTry >= 50 },
-            { id: 'anticlimax', title: "Anti-Climactic", desc: "Reach 99% on Almost Bar 5 times.", check: (s) => s.stats.almostFail >= 5 },
-            { id: 'speed_reader', title: "Speed Reader", desc: "100 Chat messages generated.", check: (s) => s.stats.chatMsgs >= 100 },
-            { id: 'overachiever', title: "Overachiever", desc: "1000x Multiplier.", check: (s) => (1 + s.chronotons * 100) >= 1000 },
-            { id: 'did_i', title: "Did I do that?", desc: "Click Golden Second while busy.", manual: true },
-            { id: 'worse', title: "Embrace Hard Mode", desc: "Turn on Hard Mode.", manual: true },
-            { id: 'font', title: "Forbidden Font", desc: "Activate Comic Sans mode.", manual: true },
-            { id: 'janitor', title: "The First Janitor", desc: "Unlock the Ancient Tablet.", check: (s) => s.shopCounts.skill_key > 0 },
-            { id: 'turbulence', title: "Turbulence", desc: "Reach 100 seconds per second.", check: (s) => false }, 
-            { id: 'bad_trade', title: "Terrible Investment", desc: "Exchange a Clock for 10 seconds via the Mushroom.", manual: true },
-            { id: 'beat', title: "Beat the Game?", desc: "Have everything + 5 Chronotons.", check: (s) => checkBeatGame(s) }
+            { id: 'anyone', title: "Is anyone there?", desc: "Waste 24 hours total (86400s).", reward: 50, check: (s) => s.totalSecondsWasted >= 86400 },
+            { id: 'missed', title: "Missed Opportunity", desc: "Let a Golden Second float away.", reward: 10, manual: true },
+            { id: 'collector', title: "Collector of Nothing", desc: "Hold 1,000 Clocks at once.", reward: 100, check: (s) => s.clocks >= 1000 },
+            { id: 'pointless', title: "Pointless Endeavor", desc: "Feed the Pet Rock 100 times.", reward: 50, check: (s) => s.stats.rockFed >= 100 },
+            { id: 'bubbles', title: "Master of Bubbles", desc: "Pop 1,200 Bubbles total.", reward: 50, check: (s) => s.stats.bubblesPopped >= 1200 },
+            { id: 'rebel', title: "Respect the Button", desc: "Click the 'Don't Click' button.", reward: 10, manual: true },
+            { id: 'traveler', title: "Time Traveler", desc: "Prestige for the first time.", reward: 100, check: (s) => s.prestigeCount >= 1 },
+            { id: 'efficient', title: "Efficiency Is Boring", desc: "Buy the Procrastinator's Engine.", reward: 50, check: (s) => s.shopCounts.engine >= 1 },
+            { id: 'online', title: "Chronically Online", desc: "Accumulate 1 Week of time wasted.", reward: 250, check: (s) => s.totalSecondsWasted >= 604800 },
+            { id: 'productive', title: "Actually Productive", desc: "Close the game for > 48 hours.", reward: 50, manual: true },
+            { id: 'speed_demon', title: "Speed Demon", desc: "Convert 10 times in 5 seconds.", reward: 25, manual: true },
+            { id: 'indecisive', title: "Indecisive", desc: "Change BG 20 times in 1 minute.", reward: 10, manual: true },
+            { id: 'wait_what', title: "Wait, what?", desc: "Find the secret button in Chat.", reward: 50, manual: true },
+            { id: 'max_effort', title: "Maximum Effort", desc: "1M Lifetime Secs, 0 Shop items.", reward: 500, check: (s) => s.totalSecondsWasted >= 1000000 && Object.values(s.shopCounts).reduce((a,b)=>a+b,0) === 0 },
+            { id: 'the_one_percent', title: "The 1%", desc: "Watch 'Almost Bar' fail.", reward: 25, manual: true },
+            { id: 'waiter', title: "Professional Waiter", desc: "Get number called in Waiting Room.", reward: 50, manual: true },
+            { id: 'paradox', title: "Paradox", desc: "Prestige with exactly 0 Seconds.", reward: 50, manual: true },
+            { id: 'clickbait', title: "Clickbait Victim", desc: "Click Fake Update 5 times.", reward: 10, check: (s) => s.stats.fakeClicks >= 5 },
+            { id: 'zen', title: "Zen Master", desc: "No mouse move for 5 mins.", reward: 30, manual: true },
+            { id: 'budgeting', title: "Budgeting", desc: "Try to buy item when 1 Clock short.", reward: 10, manual: true },
+            { id: 'long_dist', title: "Long Distance", desc: "DVD logo hit 4 corners.", reward: 100, manual: true },
+            { id: 'heist', title: "Time Heist", desc: "Capture 5 Golden Seconds in 1 min.", reward: 50, manual: true },
+            { id: 'completionist', title: "The Completionist", desc: "Unlock all Boredom items.", reward: 250, check: (s) => Object.values(s.unlocks).every(u => u) },
+            { id: 'regret', title: "Infinite Regret", desc: "Reset save after reaching highest rank.", reward: 500, manual: true },
+            { id: 'persistence', title: "Persistence", desc: "Try buy unaffordable 50 times.", reward: 20, check: (s) => s.stats.unaffordableTry >= 50 },
+            { id: 'anticlimax', title: "Anti-Climactic", desc: "Reach 99% on Almost Bar 5 times.", reward: 100, check: (s) => s.stats.almostFail >= 5 },
+            { id: 'speed_reader', title: "Speed Reader", desc: "100 Chat messages generated.", reward: 25, check: (s) => s.stats.chatMsgs >= 100 },
+            { id: 'overachiever', title: "Overachiever", desc: "1000x Multiplier.", reward: 500, check: (s) => (1 + s.chronotons * 100) >= 1000 },
+            { id: 'did_i', title: "Did I do that?", desc: "Click Golden Second while busy.", reward: 10, manual: true },
+            { id: 'worse', title: "Embrace Hard Mode", desc: "Turn on Hard Mode.", reward: 10, manual: true },
+            { id: 'font', title: "Forbidden Font", desc: "Activate Comic Sans mode.", reward: 10, manual: true },
+            { id: 'janitor', title: "The First Janitor", desc: "Unlock the Ancient Tablet.", reward: 100, check: (s) => s.shopCounts.skill_key > 0 },
+            { id: 'turbulence', title: "Turbulence", desc: "Reach 100 seconds per second.", reward: 100, check: (s) => false }, 
+            { id: 'bad_trade', title: "Terrible Investment", desc: "Exchange a Clock for 10 seconds via the Mushroom.", reward: 10, manual: true },
+            { id: 'beat', title: "Beat the Game?", desc: "Have everything + 5 Chronotons.", reward: 1000, check: (s) => checkBeatGame(s) }
         ];
 
         const RANKS = [
@@ -1036,13 +1154,20 @@
             // Calc Rate
             let baseRate = 1 * (state.knowledgeMult || 1.0);
             if(state.skills.accel_pulse) baseRate *= 1.10;
-            SHOP_ITEMS.forEach(item => { if(item.category === 'seconds') baseRate += (state.shopCounts[item.id] || 0) * item.power; });
+            SHOP_ITEMS.forEach(item => { 
+                if(item.category === 'seconds' && item.power > 0) {
+                    const count = state.shopCounts[item.id] || 0;
+                    if (count > 0) {
+                        baseRate += item.power * count;
+                    }
+                }
+            });
             if(state.skills.time_warp) baseRate *= 1.5;
             
             // Theme Buffs
             if(state.activeTheme === 'matrix') baseRate *= 1.1;
             
-            const prestigeMult = 1 + ((Number(state.chronotons) || 0) * 100); 
+            const prestigeMult = Math.max(1, (Number(state.chronotons) || 0) * 100); 
             const realWorldMult = getRealWorldMult();
             let finalRate = baseRate * prestigeMult * realWorldMult * state.entropyMultiplier;
 
@@ -1052,11 +1177,36 @@
 
             // Guided Tutorial Logic
             if (state.tutorialSeen && !document.getElementById('guideOverlay').classList.contains('hidden')) {
-                const step = guideSteps[currentGuideStep];
-                if (step && step.check && step.check()) {
-                    currentGuideStep++;
-                    if (currentGuideStep < guideSteps.length) showGuideStep();
-                    else skipTutorial();
+                if (tutorialDelayTimer > 0) {
+                    tutorialDelayTimer -= dt;
+                    document.getElementById('guideBox').style.opacity = '0';
+                    document.getElementById('guideBox').style.pointerEvents = 'none';
+                    if (document.getElementById('tutorialArrow')) document.getElementById('tutorialArrow').style.opacity = '0';
+                } else {
+                    document.getElementById('guideBox').style.opacity = '1';
+                    document.getElementById('guideBox').style.pointerEvents = 'all';
+                    const step = guideSteps[currentGuideStep];
+                    
+                    if (step && step.alternate) {
+                        const cost = Math.floor(getConversionCost() * getBoredomDiscount());
+                        const canConvert = state.seconds >= cost;
+                        // Only alternate to the convert button if the player can actually afford a conversion
+                        const altId = (canConvert && (Math.floor(Date.now() / 1000) % 2 === 0)) ? 'convertBtn' : 'entropyBtn';
+                        repositionGuide(altId);
+                    }
+                    
+                    if (document.getElementById('tutorialArrow')) {
+                         document.getElementById('tutorialArrow').style.opacity = '1';
+                    }
+
+                    if (step && step.check && step.check()) {
+                        clearTutorialGlow();
+                        if (step.onComplete) step.onComplete();
+                        if (step.id === 'buyPackBtn') tutorialDelayTimer = 2;
+                        currentGuideStep++;
+                        if (currentGuideStep < guideSteps.length) showGuideStep();
+                        else skipTutorial();
+                    }
                 }
             }
 
@@ -1123,7 +1273,7 @@
             }
 
             // Updates
-            updateUI(finalRate, prestigeMult);
+            updateUI(finalRate);
             checkAchievements();
             
             // Autosave (10s)
@@ -1178,26 +1328,17 @@
         }
 
         // --- UI ---
-        function updateUI(rate, pMult) {
+         function updateUI(rate) {
             const lol = state.settings.lolcat;
             const boredomDiscount = getBoredomDiscount();
-            
-            els.sec.innerText = formatNum(state.seconds);
-            els.clk.innerText = formatNum(state.clocks);
-            els.rate.innerText = `+${formatNum(rate)}/s`;
-            els.chronoTotal.innerText = formatNum(state.totalSecondsWasted);
-            els.runTotal.innerText = formatNum(state.runSecondsWasted);
-            els.chrono.innerText = formatNum(state.chronotons);
-            els.chronoMult.innerText = `+${formatNum((pMult - 1) * 100)}% BONUS`;
-            els.frag.innerText = state.fragments;
-            els.knowledge.innerText = `KNOWLEDGE: ${state.knowledgeMult.toFixed(2)}x`;
+            const pMult = Math.max(1, (Number(state.chronotons) || 0) * 100);
 
             els.entropy.innerText = state.entropyMultiplier.toFixed(1);
             els.entropyCap.innerText = state.entropyCap.toFixed(1);
             els.totalClicks.innerText = formatNum(state.totalClicks);
             
-            const multPct = ((state.entropyMultiplier - 1) / (state.entropyCap - 1)) * 100;
-            if (els.entropyBar) els.entropyBar.style.width = `${Math.max(0, Math.min(100, multPct))}%`;
+            const multPct = ((state.entropyMultiplier - 1) / (Math.max(0.1, state.entropyCap - 1))) * 100;
+            if (els.entropyBar) els.entropyBar.style.width = `${Math.max(0, Math.min(100, multPct)) || 0}%`;
             
             // Notifications and non-optimized UI updates
             const hasDoneQuests = (state.quests || []).some(q => q.done && !q.claimed);
@@ -1212,11 +1353,17 @@
             const goalProgress = ((state.totalClicks - prevGoal) / (nextGoal - prevGoal)) * 100;
             els.clickProgress.style.width = `${goalProgress}%`;
 
-            // Calc and display rate
-            const prestigeMult = 1 + ((Number(state.chronotons) || 0) * 100);
+
             els.sec.innerText = formatNum(state.seconds);
             els.clk.innerText = formatNum(state.clocks);
             els.rate.innerText = `+${formatNum(rate)}/s`;
+            els.chronoTotal.innerText = formatNum(state.totalSecondsWasted);
+            els.runTotal.innerText = formatNum(state.runSecondsWasted);
+            els.chrono.innerText = formatNum(state.chronotons);
+            els.chronoMult.innerText = `x${formatNum(pMult)} MULTIPLIER`;
+            els.frag.innerText = state.fragments;
+            els.knowledge.innerText = `KNOWLEDGE: ${state.knowledgeMult.toFixed(2)}x`;
+
 
             // Static Labels - Dynamic Update
             
@@ -1418,6 +1565,7 @@
         function renderShopUI() {
             const grid = document.getElementById('shopGrid');
             const currentBoredomDiscount = getBoredomDiscount();
+            const pMult = Math.max(1, (Number(state.chronotons) || 0) * 100);
             const cats = ["SECONDS SHOP", "AGITATION SHOP", "CLOCK SHOP", "BOREDOM SHOP"];
             const catIds = ["seconds", "agitation", "clocks", "boredom"];
             
@@ -1482,7 +1630,12 @@
                     if (!div || !btn) return;
 
                     div.querySelector('.shop-item-name').innerText = getText(item.name);
-                    div.querySelector('.shop-item-desc').innerText = getText(item.desc);
+                    let displayDesc = item.desc;
+                    if (item.category === 'seconds' && item.power > 0) {
+                        const count = state.shopCounts[item.id] || 0;
+                        displayDesc = `+${formatNum(item.power * pMult)} sec/s`;
+                    }
+                    div.querySelector('.shop-item-desc').innerText = getText(displayDesc);
                     div.querySelector('.shop-item-owned').innerText = `${getText("OWNED")}: ${count}`;
 
                     let price = item.cost + (count * item.cost);
@@ -1605,7 +1758,8 @@
                 if(convertClicks.length >= 10) unlockAchievement(ACHIEVEMENTS.find(a => a.id === 'speed_demon'));
                 
                 state.stats.convertSpree = convertClicks.length;
-                updateUI(0, 1 + state.chronotons*100);
+                updateUI(0);
+                saveGame(); // V7 Fix: Manual save on action
             } else {
                 SFX.play('error');
                 createFloatingText(center.x, center.y, "NOT ENOUGH TIME", "#ef4444");
@@ -1641,7 +1795,8 @@
                 state.clocks += taxedGain;
                 SFX.play('convert');
                 log(`BULK: SPENT FOR ${bought}, GAINED ${taxedGain} (TAXED).`);
-                updateUI(0, 1 + state.chronotons*100);
+                updateUI(0);
+                saveGame(); // V7 Fix: Manual save on action
             }
         }
 
@@ -1667,7 +1822,7 @@
                 if(!state.settings.reduceMotion) div.classList.add('flash-effect-strong'); // Visual feedback on purchase
                 log(`BOUGHT ${item.name}`);
                 saveGame();
-                updateUI(0, 1 + state.chronotons*100);
+                updateUI(0);
             }
         };
 
@@ -1786,6 +1941,16 @@
         }
         window.closeModal = function(id) {
             document.getElementById(id).classList.remove('active');
+            if (id === 'cutsceneModal') {
+                document.querySelector('#cutsceneModal .modal-content').classList.remove('cinematic-flicker');
+                if (cutsceneAudio) {
+                    cutsceneAudio.pause();
+                    cutsceneAudio = null;
+                }
+                if (musicWasPlayingBeforeCutscene) {
+                    assets.music.play().catch(e => {});
+                }
+            }
             SFX.play('click');
         }
 
@@ -1800,6 +1965,9 @@
         };
 
         let currentGuideStep = 0;
+        let tutorialDelayTimer = 0;
+        let settingsOpenedDuringTutorial = false;
+        let lastGlowTarget = null;
         const guideSteps = [
             { 
                 id: 'entropyBtn', 
@@ -1814,44 +1982,115 @@
             { 
                 id: 'shopGrid', 
                 text: "Shop is open. Buy RUSTY GEARS to start generating seconds automatically.",
-                check: () => state.shopCounts.gears > 0
+                check: () => (state.shopCounts.gears || 0) > 0
             },
             { 
                 id: 'convertBtn', 
-                text: "Excellent. Automate more! Keep agitating and converting until you have 50 Clocks.",
-                check: () => state.clocks >= 50
+                text: "Excellent. Automate more! Keep agitating and converting until you have 10 Clocks.",
+                check: () => state.clocks >= 10,
+                alternate: true
             },
             { 
                 id: 'cardMenuBtn', 
-                text: "Artifacts grant Knowledge. Open the CARD MENU and buy your first pack for 50 Clocks!",
-                check: () => state.cards.length >= 5
+                text: "Artifacts grant Knowledge. Open the CARD MENU and buy your first pack for 10 Clocks!",
+                check: () => document.getElementById('cardModal').classList.contains('active')
+            },
+            {
+                id: 'buyPackBtn',
+                text: "Buy a pack. Every artifact held increases production. Close the menu when done.",
+                check: () => state.cards.length >= 5 && !document.getElementById('cutsceneModal').classList.contains('active'),
+                onComplete: () => closeModal('cardModal')
+            },
+            {
+                id: 'shopPageIndicator',
+                text: "The shop has multiple categories! Flip pages to find upgrades for agitation and efficiency.",
+                check: () => state.checkedShopPages.every(v => v)
+            },
+            {
+                id: 'questMenuBtn',
+                text: "Check your Daily Quests! Completing tasks is the fastest way to get Clocks. Open the menu.",
+                check: () => document.getElementById('questModal').classList.contains('active')
+            },
+            {
+                id: 'questList',
+                text: "Quests refresh daily. Claim rewards here. Close the menu to continue.",
+                onComplete: () => closeModal('questModal')
+            },
+            {
+                id: 'achieveMenuBtn',
+                text: "The Hall of Shame tracks your progress. Open it up.",
+                check: () => document.getElementById('achieveModal').classList.contains('active')
+            },
+            {
+                id: 'achieveList',
+                text: "Claim clocks for achievements here. Close the menu to proceed.",
+                onComplete: () => closeModal('achieveModal')
+            },
+            {
+                id: 'settingsMenuBtn',
+                text: "Finally, check Settings for volume, themes, and more. Close it to finish tutorial.",
+                check: () => {
+                    const active = document.getElementById('settingsModal').classList.contains('active');
+                    if (active) settingsOpenedDuringTutorial = true;
+                    return settingsOpenedDuringTutorial && !active;
+                }
             }
         ];
 
         window.startLiveGuide = function() {
             closeModal('tutorialModal');
+            currentGuideStep = 0;
+            tutorialDelayTimer = 0;
+            settingsOpenedDuringTutorial = false;
+            state.checkedShopPages = [true, false, false, false];
             state.tutorialSeen = true; saveGame();
             const overlay = document.getElementById('guideOverlay');
             overlay.classList.remove('hidden');
             currentGuideStep = 0; showGuideStep();
         };
 
-        window.showGuideStep = function() {
-            const step = guideSteps[currentGuideStep];
+        function clearTutorialGlow() {
+            document.querySelectorAll('.tutorial-glow').forEach(el => el.classList.remove('tutorial-glow'));
+        }
+
+        function repositionGuide(id) {
             const box = document.getElementById('guideBox');
-            const target = document.getElementById(step.id);
-            const btnNext = document.getElementById('guideNext');
-            
-            btnNext.style.display = step.check ? "none" : "block";
-            document.getElementById('guideText').innerText = getText(step.text);
+            const arrow = document.getElementById('tutorialArrow');
+            const target = document.getElementById(id);
+
+            if (lastGlowTarget !== id) {
+                clearTutorialGlow();
+                if (target) target.classList.add('tutorial-glow');
+                lastGlowTarget = id;
+            }
+
             if (target) {
                 const rect = target.getBoundingClientRect();
+                arrow.style.display = 'block';
+                arrow.style.left = `${rect.left + rect.width / 2 - 15}px`;
+                arrow.style.top = `${rect.top - 50}px`;
                 box.style.left = `${rect.left}px`;
                 box.style.top = `${rect.bottom + 15}px`;
                 if (rect.left + 300 > window.innerWidth) box.style.left = `${window.innerWidth - 320}px`;
                 if (rect.bottom + 150 > window.innerHeight) box.style.top = `${rect.top - 150}px`;
+            } else {
+                arrow.style.display = 'none';
             }
+        }
+
+        window.showGuideStep = function() {
+            const step = guideSteps[currentGuideStep];
+            const btnNext = document.getElementById('guideNext');
+            
+            btnNext.style.display = step.check ? "none" : "block";
+            document.getElementById('guideText').innerText = getText(step.text);
+            
+            repositionGuide(step.id);
+
             document.getElementById('guideNext').onclick = () => {
+                clearTutorialGlow();
+                if (step.onComplete) step.onComplete();
+                if (step.id === 'buyPackBtn') tutorialDelayTimer = 2;
                 currentGuideStep++;
                 if (currentGuideStep < guideSteps.length) showGuideStep();
                 else skipTutorial();
@@ -1860,6 +2099,8 @@
 
         window.skipTutorial = function() {
             document.getElementById('guideOverlay').classList.add('hidden');
+            document.getElementById('tutorialArrow').style.display = 'none';
+            clearTutorialGlow();
             closeModal('tutorialModal');
             state.tutorialSeen = true; saveGame();
         };
@@ -1893,22 +2134,37 @@
 
         // --- Cards System ---
         function buyCardPack() {
-            if(state.clocks < 50) { SFX.play('error'); return; }
-            state.clocks -= 50;
-            
-            const rollDisplay = document.getElementById('rollingDisplay');
+            if(state.clocks < 10) { SFX.play('error'); return; }
+            state.clocks -= 10;
+
             const rollContainer = document.getElementById('rollContainer');
+            const rollDisplay = document.getElementById('rollingDisplay');
             rollContainer.classList.remove('hidden');
-            
+
+            // Create 5 rolling slots
+            rollDisplay.innerHTML = '<div class="flex gap-2 items-center justify-center w-full"></div>';
+            const slotsArea = rollDisplay.firstChild;
+            const rollElements = [];
+
+            for(let i=0; i<5; i++) {
+                const el = document.createElement('div');
+                el.className = 'w-20 h-28 border border-gray-600 flex items-center justify-center text-[10px] text-center font-bold bg-black overflow-hidden p-1 uppercase leading-tight';
+                el.innerText = '???';
+                slotsArea.appendChild(el);
+                rollElements.push(el);
+            }
+
             let rollCount = 0;
             const maxRolls = 20;
             const rollInterval = setInterval(() => {
-                const tempCard = CARDS[Math.floor(Math.random() * CARDS.length)];
-                rollDisplay.innerText = tempCard.name;
-                rollDisplay.className = `card-${tempCard.rarity} transition-all duration-75`;
+                rollElements.forEach(el => {
+                    const tempCard = CARDS[Math.floor(Math.random() * CARDS.length)];
+                    el.innerText = tempCard.name;
+                    el.className = `w-20 h-28 border flex items-center justify-center text-[10px] text-center font-bold bg-black overflow-hidden p-1 uppercase leading-tight card-${tempCard.rarity}`;
+                });
                 SFX.play('click');
                 rollCount++;
-                
+
                 if (rollCount >= maxRolls) {
                     clearInterval(rollInterval);
                     finalizePack();
@@ -1916,26 +2172,33 @@
             }, 100);
 
             function finalizePack() {
+                const chosen = [];
                 for (let i = 0; i < 5; i++) {
                     const rand = Math.random();
-                    let pool = CARDS.filter(c => c.rarity === 'common');
-                    if (rand > 0.95) pool = CARDS.filter(c => c.rarity === 'exotic');
+                    let pool;
+                    if (rand > 0.99) pool = CARDS.filter(c => c.rarity === 'mysterious');
+                    else if (rand > 0.94) pool = CARDS.filter(c => c.rarity === 'exotic');
                     else if (rand > 0.70) pool = CARDS.filter(c => c.rarity === 'rare');
-                    
+                    else pool = CARDS.filter(c => c.rarity === 'common');
+
+                    if (pool.length === 0) pool = CARDS.filter(c => c.rarity === 'common');
                     const card = pool[Math.floor(Math.random() * pool.length)];
-                    
                     state.cards.push(card);
-                    log(`PACK: FOUND [${card.name}] (${card.rarity.toUpperCase()})`);
+                    chosen.push(card);
+                    log(`PACK: FOUND [${card.name}] (${card.rarity === 'mysterious' ? '???' : card.rarity.toUpperCase()})`);
                 }
+                rollElements.forEach((el, i) => {
+                    const card = chosen[i];
+                    el.innerText = card.name;
+                    el.className = `w-20 h-28 border-2 flex items-center justify-center text-[10px] text-center font-bold bg-black overflow-hidden p-1 uppercase leading-tight card-${card.rarity} scale-110`;
+                });
                 calculateCardBonus();
-                
-                rollDisplay.innerText = "5 CARDS UNLOCKED!";
-                rollDisplay.className = `card-exotic font-black scale-125 transition-all duration-700 cubic-bezier(0.175, 0.885, 0.32, 1.275)`;
-                
                 SFX.play('golden');
                 renderCards();
                 saveGame();
-                setTimeout(() => { rollContainer.classList.add('hidden'); }, 2000);
+
+                const mysteryCard = chosen.find(c => c.cutscene);
+                if (mysteryCard) setTimeout(() => playCutscene(mysteryCard.id), 1500);
             }
         }
         
@@ -1948,7 +2211,7 @@
             els.cardGrid.innerHTML = '';
             
             // Sort cards by rarity then name to group duplicates
-            const rarityOrder = { exotic: 0, rare: 1, common: 2 };
+            const rarityOrder = { mysterious: 0, exotic: 1, rare: 2, common: 3 };
             const sortedCards = [...state.cards].sort((a, b) => {
                 const rA = a?.rarity || 'common';
                 const rB = b?.rarity || 'common';
@@ -1961,14 +2224,85 @@
                 const div = document.createElement('div');
                 div.className = `game-card card-${c.rarity}`;
                 const sellPrice = CONFIG.CARD_SELL_PRICES[c.rarity];
-                div.innerHTML = `
+                let content = `
                     <div class="font-black underline mb-1 text-sm">${c.name || c.id}</div>
+                    ${c.rarity === 'mysterious' ? '<div class="text-[9px] font-bold mb-1">[ RARITY: ??? ]</div>' : ''}
                     <div class="text-[10px] italic opacity-70 mb-2">${c.desc || 'A mysterious artifact.'}</div>
+                `;
+
+                if (c.cutscene) {
+                    content += `<button onclick="playCutscene('${c.id}')" class="btn text-[9px] py-1 border-purple-500 text-purple-400 hover:bg-purple-900 mb-1">WATCH CUTSCENE</button>`;
+                }
+
+                content += `
                     <button onclick="sellCard('${c.id}')" class="btn text-[10px] py-1 border-gray-500 hover:border-red-500 hover:text-red-500 mt-auto">SELL (${sellPrice}C)</button>
                 `;
+                div.innerHTML = content;
                 els.cardGrid.appendChild(div);
             });
             document.getElementById('cardStats').innerText = `${state.cards.length} FOUND`;
+        }
+
+        window.playCutscene = function(id) {
+            const card = state.cards.find(c => c.id === id) || CARDS.find(c => c.id === id);
+            if (card && card.cutscene) {
+                const titleEl = document.getElementById('cutsceneTitle');
+                const textEl = document.getElementById('cutsceneText');
+                const bgEl = document.getElementById('cutsceneBg');
+                
+                titleEl.innerText = getText(card.name);
+                textEl.innerText = "";
+                titleEl.classList.remove('show');
+                bgEl.innerHTML = '';
+
+                const modalContent = document.querySelector('#cutsceneModal .modal-content');
+                modalContent.classList.add('cinematic-flicker');
+
+                musicWasPlayingBeforeCutscene = !assets.music.paused;
+                if (musicWasPlayingBeforeCutscene) assets.music.pause();
+
+                if (cutsceneAudio) cutsceneAudio.pause();
+                cutsceneAudio = new Audio('cutscene.mp3');
+                cutsceneAudio.loop = true;
+                cutsceneAudio.volume = state.settings.musicVol;
+                cutsceneAudio.play().catch(e => console.log("Audio play deferred:", e));
+
+                openModal('cutsceneModal');
+                SFX.play('golden');
+
+                // Add moving particles for cinematic effect
+                for(let i=0; i<30; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'cutscene-particle';
+                    p.style.left = Math.random() * 100 + "%";
+                    p.style.top = Math.random() * 100 + "%";
+                    p.style.animation = `cutscene-float ${3 + Math.random() * 4}s infinite ease-in-out`;
+                    p.style.opacity = 0.2 + Math.random() * 0.7;
+                    bgEl.appendChild(p);
+                }
+
+                setTimeout(() => {
+                    titleEl.classList.add('show');
+                    SFX.play('ding');
+                    
+                    // Narrative typewriter (Slower & Cinematic)
+                    let i = 0;
+                    const fullText = getText(card.cutscene);
+                    const typeChar = () => {
+                        if (!document.getElementById('cutsceneModal').classList.contains('active')) return;
+                        if (i < fullText.length) {
+                            textEl.innerText += fullText.charAt(i);
+                            if (i % 3 === 0) SFX.play('click');
+                            i++;
+                            // Slower typing with a bit of random jitter (70ms-120ms)
+                            setTimeout(typeChar, 70 + Math.random() * 50);
+                        }
+                    };
+                    setTimeout(typeChar, 1500); // Dramatic pause after title appears
+                }, 1000);
+
+                log(`WATCHED CUTSCENE: ${card.name}`);
+            }
         }
 
         window.sellCard = function(id) {
@@ -2100,7 +2434,7 @@
                 log(`REWARD CLAIMED: ${q.reward} CLOCKS`);
                 renderQuests();
                 saveGame();
-                updateUI(0, 1 + state.chronotons * 100);
+                updateUI(0);
             }
         }
 
@@ -2315,13 +2649,42 @@
             let count = 0;
             ACHIEVEMENTS.forEach(a => {
                 const unlocked = state.achievements.includes(a.id);
+                const claimed = state.claimedAchievements.includes(a.id);
                 if(unlocked) count++;
+                
                 const div = document.createElement('div');
-                div.className = `p-2 border ${unlocked ? 'border-yellow-400 text-yellow-400' : 'border-gray-800 text-gray-800'}`;
-                div.innerHTML = `<div class="font-bold text-base">${getText(a.title)}</div><div class="text-xs">${unlocked ? getText(a.desc) : 'LOCKED'}</div>`;
+                div.className = `flex justify-between items-center p-2 border ${unlocked ? 'border-yellow-400 text-yellow-400' : 'border-gray-800 text-gray-800'}`;
+                
+                let content = `
+                    <div>
+                        <div class="font-bold text-base">${getText(a.title)}</div>
+                        <div class="text-xs">${unlocked ? getText(a.desc) : 'LOCKED'}</div>
+                    </div>
+                `;
+                
+                if (unlocked && !claimed) {
+                    content += `<button onclick="claimAchievementReward('${a.id}')" class="btn text-[10px] py-1 px-3 border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">CLAIM ${a.reward}C</button>`;
+                } else if (unlocked && claimed) {
+                    content += `<div class="text-[10px] text-green-600 italic">CLAIMED</div>`;
+                }
+                
+                div.innerHTML = content;
                 list.appendChild(div);
             });
             document.getElementById('achieveCount').innerText = `${count} / ${ACHIEVEMENTS.length}`;
+        }
+
+        window.claimAchievementReward = function(id) {
+            const a = ACHIEVEMENTS.find(ach => ach.id === id);
+            if (a && state.achievements.includes(id) && !state.claimedAchievements.includes(id)) {
+                state.claimedAchievements.push(id);
+                state.clocks += a.reward;
+                SFX.play('golden');
+                log(`REWARD CLAIMED: ${a.reward} CLOCKS`);
+                renderAchievements();
+                saveGame();
+                updateUI(0, 1 + state.chronotons * 100);
+            }
         }
 
         function unlockAchievement(a) {
@@ -2703,8 +3066,12 @@
         // --- Save/Load ---
         function saveGame() {
             if (cheatsEnabled) return;
-            state.lastSaveTime = Date.now();
-            localStorage.setItem(CONFIG.SAVE_KEY, JSON.stringify(state));
+            try {
+                state.lastSaveTime = Date.now();
+                localStorage.setItem(CONFIG.SAVE_KEY, JSON.stringify(state));
+            } catch (e) {
+                console.error("Save failed:", e);
+            }
         }
         function loadGame() {
             const raw = localStorage.getItem(CONFIG.SAVE_KEY);
@@ -2714,7 +3081,9 @@
                     // Deep merge and sanitize numeric values to prevent NaN breaks
                     for (const key in s) {
                         if (typeof state[key] === 'object' && state[key] !== null && !Array.isArray(state[key])) {
-                            state[key] = { ...state[key], ...s[key] };
+                            if (typeof s[key] === 'object' && s[key] !== null) {
+                                state[key] = { ...state[key], ...s[key] };
+                            }
                         } else {
                             state[key] = s[key];
                         }
@@ -2728,7 +3097,7 @@
                     state.cards = Array.isArray(state.cards) ? state.cards : [];
                     
                     // Sanitize critical multipliers and pagination state
-                    ['seconds', 'clocks', 'fragments', 'chronotons', 'prestigeCount', 'totalSecondsWasted', 'runSecondsWasted', 'conversions', 'totalClicks', 'knowledgeMult', 'entropyMultiplier'].forEach(k => {
+                    ['seconds', 'clocks', 'fragments', 'chronotons', 'prestigeCount', 'totalSecondsWasted', 'runSecondsWasted', 'conversions', 'totalClicks', 'knowledgeMult', 'entropyMultiplier', 'lastSaveTime'].forEach(k => {
                         if (k === 'knowledgeMult' || k === 'entropyMultiplier') {
                             state[k] = Number(state[k]) || 1.0;
                         } else {
@@ -2740,11 +3109,13 @@
                 state.shopCounts = (typeof state.shopCounts === 'object' && state.shopCounts !== null) ? state.shopCounts : {};
                 state.skills = (typeof state.skills === 'object' && state.skills !== null) ? state.skills : {};
                 state.unlocks = (typeof state.unlocks === 'object' && state.unlocks !== null) ? state.unlocks : {};
+                state.claimedAchievements = Array.isArray(state.claimedAchievements) ? state.claimedAchievements : [];
                 
                     if (!state.checkedShopPages || state.checkedShopPages.length !== 4) state.checkedShopPages = [true, false, false, false];
                     if (!state.pageAffordability || state.pageAffordability.length !== 4) state.pageAffordability = [false, false, false, false];
 
                     calculateCardBonus();
+                    saveGame(); // Re-save to normalize sanitized state
                     const now = Date.now();
                     const diffMins = Math.floor((now - (state.lastSaveTime || now)) / 60000);
                     if(diffMins > 2880) unlockAchievement(ACHIEVEMENTS.find(a=>a.id==='productive')); // 48h
@@ -2774,6 +3145,17 @@
         window.devAddClk = function() { state.clocks+=1000; updateUI(0,1); saveGame(); }
         window.devAddChr = function() { state.chronotons+=5; updateUI(0,1); saveGame(); }
         window.devUnlockAll = function() { ACHIEVEMENTS.forEach(a=>unlockAchievement(a)); updateUI(0,1); saveGame(); }
+        window.devUnlockRareCards = function() { 
+            const rare = CARDS.filter(c => c.rarity === 'exotic' || c.rarity === 'mysterious');
+            state.cards.push(...rare); calculateCardBonus(); renderCards(); updateUI(0,1); saveGame();
+        }
+        window.devPlayRandomCutscene = function() {
+            const pool = CARDS.filter(c => c.cutscene);
+            if(pool.length > 0) {
+                const random = pool[Math.floor(Math.random() * pool.length)];
+                playCutscene(random.id);
+            }
+        }
 
         // --- Keyboard Shortcuts ---
         window.addEventListener('keydown', (e) => {
