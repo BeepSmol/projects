@@ -841,12 +841,12 @@
                     <option value="matrix" disabled id="opt-matrix">MATRIX (+10% Speed) [LOCKED]</option>
                     <option value="blood" disabled id="opt-blood">BLOOD (-20% Shop Cost) [LOCKED]</option>
                     <option value="golden" disabled id="opt-golden">GOLDEN (2x Gold Sec Value) [LOCKED]</option>
-                    <option value="midnight">MIDNIGHT (Slower Decay)</option>
-                    <option value="nebula">NEBULA (+50% Artifact Power)</option>
-                    <option value="forest">FOREST (+15% Production)</option>
-                    <option value="cyberpunk">CYBERPUNK (+20% Entropy Cap)</option>
-                    <option value="ocean">OCEAN (2x Fishing Freq)</option>
-                    <option value="lava">LAVA (1.5x Agitation Gain)</option>
+                    <option value="midnight" disabled id="opt-midnight">MIDNIGHT (Slower Decay) [LOCKED]</option>
+                    <option value="nebula" disabled id="opt-nebula">NEBULA (+50% Artifact Power) [LOCKED]</option>
+                    <option value="forest" disabled id="opt-forest">FOREST (+15% Production) [LOCKED]</option>
+                    <option value="cyberpunk" disabled id="opt-cyberpunk">CYBERPUNK (+20% Entropy Cap) [LOCKED]</option>
+                    <option value="ocean" disabled id="opt-ocean">OCEAN (2x Fishing Freq) [LOCKED]</option>
+                    <option value="lava" disabled id="opt-lava">LAVA (1.5x Agitation Gain) [LOCKED]</option>
                 </select>
             </div>
             <div class="mb-6 border-t border-gray-700 pt-4">
@@ -1482,7 +1482,7 @@
             renderBoredomZone();
             
             // Settings Theme Selectors
-            const themes = ['matrix', 'blood', 'golden'];
+            const themes = ['matrix', 'blood', 'golden', 'midnight', 'nebula', 'forest', 'cyberpunk', 'ocean', 'lava'];
             themes.forEach(t => {
                 const opt = document.getElementById(`opt-${t}`);
                 if(opt && state.achievements.includes(getThemeUnlock(t))) {
@@ -1556,7 +1556,13 @@
             return {
                 'matrix': 'speed_reader',
                 'blood': 'efficient',
-                'golden': 'collector'
+                'golden': 'collector',
+                'midnight': 'zen',
+                'nebula': 'wait_what',
+                'forest': 'pointless',
+                'cyberpunk': 'speed_demon',
+                'ocean': 'bubbles',
+                'lava': 'rebel'
             }[t];
         }
 
