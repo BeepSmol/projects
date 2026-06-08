@@ -1119,7 +1119,7 @@
             shopCounts: { gears: 0, chrono: 0, machine: 0, dilator: 0, toaster: 0, field: 0, trash: 0, dissolver: 0, engine: 0, skill_key: 0 },
             skills: { accel_pulse: false, shiny_magnet: false, eff_expert: false, deep_focus: false, time_warp: false, compound: false, cheap_shop: false, auto_conv: false },
             achievements: [], claimedAchievements: [],
-            unlocks: { bg: false, dvd: false, chat: false, rock: false, mushroom: false, bubble: false, draw: false, unsorter: false, todo: false, waitroom: false, almost: false, dontclick: false, sub_box: false, netflix: false, miniclick: false, fishing: false, stock: false, blackjack: false, janitor: false },
+            unlocks: { bg: false, dvd: false, chat: false, rock: false, mushroom: false, bubble: false, draw: false, unsorter: false, todo: false, waitroom: false, almost: false, dontclick: false, sub_box: false, netflix: false, miniclick: false, fishing: false, stock: false, blackjack: false, janitor: false, skill_key: false },
             stats: { rockFed: 0, bubblesPopped: 0, bgChanges: 0, fakeClicks: 0, convertSpree: 0, almostFail: 0, chatMsgs: 0, unaffordableTry: 0, miniClicks: 0 },
             timers: { lastInput: Date.now() },
         };
@@ -1167,7 +1167,7 @@
             { id: 'did_i', title: "Did I do that?", desc: "Click Golden Second while busy.", reward: 10, manual: true },
             { id: 'worse', title: "Embrace Hard Mode", desc: "Turn on Hard Mode.", reward: 10, manual: true },
             { id: 'font', title: "Forbidden Font", desc: "Activate Comic Sans mode.", reward: 10, manual: true },
-            { id: 'janitor', title: "The First Janitor", desc: "Unlock the Ancient Tablet.", reward: 100, check: (s) => s.shopCounts.skill_key > 0 },
+            { id: 'janitor', title: "The First Janitor", desc: "Unlock the Ancient Tablet.", reward: 100, check: (s) => s.unlocks.skill_key },
             { id: 'turbulence', title: "Turbulence", desc: "Reach 100 seconds per second.", reward: 100, check: (s) => false }, 
             { id: 'bad_trade', title: "Terrible Investment", desc: "Exchange a Clock for 10 seconds via the Mushroom.", reward: 10, manual: true },
             { id: 'beat', title: "Beat the Game?", desc: "Have everything + 5 Chronotons.", reward: 1000, check: (s) => checkBeatGame(s) }
@@ -1199,7 +1199,6 @@
 
             { id: 'lubricant', name: 'CLOCK LUBRICANT', desc: '-2 Base Conv Cost', cost: 10, power: 0, category: 'clocks' },
             { id: 'overclocker', name: 'TIME OVERCLOCKER', desc: 'Reduces cost scaling (Max 10)', cost: 50, power: 0, category: 'clocks', max: 10 },
-            { id: 'skill_key', name: 'ANCIENT TABLET', desc: 'Unlock Skill Tree', cost: 5000, power: 0, special: true, category: 'clocks' }
         ];
         
         const DISTRACTIONS = [
@@ -1213,6 +1212,7 @@
             { id: 'blackjack', name: 'BLACKJACK', desc: 'High Stakes', cost: 30, curr: 'c', action: () => renderBlackjack(), group: 'useful' },
             { id: 'miniclick', name: 'CLICK-O-TRON', desc: '500 Clicks = 1+ Clock', cost: 1, curr: 'c', action: () => renderMiniClicker(), group: 'useful' },
             { id: 'fishing', name: 'FISHING', desc: 'Catch time fish', cost: 35, curr: 'c', action: () => renderFishing(), group: 'useful' },
+            { id: 'skill_key', name: 'ANCIENT TABLET', desc: 'Unlock Skill Tree', cost: 5000, curr: 'c', action: () => openModal('skillModal'), group: 'useful' },
             { id: 'janitor', name: 'VOID SCAVENGE', desc: 'Passive Clocks', cost: 80, curr: 'c', action: () => renderVoidScavenge(), group: 'useful' },
             { id: 'todo', name: 'INF. TO-DO', desc: 'Never ending', cost: 40, curr: 'c', action: () => renderTodo(), group: 'useless' },
             { id: 'waitroom', name: 'WAITING ROOM', desc: 'Get in line', cost: 50, curr: 'c', action: () => renderWaiting(), group: 'useless' },
@@ -1582,7 +1582,7 @@
             if (state.prestigeCount > 0) {
                 els.chronoCol.classList.remove('hidden'); els.chronoSpc.classList.add('hidden');
             }
-            if (state.shopCounts.skill_key > 0) els.skillBtn.classList.remove('hidden');
+            if (state.unlocks.skill_key) els.skillBtn.classList.remove('hidden');
             else els.skillBtn.classList.add('hidden');
 
             const cost = Math.floor(getConversionCost() * boredomDiscount);
