@@ -9,13 +9,14 @@
     <style>
         /* LOW EFFORT UI THEME - BRUTALIST */
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
             background-color: #050505;
             color: #e0e0e0;
             overflow-x: hidden;
             user-select: none;
+            line-height: 1.5;
         }
-        
+
         body.comic-sans {
             font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif !important;
         }
@@ -34,13 +35,13 @@
             background: #000000;
             border: 2px solid #ffffff;
             color: #ffffff;
-            font-weight: bold;
-            padding: 0.5rem 1rem;
+            font-weight: 800;
+            padding: 0.75rem 1.25rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
+            font-size: 0.875rem;
         }
-
         /* GameDev Trick: Hover scaling */
         .btn:hover:not(:disabled) {
             transform: translateY(-1px);
@@ -125,6 +126,17 @@
             15% { opacity: 1; transform: translateY(80vh) rotate(2deg) scale(1.05); }
             85% { opacity: 1; transform: translateY(15vh) rotate(-2deg) scale(1.05); }
             100% { transform: translateY(-10vh) rotate(0deg) scale(0.95); opacity: 0; }
+        }
+        .distortion-effect {
+            filter: contrast(120%) brightness(110%) hue-rotate(5deg);
+            transition: filter 0.3s ease;
+        }
+        .prestige-ready-glow {
+            animation: prestige-pulse 1.5s infinite alternate;
+        }
+        @keyframes prestige-pulse {
+            0% { box-shadow: 0 0 5px #a855f7; border-color: #a855f7; transform: scale(1); }
+            100% { box-shadow: 0 0 20px #a855f7; border-color: #d8b4fe; transform: scale(1.01); }
         }
         .golden-second { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
 
@@ -322,8 +334,32 @@
         .game-card:hover { transform: translateY(-3px) scale(1.02); z-index: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
         .card-common { border-color: #888; color: #fff; }
         .card-rare { border-color: #3b82f6; color: #60a5fa; box-shadow: inset 0 0 5px #3b82f6; }
+        .card-uncommon { border-color: #22c55e; color: #4ade80; box-shadow: inset 0 0 3px #22c55e; }
+        .card-epic { border-color: #ec4899; color: #f472b6; box-shadow: inset 0 0 7px #ec4899; }
+        .card-mythic { border-color: #f97316; color: #fb923c; box-shadow: inset 0 0 12px #f97316; animation: mythic-glow 1.5s infinite alternate; }
+        @keyframes mythic-glow { from { box-shadow: inset 0 0 5px #f97316, 0 0 5px #f97316; } to { box-shadow: inset 0 0 25px #f97316, 0 0 15px #f97316; } }
         .card-exotic { border-color: #a855f7; color: #c084fc; box-shadow: inset 0 0 10px #a855f7; animation: exotic-glow 2s infinite alternate; }
         @keyframes exotic-glow { from { box-shadow: inset 0 0 5px #a855f7; } to { box-shadow: inset 0 0 20px #a855f7; } }
+
+        /* Accessibility & Visual Effects */
+        body.high-contrast { background-color: #000 !important; color: #fff !important; }
+        body.high-contrast .box, body.high-contrast .btn, body.high-contrast .game-card { border-color: #fff !important; box-shadow: none !important; border-width: 3px !important; }
+        body.invert-colors { filter: invert(1) hue-rotate(180deg); }
+        body.invert-colors img, body.invert-colors #boredomCanvas { filter: invert(1) hue-rotate(180deg); }
+
+        .rank-up-anim {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #3b82f6;
+            font-weight: 900;
+            font-size: 5rem;
+            z-index: 9999;
+            pointer-events: none;
+            text-shadow: 0 0 20px #3b82f6;
+            white-space: nowrap;
+        }
 
         .card-mysterious { 
             border-color: #ff00ff; 
@@ -542,6 +578,43 @@
             50% { box-shadow: 0 0 25px 8px rgba(34, 197, 94, 0.9); }
         }
     </style>
+    <style>
+        /* New style for button notification highlight */
+        .notif-highlight {
+            animation: notif-pulse 1s infinite alternate ease-in-out !important;
+        }
+
+        @keyframes notif-pulse {
+            0% { 
+                box-shadow: 0 0 4px #ffcc00; 
+                border-color: #ffcc00 !important;
+                color: #ffcc00 !important;
+            }
+            100% { 
+                box-shadow: 0 0 20px 5px #ff4400; 
+                border-color: #ff4400 !important;
+                color: #ff4400 !important;
+                background-color: rgba(255, 68, 0, 0.15);
+            }
+        }
+
+        @keyframes boredom-ready-pulse {
+            0% { box-shadow: 0 0 2px #3b82f6; transform: scale(1); }
+            100% { box-shadow: 0 0 12px #3b82f6; transform: scale(1.02); }
+        }
+        .boredom-ready {
+            animation: boredom-ready-pulse 2s infinite alternate ease-in-out !important;
+        }
+
+        @keyframes useful-ready-pulse {
+            0% { box-shadow: 0 0 5px #22c55e; transform: scale(1); border-color: #22c55e !important; }
+            100% { box-shadow: 0 0 18px #22c55e; transform: scale(1.04); border-color: #4ade80 !important; }
+        }
+        .useful-ready {
+            animation: useful-ready-pulse 1.5s infinite alternate ease-in-out !important;
+            z-index: 5;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
 
@@ -552,14 +625,14 @@
   <div id="pixelBtn" title="?"></div>
   
   <div id="customCtx">
-      <div class="ctx-item" onclick="ctxAction('uninstall')">Uninstall Boredom</div>
-      <div class="ctx-item" onclick="ctxAction('speed')">Speed Up Time (Paid)</div>
-      <div class="ctx-item" onclick="ctxAction('free')">Free Clocks</div>
+      <div class="ctx-item" onclick="ctxAction('uninstall')">UNINSTALL BOREDOM</div>
+      <div class="ctx-item" onclick="ctxAction('speed')">SPEED UP TIME (PAID)</div>
+      <div class="ctx-item" onclick="ctxAction('free')">FREE CLOCKS</div>
   </div>
 
   <div id="fakeUpdate">
-      <div class="font-bold text-sm">⚠ System Update Available</div>
-      <div class="text-xs">Click to install now...</div>
+      <div class="font-bold text-sm">⚠ SYSTEM UPDATE AVAILABLE</div>
+      <div class="text-xs">CLICK TO INSTALL NOW...</div>
   </div>
 
   <div id="devtoolsPanel">
@@ -580,28 +653,22 @@
   </div>
 
   <!-- Desktop Layout Wrapper -->
-  <div class="w-full max-w-[1500px] flex flex-col xl:flex-row gap-6 items-start justify-center relative z-10 px-4">
+  <div class="w-full max-w-[1500px] grid grid-cols-1 lg:grid-cols-12 gap-6 items-start justify-center relative z-10 px-4 mt-4">
     <!-- LEFT SIDEBAR: QUESTS & SHOP -->
-    <div class="w-full xl:w-64 xl:sticky xl:top-4 flex flex-col gap-4 shrink-0">
-        <button id="questMenuBtn" onclick="openModal('questModal')" class="relative btn w-full border-blue-500 text-blue-400 py-4 text-lg shadow-[4px_4px_0px_#1e3a8a] lbl-quests-btn">
-            <div id="questNotif" class="notif-dot hidden"></div>
+    <div class="w-full lg:col-span-3 lg:sticky lg:top-4 flex flex-col gap-4 order-2 lg:order-1">
+        <button id="questMenuBtn" onclick="openModal('questModal')" class="relative btn w-full border-blue-500 text-blue-400 py-4 text-base shadow-[4px_4px_0px_#1e3a8a] lbl-quests-btn">
+            
             OPEN QUEST MENU
         </button>
         <div class="w-full">
             <div class="flex flex-col border-b-2 border-white mb-2 pb-1 bg-white/5">
                 <div class="flex justify-between items-center">
-                    <button onclick="changeShopPage(-1)" class="relative btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">
-                        <div id="shopLeftNotif" class="notif-dot hidden"></div>
-                        ◀
-                    </button>
+                    <button onclick="changeShopPage(-1)" class="relative btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">◀</button>
                     <div class="flex flex-col items-center">
                         <span class="text-[8px] text-gray-500 font-bold mb-[-2px] uppercase tracking-tighter">Shop Pages</span>
                         <h2 class="font-bold text-sm tracking-tighter text-center" id="shopPageTitle">SECONDS SHOP</h2>
                     </div>
-                    <button onclick="changeShopPage(1)" class="relative btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">
-                        <div id="shopRightNotif" class="notif-dot hidden"></div>
-                        ▶
-                    </button>
+                    <button onclick="changeShopPage(1)" class="relative btn p-2 text-lg border-white hover:bg-white hover:text-black font-black">▶</button>
                 </div>
                 <div id="shopPageIndicator" class="text-[9px] text-center text-gray-500 font-bold mt-1 uppercase tracking-widest">Page 1 / 3</div>
             </div>
@@ -610,31 +677,50 @@
     </div>
 
     <!-- CENTER COLUMN: MAIN GAME -->
-    <div class="content-layer w-full max-w-2xl">
+    <div class="content-layer w-full lg:col-span-6 order-1 lg:order-2">
         <div id="achieveToast" class="pointer-events-none">
             <div class="font-bold text-sm text-yellow-500">ACHIEVEMENT UNLOCKED</div>
             <div id="achieveName" class="text-lg">Title Here</div>
         </div>
+        
+        <div id="prestigeSection" class="hidden box border-purple-500 text-center prestige-ready-glow">
+            <div class="inline-block bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 mb-2 rounded animate-pulse">NEW</div>
+            <h3 class="text-purple-400 font-bold mb-2 lbl-machine">THE CHRONOTON TIME MACHINE</h3>
+            <p class="text-xs mb-4">
+                <span class="lbl-machine-desc">The machine hums. Reset run for Chronotons.</span>
+                <br>REQ: <span id="nextChronoReq">25,000</span> LIFETIME SECONDS.
+            </p>
+            <div id="potentialChrono" class="text-lg mb-4 text-white font-black">REWARD: 1 CHRONOTON</div>
+            <button onclick="prestige()" class="btn w-full border-purple-500 text-purple-400 hover:bg-purple-900 lbl-activate">[ACTIVATE TIME MACHINE]</button>
+        </div>
+
         <canvas id="boredomCanvas"></canvas>
-        <header class="text-center mb-8 border-b-2 border-white pb-4">
-            <h1 class="text-4xl font-bold uppercase tracking-tighter" id="mainTitle">THE TIME WASTER</h1>
-            <div class="flex justify-center gap-2 mt-2">
-                <span class="text-xs" id="rankTitle">RANK: NOVICE</span>
-                <span class="text-xs text-gray-600 hidden" id="rankUpText">RANK UP!</span>
+        <header class="text-center mb-6 border-b-2 border-white pb-4">
+            <h1 class="text-3xl md:text-4xl font-black uppercase tracking-tighter" id="mainTitle">THE TIME WASTER</h1>
+            <div class="flex flex-col items-center mt-2">
+                <div class="flex justify-center flex-wrap gap-x-4 gap-y-1">
+                    <span class="text-xs" id="rankTitle">RANK: NOVICE</span>
+                    <span class="text-xs text-gray-600 hidden" id="rankUpText">RANK UP!</span>
+                </div>
+                <div class="w-32 bg-gray-900 h-1 mt-1 border border-gray-800">
+                    <div id="rankProgressBar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
+                </div>
                 <span class="text-xs text-blue-400 knowledge-glow" id="knowledgeDisplay">KNOWLEDGE: 1.0x</span>
             </div>
             <div class="flex flex-wrap justify-center gap-2 mt-4 transition-all duration-300">
                 <button onclick="toggleMusic()" class="btn text-xs lbl-music">[TOGGLE MUSIC]</button>
                 <button onclick="openTutorial(false)" class="btn text-xs border-green-500 text-green-500">[TUTORIAL]</button>
                 <button id="settingsMenuBtn" onclick="openModal('settingsModal')" class="btn text-xs border-gray-400 text-gray-400 lbl-settings">[SETTINGS]</button>
-                <button id="achieveMenuBtn" onclick="openModal('achieveModal')" class="btn text-xs border-yellow-500 text-yellow-500 lbl-shame">[HALL OF SHAME]</button>
-                <button onclick="triggerReset()" class="btn text-xs hover:bg-red-600 hover:text-white border-red-500 text-red-500 lbl-reset">[HARD RESET]</button>
+                <button id="achieveMenuBtn" onclick="openModal('achieveModal')" class="relative btn text-xs border-yellow-500 text-yellow-500 lbl-shame">
+                    
+                    [HALL OF SHAME]
+                </button>
             </div>
             <div id="offlineBadge" class="hidden mt-4 border border-green-500 text-green-500 p-2 text-xs">
                 OFFLINE PROGRESS: GAINED <span id="offlineGain">0</span> SECONDS
             </div>
         </header>
-        <div class="box flex flex-col items-center">
+        <div class="box flex flex-col items-center p-3 md:p-6">
             <div class="grid grid-cols-2 w-full gap-4 text-center mb-4 border-b border-gray-700 pb-4">
                 <div>
                     <div class="text-xs text-purple-400 font-bold lbl-life">LIFETIME</div>
@@ -645,23 +731,23 @@
                     <div class="text-xl font-bold text-blue-300" id="runTotalDisplay">0.0</div>
                 </div>
             </div>
-            <div class="grid grid-cols-3 w-full gap-2 text-center mb-6 items-center transition-all duration-300">
+            <div class="grid grid-cols-2 sm:grid-cols-3 w-full gap-4 text-center mb-6 items-center transition-all duration-300">
                 <div class="col-span-1">
                     <div class="text-xs text-gray-500 lbl-wasted">TIME WASTED</div>
-                    <div class="text-3xl font-bold" id="secondsDisplay">0.0</div>
+                    <div class="text-2xl md:text-4xl font-black" id="secondsDisplay">0.0</div>
                     <div class="text-xs" id="rateDisplay">+0.0/s</div>
                 </div>
-                <div id="chronoColumn" class="col-span-1 border-x border-gray-800 hidden">
+                <div id="chronoColumn" class="col-span-1 border-x-0 sm:border-x border-gray-800 hidden">
                     <div class="text-xs text-purple-400">CHRONOTONS</div>
-                    <div class="text-3xl font-bold text-purple-400" id="chronotonDisplay">0</div>
-                    <div class="text-[10px] text-purple-300" id="chronoMultDisplay">+0% BONUS</div>
+                    <div class="text-2xl md:text-4xl font-black text-purple-400" id="chronotonDisplay">0</div>
+                    <div class="text-[10px] text-purple-300 mb-2" id="chronoMultDisplay">+0% BONUS</div>
                 </div>
-                <div id="chronoSpacer" class="col-span-1 border-x border-gray-800 flex items-center justify-center">
+                <div id="chronoSpacer" class="col-span-1 border-x-0 sm:border-x border-gray-800 flex items-center justify-center">
                     <div class="text-xs text-gray-700">LOCKED</div>
                 </div>
                 <div class="col-span-1">
                     <div class="text-xs text-gray-500 lbl-clocks">CLOCKS</div>
-                    <div class="text-3xl font-bold text-yellow-300" id="clocksDisplay">0</div>
+                    <div class="text-2xl md:text-4xl font-black text-yellow-300" id="clocksDisplay">0</div>
                     <div class="text-xs lbl-curr">CURRENCY</div>
                 </div>
             </div>
@@ -685,36 +771,26 @@
                 <button id="convertBtn" class="btn flex-grow py-4 text-lg border-dashed">
                     <span class="lbl-convert">CONVERT</span> <span id="convertCost">10</span>s -> 1 <span class="lbl-clk-sing">CLOCK</span>
                 </button>
-                <button id="bulkConvertBtn" onclick="bulkConvert()" class="btn w-20 text-xs border-dashed flex flex-col items-center justify-center" title="Convert Max (25% Penalty)">
+                <button id="bulkConvertBtn" onclick="bulkConvert()" class="btn w-20 text-xs border-dashed flex flex-col items-center justify-center" title="Convert Max (10% Penalty)">
                     <span class="lbl-bulk">BULK</span>
-                    <span class="text-[9px] text-red-400 lbl-tax" id="bulkTaxLabel">-25% TAX</span>
+                    <span class="text-[9px] text-red-400 lbl-tax" id="bulkTaxLabel">-10% TAX</span>
                 </button>
             </div>
             <div id="convertMsg" class="h-4 text-xs text-red-500 text-center opacity-0 mb-2 lbl-insufficient transition-opacity">INSUFFICIENT FUNDS</div>
             <div id="boredomDiscountMsg" class="hidden text-[10px] text-green-400 text-center animate-pulse mb-2">BOREDOM DISCOUNT ACTIVE (-50% ALL COSTS)</div>
         </div>
-        <div id="activeMinigame" class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
-        <div id="prestigeSection" class="hidden box border-purple-500 text-center">
-            <h3 class="text-purple-400 font-bold mb-2 lbl-machine">THE CHRONOTON TIME MACHINE</h3>
-            <p class="text-xs mb-4">
-                <span class="lbl-machine-desc">The machine hums. Reset run for Chronotons.</span>
-                <br>REQ: <span id="nextChronoReq">25,000</span> LIFETIME SECONDS.
-                <br>EFFECT: x100 SPEED & x10 COST per Chronoton (EXPONENTIAL).
-            </p>
-            <div id="potentialChrono" class="text-lg mb-4 text-white">REWARD: 0 CHRONOTONS</div>
-            <button onclick="prestige()" class="btn w-full border-purple-500 text-purple-400 hover:bg-purple-900 lbl-activate">[ACTIVATE TIME MACHINE]</button>
-        </div>
+        <div id="activeMinigame" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
         <div id="skillTreeBtnContainer" class="hidden box border-green-500 text-center p-2">
              <button onclick="openModal('skillModal')" class="btn w-full border-green-500 text-green-400 lbl-tablet-btn">[OPEN ANCIENT TABLET]</button>
         </div>
     </div>
 
     <!-- RIGHT SIDEBAR: CARD MENU & BOREDOM SHOP -->
-    <div class="w-full xl:w-64 xl:sticky xl:top-4 flex flex-col gap-4 shrink-0">
-        <button id="cardMenuBtn" onclick="openModal('cardModal')" class="btn w-full border-yellow-500 text-yellow-500 py-4 text-lg shadow-[4px_4px_0px_#854d0e]">OPEN CARD MENU</button>
-        <div id="boredomSection" class="opacity-50 pointer-events-none transition-opacity">
+    <div class="w-full lg:col-span-3 lg:sticky lg:top-4 flex flex-col gap-4 order-3">
+        <button id="cardMenuBtn" onclick="openModal('cardModal')" class="btn w-full border-yellow-500 text-yellow-500 py-4 text-base shadow-[4px_4px_0px_#854d0e]">OPEN CARD MENU</button>
+        <div id="boredomSection" class="opacity-50 pointer-events-none transition-opacity mt-4">
             <h2 class="font-bold border-b-2 border-white mb-2 lbl-zone text-sm text-right">BOREDOM ZONE</h2>
-            <div id="boredomGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+            <div id="boredomGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
         </div>
     </div>
   </div> <!-- End Layout Wrapper -->
@@ -775,7 +851,7 @@
         <div id="tutorialArrow" class="fixed text-green-500 text-4xl font-bold transition-all duration-300 pointer-events-none tutorial-arrow" style="text-shadow: 0 0 10px #00ff00; display: none;">⬇</div>
         <div id="guideBox" class="fixed bg-black border-2 border-green-500 p-4 rounded shadow-[0_0_15px_rgba(34,197,94,0.3)] pointer-events-auto max-w-xs transition-all duration-300 relative">
             <p id="guideText" class="text-sm font-bold text-white mb-4"></p>
-            <div class="flex gap-2">
+            <div class="flex gap-2 mt-4">
                 <button id="guideNext" class="btn text-[10px] py-1 flex-grow border-green-500 text-green-500">NEXT</button>
             </div>
             <button onclick="skipTutorial()" class="absolute bottom-1 right-2 text-[8px] text-gray-800 opacity-10 hover:opacity-50 transition-opacity">SKIP</button>
@@ -796,7 +872,12 @@
             <div class="mb-4 bg-black p-4 border border-yellow-900 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <div class="text-xs text-gray-400">Collect artifacts to boost your knowledge of time.</div>
                 <div class="flex gap-2">
-                    <button id="buyPackBtn" onclick="buyCardPack()" class="btn border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">BUY PACK (10C)</button>
+                    <select id="setSelector" onchange="state.selectedSet = this.value; saveGame();" class="bg-black border border-yellow-500 text-yellow-500 text-xs p-2">
+                        <option value="genesis">GENESIS SET (10C)</option>
+                        <option value="void">VOID SET (25C)</option>
+                        <option value="temporal">TEMPORAL SET (50C)</option>
+                    </select>
+                    <button id="buyPackBtn" onclick="buyCardPack()" class="btn border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black">BUY PACK</button>
                     <button onclick="sellAllDuplicates()" class="btn border-red-500 text-red-500 hover:bg-red-500 hover:text-black">SELL ALL DUPS</button>
                 </div>
             </div>
@@ -823,70 +904,54 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content border-gray-400">
             <div class="minigame-close" onclick="closeModal('settingsModal')">X</div>
-            <h2 class="text-2xl font-bold text-gray-300 mb-4 border-b border-gray-500 pb-2 lbl-settings">SETTINGS</h2>
-            <div class="mb-6 space-y-4">
-                <div>
-                    <div class="flex justify-between text-xs mb-1"><span>SFX VOLUME</span><span id="sfxVal">100%</span></div>
-                    <input type="range" id="sfxSlider" min="0" max="1" step="0.1" value="1" oninput="updateSettings()" class="w-full">
+            <h2 class="text-3xl font-black text-white mb-6 border-b-4 border-gray-500 pb-2 italic">SETTINGS</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Audio & Visuals -->
+                <div class="space-y-6">
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-800">Audio</h3>
+                        <div class="space-y-4">
+                            <div class="flex flex-col"><div class="flex justify-between text-[10px] mb-1"><span>SFX VOLUME</span><span id="sfxVal">100%</span></div><input type="range" id="sfxSlider" min="0" max="1" step="0.1" value="1" oninput="updateSettings()" class="w-full"></div>
+                            <div class="flex flex-col"><div class="flex justify-between text-[10px] mb-1"><span>MUSIC VOLUME</span><span id="musicVal">100%</span></div><input type="range" id="musicSlider" min="0" max="1" step="0.1" value="1" oninput="updateSettings()" class="w-full"></div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-800">Visuals</h3>
+                        <div class="space-y-3">
+                            <div class="flex flex-col"><div class="text-[10px] mb-1 uppercase">Active Theme</div><select id="themeSelector" onchange="updateSettings()" class="bg-black border border-white p-2 text-xs"><option value="default">DEFAULT (No Bonus)</option><option value="matrix" disabled id="opt-matrix">MATRIX (+10% Speed)</option><option value="blood" disabled id="opt-blood">BLOOD (-20% Shop Cost)</option><option value="golden" disabled id="opt-golden">GOLDEN (2x Gold Sec Value)</option><option value="midnight" disabled id="opt-midnight">MIDNIGHT (Slower Decay)</option><option value="nebula" disabled id="opt-nebula">NEBULA (+50% Artifact Power)</option><option value="forest" disabled id="opt-forest">FOREST (+15% Production)</option><option value="cyberpunk" disabled id="opt-cyberpunk">CYBERPUNK (+20% Entropy Cap)</option><option value="ocean" disabled id="opt-ocean">OCEAN (2x Fishing Freq)</option><option value="lava" disabled id="opt-lava">LAVA (1.5x Agitation Gain)</option></select></div>
+                            <div class="flex flex-col"><div class="flex justify-between text-[10px] mb-1"><span>SCREEN SHAKE</span><span id="shakeVal">100%</span></div><input type="range" id="shakeSlider" min="0" max="2" step="0.1" value="1" oninput="updateSettings()" class="w-full"></div>
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div class="text-xs font-bold">HIGH CONTRAST</div><input type="checkbox" id="highContrastCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div class="text-xs font-bold text-yellow-500">INVERT COLORS</div><input type="checkbox" id="invertColorsCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div class="text-xs font-bold text-blue-400">CURSOR TRAIL</div><input type="checkbox" id="cursorTrailCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div class="text-xs font-bold">REDUCE MOTION</div><input type="checkbox" id="motionCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                        </div>
+                    </section>
                 </div>
-                <div>
-                    <div class="flex justify-between text-xs mb-1"><span>MUSIC VOLUME</span><span id="musicVal">100%</span></div>
-                    <input type="range" id="musicSlider" min="0" max="1" step="0.1" value="1" oninput="updateSettings()" class="w-full">
-                </div>
-            </div>
-            <div class="mb-4">
-                <div class="text-xs mb-1">ACTIVE THEME</div>
-                <select id="themeSelector" onchange="updateSettings()" class="w-full bg-black border border-white p-2 text-xs">
-                    <option value="default">DEFAULT (No Bonus)</option>
-                    <option value="matrix" disabled id="opt-matrix">MATRIX (+10% Speed) [LOCKED]</option>
-                    <option value="blood" disabled id="opt-blood">BLOOD (-20% Shop Cost) [LOCKED]</option>
-                    <option value="golden" disabled id="opt-golden">GOLDEN (2x Gold Sec Value) [LOCKED]</option>
-                    <option value="midnight" disabled id="opt-midnight">MIDNIGHT (Slower Decay) [LOCKED]</option>
-                    <option value="nebula" disabled id="opt-nebula">NEBULA (+50% Artifact Power) [LOCKED]</option>
-                    <option value="forest" disabled id="opt-forest">FOREST (+15% Production) [LOCKED]</option>
-                    <option value="cyberpunk" disabled id="opt-cyberpunk">CYBERPUNK (+20% Entropy Cap) [LOCKED]</option>
-                    <option value="ocean" disabled id="opt-ocean">OCEAN (2x Fishing Freq) [LOCKED]</option>
-                    <option value="lava" disabled id="opt-lava">LAVA (1.5x Agitation Gain) [LOCKED]</option>
-                </select>
-            </div>
-            <div class="mb-6 border-t border-gray-700 pt-4">
-                 <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <div class="font-bold text-purple-400">LOLCAT MODE</div>
-                        <div class="text-[10px] text-gray-400">I CAN HAS CHEEZBURGER?</div>
-                    </div>
-                    <input type="checkbox" id="lolcatCheck" class="w-6 h-6" onchange="updateSettings()">
-                </div>
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <div class="font-bold text-red-500">HARD MODE</div>
-                        <div class="text-[10px] text-gray-400">Visual distortion. 100x Slower.</div>
-                    </div>
-                    <input type="checkbox" id="hardModeCheck" class="w-6 h-6" onchange="updateSettings()">
-                </div>
-                <div class="flex justify-between items-center">
-                    <div>
-                        <div class="font-bold text-blue-400">REDUCE MOTION</div>
-                        <div class="text-[10px] text-gray-400">No animations.</div>
-                    </div>
-                    <input type="checkbox" id="motionCheck" class="w-6 h-6" onchange="updateSettings()">
-                </div>
-                <div class="flex justify-between items-center">
-                    <div>
-                        <div class="font-bold text-green-500">AUTO-OPEN USEFUL</div>
-                        <div class="text-[10px] text-gray-400">Always keep useful tools open.</div>
-                    </div>
-                    <input type="checkbox" id="autoOpenCheck" class="w-6 h-6" onchange="updateSettings()">
+
+                <!-- Gameplay & Data -->
+                <div class="space-y-6">
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-800">Gameplay</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div><div class="font-bold text-xs text-purple-400">LOLCAT MODE</div><div class="text-[8px] text-gray-500">I CAN HAS CHEEZBURGER?</div></div><input type="checkbox" id="lolcatCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div><div class="font-bold text-xs text-red-500">HARD MODE</div><div class="text-[8px] text-gray-500">100x SLOWER.</div></div><input type="checkbox" id="hardModeCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                            <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded"><div><div class="font-bold text-xs text-green-500">AUTO-OPEN TOOLS</div><div class="text-[8px] text-gray-500">OPEN BOREDOM AUTOMATICALLY.</div></div><input type="checkbox" id="autoOpenCheck" class="w-5 h-5" onchange="updateSettings()"></div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-800">Data Management</h3>
+                        <div class="space-y-2">
+                            <div class="flex gap-2"><button onclick="exportSave()" class="btn text-[10px] py-1 flex-grow border-yellow-500 text-yellow-500">EXPORT SAVE</button><button onclick="importSave()" class="btn text-[10px] py-1 flex-grow border-blue-500 text-blue-400">IMPORT SAVE</button></div>
+                            <button onclick="triggerReset()" class="btn text-[10px] w-full border-red-500 text-red-500 hover:bg-red-900 mt-4">WIPE ALL DATA</button>
+                        </div>
+                    </section>
                 </div>
             </div>
-            <div class="mb-6 border-t border-gray-700 pt-4 flex flex-col gap-2">
-                <div class="font-bold text-yellow-400 text-xs mb-1">DATA MANAGEMENT</div>
-                <div class="flex gap-2">
-                    <button onclick="exportSave()" class="btn text-[10px] py-1 flex-grow border-yellow-500 text-yellow-500">EXPORT SAVE</button>
-                    <button onclick="importSave()" class="btn text-[10px] py-1 flex-grow border-blue-500 text-blue-400">IMPORT SAVE</button>
-                </div>
-            </div>
-            <button onclick="closeModal('settingsModal')" class="btn mt-4 w-full">CLOSE</button>
+            
+            <button onclick="closeModal('settingsModal')" class="btn mt-8 w-full border-gray-200">CLOSE SETTINGS</button>
         </div>
     </div>
 
@@ -972,29 +1037,58 @@
             CHRONO_THRESHOLD: 25000,
             CHRONO_SCALE: 100, 
             SAVE_KEY: 'timeWaster_v6_entropy',
-            CARD_SELL_PRICES: { 'common': 1, 'rare': 5, 'exotic': 50, 'mysterious': 500 },
+            CARD_SELL_PRICES: { 'common': 1, 'uncommon': 2, 'rare': 5, 'epic': 10, 'exotic': 25, 'mythic': 100, 'mysterious': 500 },
             ENTROPY_GOALS: [50, 250, 500, 2500, 5000, 25000]
         };
 
         const CARDS = [
-            { id: 'c1', name: 'Broken Hourglass', desc: 'Time has stopped.', rarity: 'common' },
-            { id: 'c2', name: 'Lint', desc: 'A memory of a pocket.', rarity: 'common' },
-            { id: 'c3', name: 'Stagnant Water', desc: 'Refreshingly still.', rarity: 'common' },
-            { id: 'c4', name: 'Rusty Spring', desc: 'Lost its bounce.', rarity: 'common' },
-            { id: 'c5', name: 'Dust Bunny', desc: 'The void\'s pet.', rarity: 'common' },
-            { id: 'c6', name: 'Lost Minute', desc: 'Where did it go?', rarity: 'common' },
-            { id: 'c7', name: 'Digital Watch', desc: 'Blinking 12:00.', rarity: 'rare' },
-            { id: 'c8', name: 'Quartz Crystal', desc: 'Stable vibrations.', rarity: 'rare' },
-            { id: 'c9', name: 'Metronome', desc: 'Perfectly boring.', rarity: 'rare' },
-            { id: 'c10', name: 'Chronoton Lens', desc: 'See the seconds.', rarity: 'rare' },
-            { id: 'c11', name: 'Echoing Tic', desc: 'Heard across eras.', rarity: 'rare' },
-            { id: 'c12', name: 'Temporal Anchor', desc: 'Stay in the now.', rarity: 'exotic' },
-            { id: 'c13', name: 'Void Essence', desc: 'Pure nothingness.', rarity: 'exotic' },
-            { id: 'c14', name: 'Infinite Loop', desc: 'Again and again.', rarity: 'exotic' },
-            { id: 'c15', name: 'Golden Second', desc: 'The perfect moment.', rarity: 'exotic' },
-            { id: 'c16', name: 'Paradox Core', desc: 'This shouldn\'t exist.', rarity: 'exotic' },
-            { id: 'c17', name: 'The First Glitch', desc: 'An error in reality.', rarity: 'mysterious', cutscene: 'The screen flickers as you hold the card.\n\nYou see a glimpse of the void...\n\nIt is cold, quiet, and perfectly still.' },
-            { id: 'c18', name: 'Entity\'s Whisper', desc: 'It knows you are here.', rarity: 'mysterious', cutscene: 'A static noise fills your ears.\n\nA distorted voice whispers:\n\n"Why do you waste your time?\nThe Janitor is watching."' }
+            { id: 'c1', name: 'Broken Hourglass', desc: 'Time has stopped.', rarity: 'common', set: 'genesis' },
+            { id: 'c2', name: 'Lint', desc: 'A memory of a pocket.', rarity: 'common', set: 'genesis' },
+            { id: 'c3', name: 'Stagnant Water', desc: 'Refreshingly still.', rarity: 'common', set: 'genesis' },
+            { id: 'c4', name: 'Rusty Spring', desc: 'Lost its bounce.', rarity: 'common', set: 'genesis' },
+            { id: 'c5', name: 'Dust Bunny', desc: 'The void\'s pet.', rarity: 'common', set: 'genesis' },
+            { id: 'c6', name: 'Old Receipt', desc: 'A trace of spent clocks.', rarity: 'common', set: 'genesis' },
+            { id: 'c50', name: 'Paper Clip', desc: 'Holds nothing together.', rarity: 'common', set: 'genesis' },
+            { id: 'c51', name: 'Broken Pencil', desc: 'Pointless.', rarity: 'uncommon', set: 'genesis' },
+            { id: 'c52', name: 'Rubber Band', desc: 'Stretches the moment.', rarity: 'uncommon', set: 'genesis' },
+            { id: 'c53', name: 'Safety Pin', desc: 'Keeps reality fastened.', rarity: 'uncommon', set: 'genesis' },
+            { id: 'c7', name: 'Digital Watch', desc: 'Blinking 12:00.', rarity: 'rare', set: 'genesis' },
+            { id: 'c8', name: 'Quartz Crystal', desc: 'Stable vibrations.', rarity: 'rare', set: 'genesis' },
+            { id: 'c9', name: 'Metronome', desc: 'Perfectly boring.', rarity: 'rare', set: 'genesis' },
+            { id: 'c54', name: 'Silver Coin', desc: 'Valuable stagnation.', rarity: 'rare', set: 'genesis' },
+            { id: 'c55', name: 'Master Clock', desc: 'The gears of industry.', rarity: 'epic', set: 'genesis' },
+            { id: 'c56', name: 'Golden Cog', desc: 'The engine of the void.', rarity: 'epic', set: 'genesis' },
+            { id: 'c15', name: 'Golden Second', desc: 'The perfect moment.', rarity: 'exotic', set: 'genesis' },
+            
+            { id: 'c57', name: 'Shadow Dust', desc: 'Particles of absence.', rarity: 'common', set: 'void' },
+            { id: 'c58', name: 'Muffled Scream', desc: 'Echoes in the dark.', rarity: 'common', set: 'void' },
+            { id: 'c59', name: 'Void Petal', desc: 'Blooms in nothingness.', rarity: 'uncommon', set: 'void' },
+            { id: 'c60', name: 'Dark Matter', desc: 'Heavy and invisible.', rarity: 'uncommon', set: 'void' },
+            { id: 'c61', name: 'Silent Bell', desc: 'Rings without sound.', rarity: 'uncommon', set: 'void' },
+            { id: 'c13', name: 'Void Essence', desc: 'Pure nothingness.', rarity: 'rare', set: 'void' },
+            { id: 'c62', name: 'Event Horizon', desc: 'No turning back.', rarity: 'rare', set: 'void' },
+            { id: 'c63', name: 'Singularity', desc: 'Infinity in a point.', rarity: 'epic', set: 'void' },
+            { id: 'c64', name: 'Entropy Core', desc: 'Decay is inevitable.', rarity: 'epic', set: 'void' },
+            { id: 'c65', name: 'The Maw', desc: 'Consumes the seconds.', rarity: 'exotic', set: 'void' },
+            { id: 'c66', name: 'Vacuum Seal', desc: 'Preserves the void.', rarity: 'mythic', set: 'void' },
+
+            { id: 'c67', name: 'Ticking Gear', desc: 'A rhythmic heartbeat.', rarity: 'common', set: 'temporal' },
+            { id: 'c68', name: 'Pendulum', desc: 'Back and forth.', rarity: 'common', set: 'temporal' },
+            { id: 'c69', name: 'Minute Hand', desc: 'The slow crawler.', rarity: 'uncommon', set: 'temporal' },
+            { id: 'c70', name: 'Second Pulse', desc: 'Gone in a flash.', rarity: 'uncommon', set: 'temporal' },
+            { id: 'c10', name: 'Chronoton Lens', desc: 'See the seconds.', rarity: 'rare', set: 'temporal' },
+            { id: 'c71', name: 'Temporal Coil', desc: 'Springs eternal.', rarity: 'rare', set: 'temporal' },
+            { id: 'c72', name: 'Hourglass of Sand', desc: 'Grains of history.', rarity: 'rare', set: 'temporal' },
+            { id: 'c12', name: 'Temporal Anchor', desc: 'Stay in the now.', rarity: 'epic', set: 'temporal' },
+            { id: 'c73', name: 'Relativity Warp', desc: 'Space is just time.', rarity: 'epic', set: 'temporal' },
+            { id: 'c74', name: 'Wormhole Loop', desc: 'Connecting the eras.', rarity: 'epic', set: 'temporal' },
+            { id: 'c14', name: 'Infinite Loop', desc: 'Again and again.', rarity: 'exotic', set: 'temporal' },
+            { id: 'c16', name: 'Paradox Core', desc: 'This shouldn\'t exist.', rarity: 'exotic', set: 'temporal' },
+            { id: 'c75', name: 'The Big Bang', desc: 'Where it all started.', rarity: 'mythic', set: 'temporal' },
+
+            { id: 'c17', name: 'The First Glitch', desc: 'An error in reality.', rarity: 'mysterious', set: 'special', cutscene: 'The screen flickers as you hold the card.\n\nYou see a glimpse of the void...\n\nIt is cold, quiet, and perfectly still.' },
+            { id: 'c18', name: 'Entity\'s Whisper', desc: 'It knows you are here.', rarity: 'mysterious', set: 'special', cutscene: 'A static noise fills your ears.\n\nA distorted voice whispers:\n\n"Why do you waste your time?\nThe Janitor is watching."' },
+            { id: 'c76', name: 'The Janitor\'s Mop', desc: 'Cleaning up the timeline.', rarity: 'mysterious', set: 'special', cutscene: 'You feel a sense of cleanliness.\n\nThe void is tidy now.\n\nThe Janitor nods at you.' }
         ];
 
         const assets = { dvd: new Image(), music: document.getElementById('bgMusic') };
@@ -1009,6 +1103,7 @@
             totalSecondsWasted: 0, runSecondsWasted: 0, conversions: 0,
             entropyMultiplier: 1.0, entropyCap: 1.5, totalClicks: 0,
             tutorialSeen: false,
+            selectedSet: 'genesis',
             cards: [], knowledgeMult: 1.0, 
             pageAffordability: [false, false, false],
             checkedShopPages: [true, false, false],
@@ -1020,7 +1115,7 @@
             ownedStocks: { VOID: 0, TIME: 0, STAGN: 0 },
             bjBet: 10, bjScore: 0, bjHouse: 0, bjPlayerHand: [], bjDealerHand: [], bjGameOver: true,
             lastSaveTime: Date.now(), startTime: Date.now(),
-            settings: { sfxVol: 1, musicVol: 1, hardMode: false, lolcat: false, comicSans: false, reduceMotion: false, shopCollapsed: false, autoOpenUseful: true },
+            settings: { sfxVol: 1, musicVol: 1, hardMode: false, lolcat: false, comicSans: false, reduceMotion: false, shopCollapsed: false, autoOpenUseful: true, shakeStrength: 1, highContrast: false, invertColors: false, cursorTrail: false },
             shopCounts: { gears: 0, chrono: 0, machine: 0, dilator: 0, toaster: 0, field: 0, trash: 0, dissolver: 0, engine: 0, skill_key: 0 },
             skills: { accel_pulse: false, shiny_magnet: false, eff_expert: false, deep_focus: false, time_warp: false, compound: false, cheap_shop: false, auto_conv: false },
             achievements: [], claimedAchievements: [],
@@ -1103,7 +1198,7 @@
             { id: 'vibration_core', name: 'VIBRATION CORE', desc: '+0.05 Agitation/Click', cost: 20, power: 0, category: 'agitation' },
 
             { id: 'lubricant', name: 'CLOCK LUBRICANT', desc: '-2 Base Conv Cost', cost: 10, power: 0, category: 'clocks' },
-            { id: 'overclocker', name: 'TIME OVERCLOCKER', desc: '-0.2% Cost Scaling', cost: 50, power: 0, category: 'clocks' },
+            { id: 'overclocker', name: 'TIME OVERCLOCKER', desc: 'Reduces cost scaling (Max 10)', cost: 50, power: 0, category: 'clocks', max: 10 },
             { id: 'skill_key', name: 'ANCIENT TABLET', desc: 'Unlock Skill Tree', cost: 5000, power: 0, special: true, category: 'clocks' }
         ];
         
@@ -1172,6 +1267,8 @@
         let autoConvTimer = 0;
         let questTimer = 0;
         let shopGenerated = false;
+        let logicTimer = 0;
+        let uiUpdateTimer = 0;
         
         // Trackers
         let convertClicks = [];
@@ -1181,21 +1278,40 @@
         // Devtools
         let keyBuffer = "";
 
-        function gameLoop() {
+        function gameLoop() { // Render Loop (RAF)
             const now = Date.now();
             const dt = (now - lastTime) / 1000;
             lastTime = now;
 
+            // Logic Tick Throttling (Math & State)
+            logicTimer += dt;
+            if (logicTimer >= 0.1) {
+                runLogicTick(logicTimer);
+                logicTimer = 0;
+            }
+
+            // UI Tick Throttling (DOM Updates)
+            uiUpdateTimer += dt;
+            if (uiUpdateTimer > 0.05) {
+                updateUI(state.lastCalculatedRate);
+                checkAchievements();
+                uiUpdateTimer = 0;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function runLogicTick(dt) {
+            const now = Date.now();
+            
             // Idle Check
-            if (now - state.timers.lastInput > 600000 && !state.unlocks.netflix) { 
+            if (now - state.timers.lastInput > 600000 && !state.unlocks.netflix) {
                 document.getElementById('idleOverlay').style.display = 'flex';
-                requestAnimationFrame(gameLoop);
-                return; 
+                return;
             }
 
             const boredomActive = els.mini.children.length > 0;
-            els.boredomMsg.classList.toggle('hidden', !boredomActive);
-
+            
             // Entropy Decay
             let decayRate = 0.05;
             if (state.activeTheme === 'midnight') decayRate = 0.02;
@@ -1218,15 +1334,15 @@
             
             // Theme Buffs
             if(state.activeTheme === 'matrix') baseRate *= 1.1;
-            if(state.activeTheme === 'forest') baseRate *= 1.15;
             
-            const prestigeMult = Math.pow(100, state.chronotons);
+            const prestigeMult = Math.pow(10, state.chronotons);
             const realWorldMult = getRealWorldMult();
             let finalRate = baseRate * prestigeMult * realWorldMult * state.entropyMultiplier;
 
             if (state.settings.hardMode) finalRate *= 0.01;
             
             if (finalRate >= 100) unlockAchievement(ACHIEVEMENTS.find(a=>a.id==='turbulence'));
+            state.lastCalculatedRate = finalRate;
 
             // Guided Tutorial Logic
             if (state.tutorialSeen && !document.getElementById('guideOverlay').classList.contains('hidden')) {
@@ -1239,15 +1355,7 @@
                     document.getElementById('guideBox').style.opacity = '1';
                     document.getElementById('guideBox').style.pointerEvents = 'all';
                     const step = guideSteps[currentGuideStep];
-                    
-                    if (step && step.alternate) {
-                        const cost = Math.floor(getConversionCost() * getBoredomDiscount());
-                        const canConvert = state.seconds >= cost;
-                        // Only alternate to the convert button if the player can actually afford a conversion
-                        const altId = (canConvert && (Math.floor(Date.now() / 1000) % 2 === 0)) ? 'convertBtn' : 'entropyBtn';
-                        repositionGuide(altId);
-                    }
-                    
+
                     if (document.getElementById('tutorialArrow')) {
                          document.getElementById('tutorialArrow').style.opacity = '1';
                     }
@@ -1255,7 +1363,7 @@
                     if (step && step.check && step.check()) {
                         clearTutorialGlow();
                         if (step.onComplete) step.onComplete();
-                        if (step.id === 'buyPackBtn') tutorialDelayTimer = 2;
+                        if (step.id === 'buyPackBtn') tutorialDelayTimer = 0;
                         currentGuideStep++;
                         if (currentGuideStep < guideSteps.length) showGuideStep();
                         else skipTutorial();
@@ -1281,18 +1389,19 @@
             // Auto Convert Skill
             if (state.skills.auto_conv) {
                 autoConvTimer += dt;
-                if (autoConvTimer >= 1) {
+                if (autoConvTimer >= 5) { // Slower auto-convert for performance
                     const cost = getConversionCost();
                     if (state.seconds >= cost) {
                         state.seconds -= cost;
                         state.clocks++;
                         state.conversions++;
+                        if (els.mini.children.length > 0) state.clocks += 0.5; // Bonus for active distractions
                     }
                     autoConvTimer = 0;
                 }
             }
-
-            // Random Ding
+            
+            // Random Events
             dingTimer += dt;
             if (dingTimer > (600 + Math.random()*600)) { 
                 SFX.play('ding');
@@ -1325,15 +1434,9 @@
                 }
             }
 
-            // Updates
-            updateUI(finalRate);
-            checkAchievements();
-            
-            // Autosave (10s)
             saveTimer += dt;
             if (saveTimer > 10) { saveGame(); saveTimer = 0; }
-
-            // Golden Seconds (Rarer)
+            
             goldenTimer += dt;
             const spawnChance = state.skills.shiny_magnet ? 0.02 : 0.005; // Rare
             if (goldenTimer > 1) { 
@@ -1341,10 +1444,11 @@
                 goldenTimer = 0;
             }
 
-            // Zen Master Check
             if (now - state.timers.lastInput > 300000) unlockAchievement(ACHIEVEMENTS.find(a=>a.id==='zen'));
-
-            requestAnimationFrame(gameLoop);
+            
+            // Distortion Effect based on Entropy
+            const isDistorted = state.entropyMultiplier >= state.entropyCap - 0.1 && state.entropyCap > 1.5;
+            document.body.classList.toggle('distortion-effect', isDistorted);
         }
 
         // --- Logic ---
@@ -1354,19 +1458,21 @@
         }
 
         function getConversionCost() {
-            const prestigePenalty = Math.pow(10, (Number(state.prestigeCount) || 0));
-            let scale = CONFIG.CONVERSION_SCALE;
-            if(state.skills.eff_expert) scale -= 0.005;
+            const prestigeCount = Number(state.prestigeCount) || 0;
+            const prestigePenalty = Math.pow(5, prestigeCount);
             
-            // Upgrade effect
-            scale -= (state.shopCounts.overclocker || 0) * 0.002;
+            let inflation = 0.01; // Base inflation (1.01)
+            if (state.skills.eff_expert) inflation *= 0.5;
+            inflation *= Math.pow(0.95, Math.min(10, state.shopCounts.overclocker || 0)); // Nerfed & Capped Diminishing returns
+            
+            const scale = 1 + inflation;
             const base = CONFIG.BASE_CONVERSION - (state.shopCounts.lubricant || 0) * 2;
             
-            return Math.floor((base * prestigePenalty) * Math.pow(scale, state.conversions));
+            return Math.floor((base * prestigePenalty) * Math.pow(scale, Number(state.conversions) || 0));
         }
 
         function getNextChronoCost() {
-            return CONFIG.CHRONO_THRESHOLD * Math.pow(CONFIG.CHRONO_SCALE, state.chronotons);
+            return CONFIG.CHRONO_THRESHOLD * Math.pow(CONFIG.CHRONO_SCALE, Number(state.chronotons) || 0);
         }
 
         function checkBeatGame(s) {
@@ -1393,11 +1499,29 @@
             const multPct = ((state.entropyMultiplier - 1) / (Math.max(0.1, state.entropyCap - 1))) * 100;
             if (els.entropyBar) els.entropyBar.style.width = `${Math.max(0, Math.min(100, multPct)) || 0}%`;
             
+            // Rank Progress Bar
+            let currentRankIdx = 0;
+            for (let i = RANKS.length - 1; i >= 0; i--) {
+                if (state.totalSecondsWasted >= RANKS[i].t) { currentRankIdx = i; break; }
+            }
+
+            const nextRank = RANKS[currentRankIdx + 1];
+            if (nextRank) {
+                const progress = Math.max(0, Math.min(100, ((state.totalSecondsWasted - RANKS[currentRankIdx].t) / (nextRank.t - RANKS[currentRankIdx].t)) * 100));
+                document.getElementById('rankProgressBar').style.width = `${progress}%`;
+            } else { document.getElementById('rankProgressBar').style.width = `100%`; }
+            document.getElementById('rankTitle').innerText = `RANK ${currentRankIdx + 1}: ${getText(RANKS[currentRankIdx].title)}`;
+            
             // Notifications and non-optimized UI updates
-            const hasDoneQuests = (state.quests || []).some(q => q.done && !q.claimed);
-            const questNotif = document.getElementById('questNotif');
-            if (questNotif) questNotif.classList.toggle('hidden', !hasDoneQuests);
-            checkShopNotifications();
+            const hasDoneQuests = state.tutorialSeen && (state.quests || []).some(q => q.done && !q.claimed);
+            document.getElementById('questMenuBtn')?.classList.toggle('notif-highlight', hasDoneQuests);
+            
+            const hasUnclaimedAchieve = state.tutorialSeen && (state.achievements || []).some(id =>
+                !(state.claimedAchievements || []).includes(id)
+            );
+            document.getElementById('achieveMenuBtn')?.classList.toggle('notif-highlight', hasUnclaimedAchieve);
+
+            // checkShopNotifications(); // Removed shop dots as per request
 
             const goals = CONFIG.ENTROPY_GOALS;
             const nextGoal = goals.find(g => g > state.totalClicks) || 999999;
@@ -1422,7 +1546,6 @@
             
             if (Math.random() < 0.05) { // Optimization: update labels less frequently
                 document.getElementById('mainTitle').innerText = getText("THE TIME WASTER");
-                document.getElementById('rankTitle').innerText = `RANK: ${getText(getRankTitle())}`;
                 const labels = {
                     '.lbl-life': "LIFETIME",
                     '.lbl-run': "TOTAL (THIS RUN)",
@@ -1433,7 +1556,7 @@
                     '.lbl-bulk': "BULK",
                     '.lbl-convert': "CONVERT",
                     '.lbl-clk-sing': "CLOCK",
-                    '.lbl-tax': "-25% TAX",
+                    '.lbl-tax': "-10% TAX",
                     '.lbl-insufficient': "INSUFFICIENT FUNDS",
                     '.lbl-machine': "THE CHRONOTON TIME MACHINE",
                     '.lbl-machine-desc': "The machine hums. Reset run for Chronotons.",
@@ -1473,10 +1596,12 @@
             const nextCost = getNextChronoCost();
             const canPrestige = state.totalSecondsWasted >= nextCost;
             document.getElementById('nextChronoReq').innerText = formatNum(nextCost);
+            
             if (canPrestige) {
                 els.prestige.classList.remove('hidden');
-                els.potChrono.innerText = `${getText("REWARD")}: 1 ${getText("CHRONOTON")}`;
-            } else { els.prestige.classList.add('hidden'); }
+            } else {
+                els.prestige.classList.add('hidden');
+            }
 
             renderShopUI();
             renderBoredomZone();
@@ -1499,8 +1624,14 @@
         function checkRankUp() {
             const currentRank = getRankTitle();
             if (state.lastRank !== currentRank) {
+                let currentRankIdx = 0;
+                for (let i = RANKS.length - 1; i >= 0; i--) {
+                    if (state.totalSecondsWasted >= RANKS[i].t) { currentRankIdx = i; break; }
+                }
+
                 state.lastRank = currentRank;
                 triggerJuice('rank');
+                triggerRankUpAnimation(currentRank, currentRankIdx + 1);
                 log(`RANK INCREASED TO ${currentRank}!`);
                 const el = document.getElementById('rankUpText');
                 el.classList.remove('hidden');
@@ -1526,18 +1657,47 @@
 
         function triggerJuice(type) {
             if (state.settings.reduceMotion) return;
+            const mult = state.settings.shakeStrength || 1;
             if (type === 'prestige') {
                 hitstop(50);
                 document.body.classList.add('shake-heavy');
-                setTimeout(() => document.body.classList.remove('shake-heavy'), 1000);
+                setTimeout(() => document.body.classList.remove('shake-heavy'), 1000 * mult);
             } else if (type === 'convert') {
                 document.body.classList.add('shake');
-                setTimeout(() => document.body.classList.remove('shake'), 200);
+                setTimeout(() => document.body.classList.remove('shake'), 200 * mult);
             } else if (type === 'goal' || type === 'rank') {
                 hitstop(30);
                 document.body.classList.add('shake');
-                setTimeout(() => document.body.classList.remove('shake'), 500);
+                setTimeout(() => document.body.classList.remove('shake'), 500 * mult);
             }
+        }
+
+        function triggerRankUpAnimation(rankName, rankNum) {
+            if (state.settings.reduceMotion) return;
+            SFX.play('ding');
+            const target = document.getElementById('rankTitle');
+            if (!target) return;
+            const targetRect = target.getBoundingClientRect();
+            
+            const animEl = document.createElement('div');
+            animEl.className = 'rank-up-anim';
+            animEl.innerText = getText("RANK UP!");
+            document.body.appendChild(animEl);
+
+            const startX = window.innerWidth / 2;
+            const startY = window.innerHeight / 2;
+            const endX = targetRect.left + targetRect.width / 2;
+            const endY = targetRect.top + targetRect.height / 2;
+
+            animEl.animate([
+                { transform: 'translate(-50%, -50%) scale(0)', opacity: 0 },
+                { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 1, offset: 0.2 },
+                { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 1, offset: 0.6 },
+                { transform: `translate(calc(-50% + ${endX - startX}px), calc(-50% + ${endY - startY}px)) scale(0.1)`, opacity: 0 }
+            ], {
+                duration: 1500,
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            }).onfinish = () => animEl.remove();
         }
 
         function createFloatingText(x, y, text, color = "#fff") {
@@ -1577,15 +1737,7 @@
                     state.checkedShopPages[p] = false;
                 }
                 state.pageAffordability[p] = isAffordable;
-                
-                if (p !== state.shopPage && isAffordable && !state.checkedShopPages[p]) {
-                    if (p < state.shopPage) leftNotif = true;
-                    else rightNotif = true;
-                }
             }
-
-            document.getElementById('shopLeftNotif').classList.toggle('hidden', !leftNotif);
-            document.getElementById('shopRightNotif').classList.toggle('hidden', !rightNotif);
         }
 
         function isSomethingAffordableOnPage(p, discount) {
@@ -1669,16 +1821,18 @@
                 div.querySelector('.shop-item-desc').innerText = getText(displayDesc);
                 div.querySelector('.shop-item-owned').innerText = `${getText("OWNED")}: ${count}`;
 
-                let price = (item.cost + (count * item.cost)) * Math.pow(5, state.chronotons);
+                // Balanced Exponential Scaling: Base * 1.2^Count
+                let price = Math.floor(item.cost * Math.pow(1.2, count));
+                price *= Math.pow(5, state.chronotons);
                 if(state.skills.cheap_shop) price = Math.floor(price * 0.95);
                 if(state.activeTheme === 'blood') price = Math.floor(price * 0.8);
                 price = Math.floor(price * currentBoredomDiscount);
 
-                const isOwned = item.special && count > 0;
+                const isOwned = (item.special && count > 0) || (item.max && count >= item.max);
                 const canAfford = state.clocks >= price;
                 
                 btn.disabled = isOwned || !canAfford;
-                btn.innerText = isOwned ? getText("OWNED") : formatNum(price);
+                btn.innerText = isOwned ? (item.max ? getText("MAXED") : getText("OWNED")) : formatNum(price);
             });
         }
 
@@ -1719,21 +1873,37 @@
 
             DISTRACTIONS.forEach(d => {
                 const unlocked = state.unlocks[d.id];
+                // Check if the window is open, accounting for standard minigames and special cases
+                let isOpen = !!document.getElementById(`mini-win-${d.id}`);
+                if (d.id === 'dvd') isOpen = getComputedStyle(els.cvs).opacity !== '0';
+                if (d.id === 'netflix') isOpen = unlocked;
+
                 const div = document.getElementById(`shop-div-${d.id}`);
                 const btn = document.getElementById(`btn-dist-${d.id}`);
                 if (!div || !btn) return;
 
-                div.querySelector('.dist-item-name').innerText = getText(unlocked ? d.name : "LOCKED");
-                div.querySelector('.dist-item-name').className = `font-bold text-[11px] dist-item-name ${unlocked ? 'text-blue-400' : ''}`;
-                div.querySelector('.dist-item-desc').innerText = getText(d.desc);
-                
-                div.className = `flex flex-col justify-between box p-2 bg-gray-900 !mb-0 transition-colors ${unlocked ? 'border-blue-500' : 'border-gray-700'}`;
                 const price = d.cost;
                 const canAfford = d.curr === 'k' ? state.chronotons >= price : state.clocks >= price;
+
+                let displayName = unlocked ? d.name : "LOCKED";
+                if (d.group === 'useful' && unlocked) displayName = `[CORE] ${displayName}`;
+                div.querySelector('.dist-item-name').innerText = getText(displayName);
+                div.querySelector('.dist-item-name').className = `font-bold text-[11px] dist-item-name ${unlocked ? (d.group === 'useful' ? 'text-green-400' : 'text-blue-400') : ''}`;
+                div.querySelector('.dist-item-desc').innerText = getText(d.desc);
                 
-                btn.className = `btn text-[9px] py-1 px-2 w-full ${unlocked ? 'border-blue-500' : 'border-gray-500'}`;
+                let borderClass = unlocked ? (d.group === 'useful' ? 'border-green-500' : 'border-blue-500') : 'border-gray-700';
+                div.className = `flex flex-col justify-between box p-2 bg-gray-900 !mb-0 transition-all duration-300 ${borderClass}`;
+                
+                // Pulse if unlocked and not open, OR if locked but affordable
+                if ((unlocked && !isOpen) || (!unlocked && canAfford)) {
+                    div.classList.add(d.group === 'useful' ? 'useful-ready' : 'boredom-ready');
+                } else {
+                    div.classList.remove('useful-ready', 'boredom-ready');
+                }
+
+                btn.className = `btn text-[9px] py-1 px-2 w-full transition-all ${unlocked ? (d.group === 'useful' ? 'border-green-500 text-green-400' : 'border-blue-500 text-blue-400') : 'border-gray-500'}`;
                 btn.disabled = !unlocked && !canAfford;
-                btn.innerText = unlocked ? getText("LAUNCH") : (d.curr === 'k' ? `${price}K` : `${price}C`);
+                btn.innerText = unlocked ? (isOpen ? getText("ACTIVE") : getText("LAUNCH")) : (d.curr === 'k' ? `${price}K` : `${price}C`);
                 btn.onclick = () => {
                     if (unlocked) triggerDist(d.id);
                     else buyDist(d.id);
@@ -1769,7 +1939,8 @@
                        .replace(/CHECKING/g, "CHECKN")
                        .replace(/JUST/g, "JUS")
                        .replace(/SYSTEM/g, "SISTEM")
-                       .replace(/READY/g, "REDDY");
+                       .replace(/READY/g, "REDDY")
+                       .replace(/MAXED/g, "MAXD");
         }
 
         // --- Actions ---
@@ -1852,17 +2023,23 @@
 
         window.bulkConvert = function() {
             const discount = getBoredomDiscount();
-            const prestigePenalty = Math.pow(10, state.prestigeCount);
-            let scale = CONFIG.CONVERSION_SCALE;
-            if(state.skills.eff_expert) scale -= 0.005;
+            const prestigeCount = Number(state.prestigeCount) || 0;
+            const prestigePenalty = Math.pow(5, prestigeCount);
             
-            const currentCost = Math.floor(getConversionCost() * discount);
-            if (state.seconds < currentCost) { SFX.play('error'); return; }
+            let inflation = 0.01;
+            if (state.skills.eff_expert) inflation *= 0.5;
+            inflation *= Math.pow(0.95, Math.min(10, state.shopCounts.overclocker || 0));
             
-            const bulkTax = discount < 1.0 ? 0.95 : 0.75;
+            const scale = 1 + inflation;
+            const base = CONFIG.BASE_CONVERSION - (state.shopCounts.lubricant || 0) * 2;
+            const initialCost = Math.floor((base * prestigePenalty) * Math.pow(scale, Number(state.conversions) || 0) * discount);
+
+            if (state.seconds < initialCost) { SFX.play('error'); return; }
+            
+            const bulkTax = discount < 1.0 ? 0.95 : 0.90;
             let bought = 0;
-            for(let i=0; i<250; i++) {
-                let c = Math.floor((CONFIG.BASE_CONVERSION * prestigePenalty) * Math.pow(scale, state.conversions + bought));
+            for(let i=0; i<1000; i++) {
+                let c = Math.floor((base * prestigePenalty) * Math.pow(scale, Number(state.conversions) + bought));
                 c = Math.floor(c * discount);
                 if (state.seconds >= c) {
                     state.seconds -= c;
@@ -1884,7 +2061,8 @@
         window.buy = function(id) {
             const item = SHOP_ITEMS.find(i => i.id === id);
             const count = state.shopCounts[id] || 0;
-            let price = (item.cost + (count * item.cost)) * Math.pow(5, state.chronotons);
+            let price = Math.floor(item.cost * Math.pow(1.2, count));
+            price *= Math.pow(5, state.chronotons);
             if(state.skills.cheap_shop) price = Math.floor(price * 0.95);
             if(state.activeTheme === 'blood') price = Math.floor(price * 0.8);
             price = Math.floor(price * getBoredomDiscount());
@@ -1940,6 +2118,8 @@
                         alert("ACHIEVEMENT UNLOCKED: INFINITE REGRET. Goodbye.");
                     }
                     localStorage.removeItem(CONFIG.SAVE_KEY);
+                    // Cleanup timeline keys if they exist
+                    [1,2,3].forEach(n => localStorage.removeItem(CONFIG.SAVE_KEY + '_T' + n));
                     location.reload();
                 }
             }
@@ -2021,6 +2201,7 @@
                 document.getElementById('motionCheck').checked = state.settings.reduceMotion;
                 document.getElementById('autoOpenCheck').checked = state.settings.autoOpenUseful;
                 document.getElementById('themeSelector').value = state.activeTheme;
+                if(document.getElementById('setSelector')) document.getElementById('setSelector').value = state.selectedSet;
             }
             SFX.play('click');
         }
@@ -2072,10 +2253,10 @@
                 check: () => (state.shopCounts.gears || 0) > 0
             },
             { 
-                id: 'convertBtn', 
+                id: ['entropyBtn', 'convertBtn'], 
                 text: "Excellent. Automate more! Keep agitating and converting until you have 10 Clocks.",
                 check: () => state.clocks >= 10,
-                alternate: true
+                forceUnder: true
             },
             { 
                 id: 'cardMenuBtn', 
@@ -2085,13 +2266,24 @@
             {
                 id: 'buyPackBtn',
                 text: "Buy a pack. Every artifact held increases production. Close the menu when done.",
-                check: () => state.cards.length >= 5 && !document.getElementById('cutsceneModal').classList.contains('active'),
-                onComplete: () => closeModal('cardModal')
+                check: () => {
+                    if (state.cards.length < 5 || document.getElementById('cutsceneModal').classList.contains('active')) return false;
+                    if (!state._tutorialCardWait) {
+                        state._tutorialCardWait = Date.now() + 3000;
+                        const s = guideSteps[currentGuideStep];
+                        s.text = "Observe your findings...";
+                        s.id = 'cardGrid';
+                        document.getElementById('guideText').innerText = getText(s.text);
+                        repositionGuide(s.id);
+                    }
+                    return Date.now() >= state._tutorialCardWait;
+                },
+                onComplete: () => { closeModal('cardModal'); delete state._tutorialCardWait; }
             },
             {
                 id: 'shopPageIndicator',
-                text: "The shop has multiple categories! Flip pages to find upgrades for agitation and efficiency.",
-                check: () => state.checkedShopPages.every(v => v)
+                text: "The shop has multiple categories! Flip pages to find upgrades for agitation and efficiency. Return to the Seconds Shop to proceed.",
+                check: () => state.checkedShopPages.every(v => v) && state.shopPage === 0
             },
             {
                 id: 'questMenuBtn',
@@ -2101,7 +2293,7 @@
             {
                 id: 'questList',
                 text: "Quests refresh daily. Claim rewards here. Close the menu to continue.",
-                onComplete: () => closeModal('questModal')
+                check: () => !document.getElementById('questModal').classList.contains('active')
             },
             {
                 id: 'achieveMenuBtn',
@@ -2111,7 +2303,7 @@
             {
                 id: 'achieveList',
                 text: "Claim clocks for achievements here. Close the menu to proceed.",
-                onComplete: () => closeModal('achieveModal')
+                check: () => !document.getElementById('achieveModal').classList.contains('active')
             },
             {
                 id: 'settingsMenuBtn',
@@ -2129,7 +2321,7 @@
             currentGuideStep = 0;
             tutorialDelayTimer = 0;
             settingsOpenedDuringTutorial = false;
-            state.checkedShopPages = [true, false, false, false];
+            state.checkedShopPages = [true, false, false];
             state.tutorialSeen = true; saveGame();
             const overlay = document.getElementById('guideOverlay');
             overlay.classList.remove('hidden');
@@ -2140,29 +2332,38 @@
             document.querySelectorAll('.tutorial-glow').forEach(el => el.classList.remove('tutorial-glow'));
         }
 
-        function repositionGuide(id) {
+        function repositionGuide(id, forceUnder = false) {
             const box = document.getElementById('guideBox');
             const arrow = document.getElementById('tutorialArrow');
-            const target = document.getElementById(id);
+            const targets = (Array.isArray(id) ? id : [id]).map(i => document.getElementById(i)).filter(el => el);
 
-            if (lastGlowTarget !== id) {
+            if (targets.length === 0) {
+                arrow.style.display = 'none';
+                return;
+            }
+
+            if (JSON.stringify(id) !== JSON.stringify(lastGlowTarget)) {
                 clearTutorialGlow();
-                if (target) target.classList.add('tutorial-glow');
+                targets.forEach(t => t.classList.add('tutorial-glow'));
                 lastGlowTarget = id;
             }
 
-            if (target) {
-                const rect = target.getBoundingClientRect();
-                arrow.style.display = 'block';
-                arrow.style.left = `${rect.left + rect.width / 2 - 15}px`;
-                arrow.style.top = `${rect.top - 50}px`;
-                box.style.left = `${rect.left}px`;
-                box.style.top = `${rect.bottom + 15}px`;
-                if (rect.left + 300 > window.innerWidth) box.style.left = `${window.innerWidth - 320}px`;
-                if (rect.bottom + 150 > window.innerHeight) box.style.top = `${rect.top - 150}px`;
-            } else {
-                arrow.style.display = 'none';
-            }
+            // Calculate bounding box of all targets
+            const rects = targets.map(t => t.getBoundingClientRect());
+            const minTop = Math.min(...rects.map(r => r.top));
+            const maxBottom = Math.max(...rects.map(r => r.bottom));
+            const minLeft = Math.min(...rects.map(r => r.left));
+            const maxRight = Math.max(...rects.map(r => r.right));
+
+            arrow.style.display = 'block';
+            arrow.style.left = `${(minLeft + maxRight) / 2 - 15}px`;
+            arrow.style.top = `${minTop - 50}px`;
+            
+            box.style.left = `${minLeft}px`;
+            box.style.top = `${maxBottom + 15}px`;
+            
+            if (minLeft + 300 > window.innerWidth) box.style.left = `${window.innerWidth - 320}px`;
+            if (!forceUnder && maxBottom + 150 > window.innerHeight) box.style.top = `${minTop - 150}px`;
         }
 
         window.showGuideStep = function() {
@@ -2170,9 +2371,14 @@
             const btnNext = document.getElementById('guideNext');
             
             btnNext.style.display = step.check ? "none" : "block";
+
+            // Ensure the target element is in view before positioning the guide
+            const targetId = Array.isArray(step.id) ? step.id[0] : step.id;
+            document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
             document.getElementById('guideText').innerText = getText(step.text);
             
-            repositionGuide(step.id);
+            repositionGuide(step.id, step.forceUnder);
 
             document.getElementById('guideNext').onclick = () => {
                 clearTutorialGlow();
@@ -2195,15 +2401,18 @@
         window.updateSettings = function() {
             state.settings.sfxVol = parseFloat(document.getElementById('sfxSlider').value);
             state.settings.musicVol = parseFloat(document.getElementById('musicSlider').value);
+            state.settings.shakeStrength = parseFloat(document.getElementById('shakeSlider').value);
             const hard = document.getElementById('hardModeCheck').checked;
-            const lol = document.getElementById('lolcatCheck').checked;
+            state.settings.lolcat = document.getElementById('lolcatCheck').checked;
             state.settings.reduceMotion = document.getElementById('motionCheck').checked;
             state.settings.autoOpenUseful = document.getElementById('autoOpenCheck').checked;
+            state.settings.highContrast = document.getElementById('highContrastCheck').checked;
+            state.settings.invertColors = document.getElementById('invertColorsCheck').checked;
+            state.settings.cursorTrail = document.getElementById('cursorTrailCheck').checked;
             
             if (hard && !state.settings.hardMode) unlockAchievement(ACHIEVEMENTS.find(a=>a.id==='worse'));
             state.settings.hardMode = hard;
-            state.settings.lolcat = lol;
-
+            
             const theme = document.getElementById('themeSelector').value;
             state.activeTheme = theme;
             Array.from(document.body.classList).forEach(cls => {
@@ -2213,22 +2422,31 @@
 
             document.getElementById('sfxVal').innerText = Math.round(state.settings.sfxVol * 100) + "%";
             document.getElementById('musicVal').innerText = Math.round(state.settings.musicVol * 100) + "%";
+            document.getElementById('shakeVal').innerText = Math.round(state.settings.shakeStrength * 100) + "%";
             assets.music.volume = state.settings.musicVol;
             
             if (hard) document.body.classList.add('hard-mode-active');
             else document.body.classList.remove('hard-mode-active');
+
+            document.body.classList.toggle('high-contrast', state.settings.highContrast);
+            document.body.classList.toggle('invert-colors', state.settings.invertColors);
             
             calculateCardBonus();
             calculateEntropyCap();
             saveGame();
-            shopGenerated = false; 
+            shopGenerated = false;
             updateUI(0, 1 + state.chronotons*100);
         }
 
         // --- Cards System ---
         function buyCardPack() {
-            if(state.clocks < 10) { SFX.play('error'); return; }
-            state.clocks -= 10;
+            const btn = document.getElementById('buyPackBtn');
+            const setCosts = { 'genesis': 10, 'void': 25, 'temporal': 50 };
+            const cost = setCosts[state.selectedSet] || 10;
+            
+            if(state.clocks < cost) { SFX.play('error'); return; }
+            state.clocks -= cost;
+            if (btn) btn.disabled = true;
 
             const rollContainer = document.getElementById('rollContainer');
             const rollDisplay = document.getElementById('rollingDisplay');
@@ -2266,15 +2484,28 @@
 
             function finalizePack() {
                 const chosen = [];
+                const setPool = CARDS.filter(c => c.set === state.selectedSet || c.set === 'special');
+
                 for (let i = 0; i < 5; i++) {
                     const rand = Math.random();
                     let pool;
-                    if (rand > 0.99) pool = CARDS.filter(c => c.rarity === 'mysterious');
-                    else if (rand > 0.94) pool = CARDS.filter(c => c.rarity === 'exotic');
-                    else if (rand > 0.70) pool = CARDS.filter(c => c.rarity === 'rare');
-                    else pool = CARDS.filter(c => c.rarity === 'common');
+                    if (state.selectedSet === 'genesis') {
+                        if (rand > 0.999) pool = setPool.filter(c => c.rarity === 'exotic');
+                        else if (rand > 0.98) pool = setPool.filter(c => c.rarity === 'epic');
+                        else if (rand > 0.90) pool = setPool.filter(c => c.rarity === 'rare');
+                        else if (rand > 0.70) pool = setPool.filter(c => c.rarity === 'uncommon');
+                        else pool = setPool.filter(c => c.rarity === 'common');
+                    } else {
+                        if (rand > 0.999) pool = setPool.filter(c => c.rarity === 'mysterious');
+                        else if (rand > 0.99) pool = setPool.filter(c => c.rarity === 'mythic');
+                        else if (rand > 0.97) pool = setPool.filter(c => c.rarity === 'exotic');
+                        else if (rand > 0.90) pool = setPool.filter(c => c.rarity === 'epic');
+                        else if (rand > 0.70) pool = setPool.filter(c => c.rarity === 'rare');
+                        else if (rand > 0.40) pool = setPool.filter(c => c.rarity === 'uncommon');
+                        else pool = setPool.filter(c => c.rarity === 'common');
+                    }
 
-                    if (pool.length === 0) pool = CARDS.filter(c => c.rarity === 'common');
+                    if (pool.length === 0) pool = setPool.filter(c => c.rarity === 'common');
                     const card = pool[Math.floor(Math.random() * pool.length)];
                     state.cards.push(card);
                     chosen.push(card);
@@ -2290,6 +2521,7 @@
                 renderCards();
                 saveGame();
 
+                if (btn) btn.disabled = false;
                 const mysteryCard = chosen.find(c => c.cutscene);
                 if (mysteryCard) setTimeout(() => playCutscene(mysteryCard.id), 1500);
             }
@@ -2306,7 +2538,7 @@
             els.cardGrid.innerHTML = '';
             
             // Sort cards by rarity then name to group duplicates
-            const rarityOrder = { mysterious: 0, exotic: 1, rare: 2, common: 3 };
+            const rarityOrder = { mysterious: 0, mythic: 1, exotic: 2, epic: 3, rare: 4, uncommon: 5, common: 6 };
             const sortedCards = [...state.cards].sort((a, b) => {
                 const rA = a?.rarity || 'common';
                 const rB = b?.rarity || 'common';
@@ -2321,6 +2553,7 @@
                 const sellPrice = CONFIG.CARD_SELL_PRICES[c.rarity];
                 let content = `
                     <div class="font-black underline mb-1 text-sm">${c.name || c.id}</div>
+                    <div class="text-[8px] text-gray-500 uppercase tracking-widest mb-1">[SET: ${c.set}]</div>
                     ${c.rarity === 'mysterious' ? '<div class="text-[9px] font-bold mb-1">[ RARITY: ??? ]</div>' : ''}
                     <div class="text-[10px] italic opacity-70 mb-2">${c.desc || 'A mysterious artifact.'}</div>
                 `;
@@ -2563,12 +2796,12 @@
                 </div>
             `;
             
-            const existing = document.getElementById('mini-content-market');
+            const existing = document.getElementById('mini-content-stock');
             if (existing) {
                 existing.innerHTML = innerHTML;
             } else {
-                addMinigameWindow('market', innerHTML);
-                updateMarket(); // Initial start
+                addMinigameWindow('stock', innerHTML);
+                updateMarket(); 
             }
         }
 
@@ -2662,8 +2895,8 @@
                     </div>
                 </div>
             `;
-            if (!document.getElementById('mini-win-bj')) addMinigameWindow('bj', html);
-            else document.getElementById('mini-content-bj').innerHTML = html;
+            if (!document.getElementById('mini-win-blackjack')) addMinigameWindow('blackjack', html);
+            else document.getElementById('mini-content-blackjack').innerHTML = html;
             
             if (!state.bjGameOver) {
                 document.getElementById('bjPlayerDisplay').innerText = calculateBJValue(state.bjPlayerHand);
@@ -2851,7 +3084,7 @@
         function toggleSubBox() {
             state.unlocks.sub_box = true; 
             log("SUBSCRIPTION BOX ACTIVE. WAIT 10 MINS.");
-            addMinigameWindow('sub', `<div class="p-2 text-center text-xs">${getText("SUB BOX RUNNING IN BACKGROUND...")}</div>`);
+            addMinigameWindow('sub_box', `<div class="p-2 text-center text-xs">${getText("SUB BOX RUNNING IN BACKGROUND...")}</div>`);
         }
         
         function activateNetflix() {
@@ -3021,7 +3254,7 @@
 
         function renderWaiting() {
             const html = `<div class="p-4 text-center"><div class="text-6xl font-mono" id="waitNum">999</div><div class="text-xs">${getText("Waiting...")}</div></div>`;
-            addMinigameWindow('wait', html);
+            addMinigameWindow('waitroom', html);
             
             let n = 999;
             const i = setInterval(()=>{
@@ -3057,7 +3290,7 @@
         
         function renderDontClick() {
              const html = `<div class="p-8 text-center"><button onclick="dontClick()" class="w-32 h-32 rounded-full bg-red-600 font-bold text-white">${getText("DO NOT CLICK")}</button></div>`;
-             addMinigameWindow('dont', html);
+             addMinigameWindow('dontclick', html);
         }
         window.dontClick = function() {
             SFX.play('ding'); state.seconds=0; updateUI(0,1);
@@ -3076,7 +3309,7 @@
                     <div id="miniClickWarning" class="text-red-500 text-[9px] mt-2 h-4 font-bold"></div>
                 </div>
             `;
-            addMinigameWindow('clicker', html);
+            addMinigameWindow('miniclick', html);
         }
 
         let lastClickTime = 0;
@@ -3130,7 +3363,7 @@
                     <p class="text-[9px] text-gray-500 mt-2">Passively scavenges the void for Clocks while open.</p>
                 </div>
             `;
-            addMinigameWindow('scavenge', html);
+            addMinigameWindow('janitor', html);
             let time = 60;
             const tick = setInterval(() => {
                 const el = document.getElementById('scavengeTimer');
@@ -3266,7 +3499,6 @@
             if (raw) {
                 try {
                     const s = JSON.parse(raw);
-                    // Deep merge and sanitize numeric values to prevent NaN breaks
                     for (const key in s) {
                         if (typeof state[key] === 'object' && state[key] !== null && !Array.isArray(state[key])) {
                             if (typeof s[key] === 'object' && s[key] !== null) {
@@ -3298,6 +3530,10 @@
                 state.skills = (typeof state.skills === 'object' && state.skills !== null) ? state.skills : {};
                 state.unlocks = (typeof state.unlocks === 'object' && state.unlocks !== null) ? state.unlocks : {};
                 state.claimedAchievements = Array.isArray(state.claimedAchievements) ? state.claimedAchievements : [];
+
+                    // Apply Visual Settings
+                    document.body.classList.toggle('high-contrast', !!state.settings.highContrast);
+                    document.body.classList.toggle('invert-colors', !!state.settings.invertColors);
 
                     if (!state.checkedShopPages || state.checkedShopPages.length !== 3) state.checkedShopPages = [true, false, false];
                     if (!state.pageAffordability || state.pageAffordability.length !== 3) state.pageAffordability = [false, false, false];
@@ -3401,6 +3637,27 @@
                 }
             });
             window.onmousemove = () => { state.timers.lastInput = Date.now(); };
+
+            window.addEventListener('mousemove', (e) => {
+                if (state.settings.cursorTrail) {
+                    const dot = document.createElement('div');
+                    dot.style.position = 'fixed';
+                    dot.style.left = e.clientX + 'px';
+                    dot.style.top = e.clientY + 'px';
+                    dot.style.width = '6px';
+                    dot.style.height = '6px';
+                    dot.style.background = state.activeTheme === 'default' ? 'white' : getComputedStyle(document.body).color;
+                    dot.style.borderRadius = '50%';
+                    dot.style.pointerEvents = 'none';
+                    dot.style.zIndex = '9999';
+                    dot.style.boxShadow = `0 0 10px ${dot.style.background}`;
+                    document.body.appendChild(dot);
+                    dot.animate([
+                        { opacity: 1, transform: 'scale(1) translate(0, 0)' },
+                        { opacity: 0, transform: `scale(0) translate(${(Math.random()-0.5)*20}px, 20px)` }
+                    ], { duration: 600, easing: 'ease-out' }).onfinish = () => dot.remove();
+                }
+            });
         };
     </script>
 </body>
