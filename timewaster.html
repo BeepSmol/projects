@@ -646,12 +646,6 @@
       <button onclick="document.getElementById('devtoolsPanel').style.display='none'" class="btn text-xs w-full border-red-500 text-red-500">CLOSE</button>
   </div>
 
-  <div id="idleOverlay">
-      <h1 class="text-4xl font-bold mb-4 text-center">ARE YOU STILL THERE?</h1>
-      <p class="mb-4 text-gray-400">Progression paused due to inactivity.</p>
-      <button onclick="resumeIdle()" class="btn">I'M HERE</button>
-  </div>
-
   <!-- Desktop Layout Wrapper -->
   <div class="w-full max-w-[1500px] grid grid-cols-1 lg:grid-cols-12 gap-6 items-start justify-center relative z-10 px-4 mt-4">
     <!-- LEFT SIDEBAR: QUESTS & SHOP -->
@@ -721,10 +715,14 @@
             </div>
         </header>
         <div class="box flex flex-col items-center p-3 md:p-6">
-            <div class="grid grid-cols-2 w-full gap-4 text-center mb-4 border-b border-gray-700 pb-4">
+            <div class="grid grid-cols-3 w-full gap-4 text-center mb-4 border-b border-gray-700 pb-4">
                 <div>
                     <div class="text-xs text-purple-400 font-bold lbl-life">LIFETIME</div>
                     <div class="text-xl font-bold text-purple-300" id="chronoTotalDisplay">0.0</div>
+                </div>
+                <div>
+                    <div class="text-xs text-green-400 font-bold">TRUE TIME WASTED</div>
+                    <div class="text-xl font-bold text-green-300" id="trueTotalDisplay">0.0</div>
                 </div>
                 <div>
                     <div class="text-xs text-blue-400 font-bold lbl-run">TOTAL (THIS RUN)</div>
@@ -1100,7 +1098,7 @@
         let musicWasPlayingBeforeCutscene = false;
         let state = {
             seconds: 0, clocks: 0, fragments: 0, chronotons: 0, prestigeCount: 0,
-            totalSecondsWasted: 0, runSecondsWasted: 0, conversions: 0,
+            totalSecondsWasted: 0, trueTotalSeconds: 0, runSecondsWasted: 0, conversions: 0,
             entropyMultiplier: 1.0, entropyCap: 1.5, totalClicks: 0,
             tutorialSeen: false,
             selectedSet: 'genesis',
@@ -1119,7 +1117,7 @@
             shopCounts: { gears: 0, chrono: 0, machine: 0, dilator: 0, toaster: 0, field: 0, trash: 0, dissolver: 0, engine: 0, skill_key: 0 },
             skills: { accel_pulse: false, shiny_magnet: false, eff_expert: false, deep_focus: false, time_warp: false, compound: false, cheap_shop: false, auto_conv: false },
             achievements: [], claimedAchievements: [],
-            unlocks: { bg: false, dvd: false, chat: false, rock: false, mushroom: false, bubble: false, draw: false, unsorter: false, todo: false, waitroom: false, almost: false, dontclick: false, sub_box: false, netflix: false, miniclick: false, fishing: false, stock: false, blackjack: false, janitor: false, skill_key: false },
+            unlocks: { bg: false, dvd: false, chat: false, rock: false, mushroom: false, bubble: false, draw: false, unsorter: false, todo: false, waitroom: false, almost: false, dontclick: false, sub_box: false, miniclick: false, fishing: false, stock: false, blackjack: false, janitor: false, skill_key: false },
             stats: { rockFed: 0, bubblesPopped: 0, bgChanges: 0, fakeClicks: 0, convertSpree: 0, almostFail: 0, chatMsgs: 0, unaffordableTry: 0, miniClicks: 0 },
             timers: { lastInput: Date.now() },
         };
@@ -1218,7 +1216,6 @@
             { id: 'waitroom', name: 'WAITING ROOM', desc: 'Get in line', cost: 50, curr: 'c', action: () => renderWaiting(), group: 'useless' },
             { id: 'almost', name: 'ALMOST BAR', desc: '99% Loading', cost: 60, curr: 'c', action: () => renderAlmost(), group: 'useless' },
             { id: 'sub_box', name: 'SUB BOX', desc: 'Mystery Gifts', cost: 5, curr: 'c', action: () => toggleSubBox(), group: 'greedy' },
-            { id: 'netflix', name: 'NETFLIX BLOCKER', desc: 'No Idle Pause', cost: 10, curr: 'k', action: () => activateNetflix(), group: 'useful' },
             { id: 'dontclick', name: 'DO NOT CLICK', desc: 'Seriously', cost: 100, curr: 'c', action: () => renderDontClick(), group: 'greedy' }
         ];
 
@@ -1243,6 +1240,7 @@
             potChrono: document.getElementById('potentialChrono'),
             offline: document.getElementById('offlineBadge'),
             chronoTotal: document.getElementById('chronoTotalDisplay'),
+            trueTotal: document.getElementById('trueTotalDisplay'),
             runTotal: document.getElementById('runTotalDisplay'),
             skillBtn: document.getElementById('skillTreeBtnContainer'),
             frag: document.getElementById('fragDisplay'),
@@ -1304,12 +1302,6 @@
         function runLogicTick(dt) {
             const now = Date.now();
             
-            // Idle Check
-            if (now - state.timers.lastInput > 600000 && !state.unlocks.netflix) {
-                document.getElementById('idleOverlay').style.display = 'flex';
-                return;
-            }
-
             const boredomActive = els.mini.children.length > 0;
             
             // Entropy Decay
@@ -1384,6 +1376,7 @@
             const gain = finalRate * dt;
             state.seconds += gain;
             state.totalSecondsWasted += gain;
+            state.trueTotalSeconds += dt;
             state.runSecondsWasted += gain;
 
             // Auto Convert Skill
@@ -1535,6 +1528,7 @@
             els.clk.innerText = formatNum(state.clocks);
             els.rate.innerText = `+${formatNum(rate)}/s`;
             els.chronoTotal.innerText = formatNum(state.totalSecondsWasted);
+            els.trueTotal.innerText = formatNum(state.trueTotalSeconds);
             els.runTotal.innerText = formatNum(state.runSecondsWasted);
             els.chrono.innerText = formatNum(state.chronotons);
             els.chronoMult.innerText = `x${formatNum(pMult)} MULTIPLIER`;
@@ -1876,7 +1870,6 @@
                 // Check if the window is open, accounting for standard minigames and special cases
                 let isOpen = !!document.getElementById(`mini-win-${d.id}`);
                 if (d.id === 'dvd') isOpen = getComputedStyle(els.cvs).opacity !== '0';
-                if (d.id === 'netflix') isOpen = unlocked;
 
                 const div = document.getElementById(`shop-div-${d.id}`);
                 const btn = document.getElementById(`btn-dist-${d.id}`);
@@ -2180,11 +2173,6 @@
         }
         window.ctxAction = function() {
             alert(getText("This feature will be available in the year 600000."));
-        }
-
-        window.resumeIdle = function() {
-            document.getElementById('idleOverlay').style.display = 'none';
-            state.timers.lastInput = Date.now();
         }
 
         // --- Modal & Skill Logic ---
@@ -3086,11 +3074,6 @@
             log("SUBSCRIPTION BOX ACTIVE. WAIT 10 MINS.");
             addMinigameWindow('sub_box', `<div class="p-2 text-center text-xs">${getText("SUB BOX RUNNING IN BACKGROUND...")}</div>`);
         }
-        
-        function activateNetflix() {
-            state.unlocks.netflix = true;
-            log("NETFLIX BLOCKER ACTIVE. NO IDLE TIMEOUT.");
-        }
 
         function renderRock() {
             let html = "";
@@ -3375,14 +3358,10 @@
                     const entry = document.createElement('div');
                     entry.className = "border-b border-gray-900 pb-1 mb-1";
                     
-                    if (Math.random() < 0.1 * state.knowledgeMult) {
-                        state.clocks++; 
-                        log("SCAVENGER: Found a clock in the void!"); 
-                        SFX.play('golden');
-                        entry.innerHTML = `<span class="text-green-400">SEARCH RESULT: +1 CLOCK</span>`;
-                    } else {
-                        entry.innerHTML = `<span class="text-gray-600">SEARCH RESULT: 0 CLOCKS</span>`;
-                    }
+                    state.clocks++; 
+                    log("SCAVENGER: Found a clock in the void!"); 
+                    SFX.play('golden');
+                    entry.innerHTML = `<span class="text-green-400">SEARCH RESULT: +1 CLOCK</span>`;
                     
                     if(logEl) {
                         logEl.prepend(entry);
@@ -3517,7 +3496,7 @@
                     state.cards = Array.isArray(state.cards) ? state.cards : [];
                     
                     // Sanitize critical multipliers and pagination state
-                    ['seconds', 'clocks', 'fragments', 'chronotons', 'prestigeCount', 'totalSecondsWasted', 'runSecondsWasted', 'conversions', 'totalClicks', 'knowledgeMult', 'entropyMultiplier', 'lastSaveTime'].forEach(k => {
+                    ['seconds', 'clocks', 'fragments', 'chronotons', 'prestigeCount', 'totalSecondsWasted', 'trueTotalSeconds', 'runSecondsWasted', 'conversions', 'totalClicks', 'knowledgeMult', 'entropyMultiplier', 'lastSaveTime'].forEach(k => {
                         if (k === 'knowledgeMult' || k === 'entropyMultiplier') {
                             state[k] = Number(state[k]) || 1.0;
                         } else {
@@ -3599,7 +3578,6 @@
             if (e.key.toLowerCase() === 'r') {
                 if (!els.prestige.classList.contains('hidden')) prestige();
             }
-            if (document.getElementById('idleOverlay').style.display === 'flex') resumeIdle();
         });
 
         window.onload = function() {
