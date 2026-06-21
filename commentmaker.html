@@ -200,7 +200,7 @@
                                 <label for="input-content" class="text-xs font-semibold text-slate-300">Comment Text</label>
                                 <span class="text-[10px] text-slate-500 font-medium">Use **word** for <b class="text-white">bold</b> & ==word== for <span class="bg-yellow-500 text-black px-1 rounded">highlight</span></span>
                             </div>
-                            <textarea id="input-content" rows="4" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500 resize-none font-yt">Can't believe this only took ==5 minutes== to build. This feature is absolutely **GAME CHANGING**! 🚀🔥</textarea>
+                            <textarea id="input-content" rows="4" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500 resize-none font-yt font-normal">Can't believe this only took ==5 minutes== to build. This feature is absolutely **GAME CHANGING**! 🚀🔥</textarea>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
@@ -380,7 +380,7 @@
 
             <!-- Comment Card Container Wrap -->
             <!-- Workspace container is what gets cropped according to controls -->
-            <div id="workspace-container" class="checkerboard flex-1 w-full rounded-2xl flex items-center justify-center border border-slate-800 min-h-[420px] transition-all relative overflow-hidden p-8">
+            <div id="workspace-container" class="checkerboard flex-1 w-full rounded-2xl flex items-center justify-center border border-slate-800 min-h-[420px] transition-all relative overflow-hidden p-8" style="width: 100%; height: auto;">
                 
                 <!-- THE COMMENT CARD -->
                 <div id="yt-comment-card" class="bg-[#0f0f0f] p-8 rounded-2xl w-full max-w-3xl font-yt transition-all duration-200 select-none relative" style="box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);">
@@ -411,7 +411,6 @@
                             </div>
 
                             <!-- Comment Content Line (Main Text) -->
-                            <!-- Highlight and text-size will modify this specifically -->
                             <div id="card-content" class="text-[#f1f1f1] font-normal leading-relaxed break-words whitespace-pre-wrap select-text pr-2" style="font-size: 22px;">
                                 <!-- Dynamically populated in JS -->
                             </div>
@@ -425,7 +424,7 @@
                                     <span id="card-likes" class="text-xs text-[#aaaaaa] font-yt" style="display: inline-block; vertical-align: middle; line-height: 15px;">12K</span>
                                 </div>
                                 
-                                <!-- Optional Creator Heart badge (Strict rendering to prevent export shifts) -->
+                                <!-- Optional Creator Heart badge -->
                                 <div id="card-heart-container" class="hidden flex items-center gap-2">
                                     <div class="relative w-7 h-5 flex items-center shrink-0">
                                         <img id="card-creator-pfp" src="https://placehold.co/100x100/dc2626/ffffff?text=C" alt="Creator PFP" class="w-5 h-5 rounded-full border border-[#0f0f0f] object-cover absolute left-0 top-0 z-10">
@@ -464,12 +463,103 @@
 
     </div>
 
-    <!-- Global Early Save Handler to prevent crashes before module loads -->
+    <!-- Cookie Storage & Helper Utilities (Instant State Backups) -->
+    <script>
+        // Set Cookie helper
+        function setCookie(name, value, days = 30) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (encodeURIComponent(value) || "") + expires + "; path=/; SameSite=Lax";
+        }
+
+        // Get Cookie helper
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        }
+
+        // Gather all current settings to form a state payload
+        function getAppStatePayload() {
+            return {
+                username: document.getElementById('input-username').value,
+                handle: document.getElementById('input-handle').value,
+                verified: document.getElementById('toggle-verified').checked,
+                content: document.getElementById('input-content').value,
+                time: document.getElementById('input-time').value,
+                likes: document.getElementById('input-likes').value,
+                creatorHearted: document.getElementById('toggle-hearted').checked,
+                creatorName: document.getElementById('input-creator-name').value,
+                creatorPfpUrl: document.getElementById('creator-pfp-url').value,
+                pfpUrl: document.getElementById('pfp-url-input').value,
+                fontSize: document.getElementById('slider-font-size').value,
+                cardBg: document.getElementById('picker-card-bg').value,
+                textColor: document.getElementById('picker-text').value,
+                highlightColor: document.getElementById('picker-highlight').value,
+                borderStyle: document.getElementById('border-style').value,
+                borderColor: document.getElementById('picker-border').value,
+                cardShadow: document.getElementById('card-shadow').value,
+                aspectRatio: document.getElementById('aspect-ratio-select').value,
+                cardWidth: document.getElementById('slider-card-width').value,
+                canvasPadding: document.getElementById('slider-canvas-padding').value
+            };
+        }
+
+        // Set configuration elements from a state payload
+        function loadPayloadIntoUi(data) {
+            if (!data) return;
+            if (data.username !== undefined) document.getElementById('input-username').value = data.username;
+            if (data.handle !== undefined) document.getElementById('input-handle').value = data.handle;
+            if (data.verified !== undefined) document.getElementById('toggle-verified').checked = !!data.verified;
+            if (data.content !== undefined) document.getElementById('input-content').value = data.content;
+            if (data.time !== undefined) document.getElementById('input-time').value = data.time;
+            if (data.likes !== undefined) document.getElementById('input-likes').value = data.likes;
+            if (data.creatorHearted !== undefined) document.getElementById('toggle-hearted').checked = !!data.creatorHearted;
+            if (data.creatorName !== undefined) document.getElementById('input-creator-name').value = data.creatorName;
+            if (data.creatorPfpUrl !== undefined) document.getElementById('creator-pfp-url').value = data.creatorPfpUrl;
+            if (data.pfpUrl !== undefined) document.getElementById('pfp-url-input').value = data.pfpUrl;
+            if (data.fontSize !== undefined) document.getElementById('slider-font-size').value = data.fontSize;
+            if (data.cardBg !== undefined) document.getElementById('picker-card-bg').value = data.cardBg;
+            if (data.textColor !== undefined) document.getElementById('picker-text').value = data.textColor;
+            if (data.highlightColor !== undefined) document.getElementById('picker-highlight').value = data.highlightColor;
+            if (data.borderStyle !== undefined) document.getElementById('border-style').value = data.borderStyle;
+            if (data.borderColor !== undefined) document.getElementById('picker-border').value = data.borderColor;
+            if (data.cardShadow !== undefined) document.getElementById('card-shadow').value = data.cardShadow;
+            if (data.aspectRatio !== undefined) document.getElementById('aspect-ratio-select').value = data.aspectRatio;
+            if (data.cardWidth !== undefined) document.getElementById('slider-card-width').value = data.cardWidth;
+            if (data.canvasPadding !== undefined) document.getElementById('slider-canvas-padding').value = data.canvasPadding;
+
+            // Sync picker hex values
+            if (data.cardBg) document.getElementById('picker-card-bg-hex').value = data.cardBg;
+            if (data.textColor) document.getElementById('picker-text-hex').value = data.textColor;
+            if (data.highlightColor) document.getElementById('picker-highlight-hex').value = data.highlightColor;
+
+            if (data.pfpUrl) {
+                document.getElementById('pfp-preview').src = data.pfpUrl;
+                document.getElementById('card-pfp').src = data.pfpUrl;
+            }
+            if (data.creatorPfpUrl) {
+                document.getElementById('creator-pfp-preview').src = data.creatorPfpUrl;
+                document.getElementById('card-creator-pfp').src = data.creatorPfpUrl;
+            }
+        }
+    </script>
+
+    <!-- Global Early Save Handler with Cookie Sync -->
     <script>
         let firestoreSaveBridge = null;
         let localSaveTimeout = null;
 
-        // Define triggerAutoSave globally so input elements don't throw Uncaught ReferenceErrors
+        // Auto-saves globally, backing up settings instantly to local cookies
         window.triggerAutoSave = function() {
             const statusDot = document.getElementById('cloud-status-dot');
             const statusText = document.getElementById('cloud-status-text');
@@ -479,19 +569,27 @@
                 statusText.innerText = "Saving changes...";
             }
 
+            // Immediately write state variables to Cookies
+            try {
+                const currentPayload = getAppStatePayload();
+                setCookie('yt_comment_draft', JSON.stringify(currentPayload), 30);
+            } catch (err) {
+                console.warn("Cookie save issue:", err);
+            }
+
             if (firestoreSaveBridge) {
                 firestoreSaveBridge();
             } else {
-                // Graceful fallback for single-session modes
+                // Single Session fallback completes when Firestore isn't connected
                 clearTimeout(localSaveTimeout);
                 localSaveTimeout = setTimeout(() => {
                     const dot = document.getElementById('cloud-status-dot');
                     const txt = document.getElementById('cloud-status-text');
                     if (dot && txt) {
                         dot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                        txt.innerText = "Single-session Mode (Saved)";
+                        txt.innerText = "Saved to Cookies (Local)";
                     }
-                }, 1000);
+                }, 800);
             }
         };
     </script>
@@ -502,20 +600,31 @@
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global Firebase state references
         let db = null;
         let auth = null;
         let currentUser = null;
         let saveTimeout = null;
 
-        // Extract credentials
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'yt-comment-gen';
         const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
 
         window.addEventListener('load', async () => {
-            // Apply default initial random avatar
-            setPresetPfp('random-retro');
+            // First load from local Cookies for instantaneous render
+            try {
+                const localCookieData = getCookie('yt_comment_draft');
+                if (localCookieData) {
+                    const parsed = JSON.parse(localCookieData);
+                    loadPayloadIntoUi(parsed);
+                } else {
+                    setPresetPfp('random-retro');
+                }
+            } catch (err) {
+                console.warn("Failed to unpack cookies on initial load:", err);
+                setPresetPfp('random-retro');
+            }
+
             updatePreview();
+            updateWorkspaceRatio();
 
             if (rawConfig) {
                 try {
@@ -524,7 +633,6 @@
                     auth = getAuth(app);
                     db = getFirestore(app);
 
-                    // Standard authentication setup
                     updateSaveStatus('connecting', 'Authenticating...');
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
@@ -538,7 +646,7 @@
                             updateSaveStatus('syncing', 'Loading your draft...');
                             await loadSavedComment();
                             
-                            // Bind the active cloud save function to the global autoSave trigger
+                            // Bind active cloud save function to global bridge
                             window.firestoreSaveBridge = function() {
                                 clearTimeout(saveTimeout);
                                 saveTimeout = setTimeout(() => {
@@ -552,7 +660,7 @@
                     updateSaveStatus('failed', 'Cloud Offline');
                 }
             } else {
-                updateSaveStatus('failed', 'Single-session Mode (Ready)');
+                updateSaveStatus('saved', 'Saved to Cookies (Local)');
             }
         });
 
@@ -561,34 +669,12 @@
             if (!db || !currentUser) return;
             updateSaveStatus('saving', 'Saving draft...');
             try {
-                const data = {
-                    username: document.getElementById('input-username').value,
-                    handle: document.getElementById('input-handle').value,
-                    verified: document.getElementById('toggle-verified').checked,
-                    content: document.getElementById('input-content').value,
-                    time: document.getElementById('input-time').value,
-                    likes: document.getElementById('input-likes').value,
-                    creatorHearted: document.getElementById('toggle-hearted').checked,
-                    creatorName: document.getElementById('input-creator-name').value,
-                    creatorPfpUrl: document.getElementById('creator-pfp-url').value,
-                    pfpUrl: document.getElementById('pfp-url-input').value,
-                    fontSize: document.getElementById('slider-font-size').value,
-                    cardBg: document.getElementById('picker-card-bg').value,
-                    textColor: document.getElementById('picker-text').value,
-                    highlightColor: document.getElementById('picker-highlight').value,
-                    borderStyle: document.getElementById('border-style').value,
-                    borderColor: document.getElementById('picker-border').value,
-                    cardShadow: document.getElementById('card-shadow').value,
-                    // Cropper properties
-                    aspectRatio: document.getElementById('aspect-ratio-select').value,
-                    cardWidth: document.getElementById('slider-card-width').value,
-                    canvasPadding: document.getElementById('slider-canvas-padding').value,
-                    savedAt: new Date().toISOString()
-                };
+                const data = getAppStatePayload();
+                data.savedAt = new Date().toISOString();
 
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'current_comment');
                 await setDoc(docRef, data);
-                updateSaveStatus('saved', 'Draft Saved');
+                updateSaveStatus('saved', 'Draft Saved (Cloud & Cookie)');
             } catch (e) {
                 console.error("Auto-saving draft failed:", e);
                 updateSaveStatus('failed', 'Save Error');
@@ -603,45 +689,7 @@
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-
-                    // Restore state variables safely
-                    document.getElementById('input-username').value = data.username || 'Commenter Extraordinaire';
-                    document.getElementById('input-handle').value = data.handle || '@user-legend';
-                    document.getElementById('toggle-verified').checked = !!data.verified;
-                    document.getElementById('input-content').value = data.content || '';
-                    document.getElementById('input-time').value = data.time || '3 hours ago';
-                    document.getElementById('input-likes').value = data.likes || '12K';
-                    document.getElementById('toggle-hearted').checked = !!data.creatorHearted;
-                    document.getElementById('input-creator-name').value = data.creatorName || 'MrBeast';
-                    document.getElementById('creator-pfp-url').value = data.creatorPfpUrl || '';
-                    document.getElementById('pfp-url-input').value = data.pfpUrl || '';
-                    document.getElementById('slider-font-size').value = data.fontSize || '22';
-                    document.getElementById('picker-card-bg').value = data.cardBg || '#0f0f0f';
-                    document.getElementById('picker-text').value = data.textColor || '#f1f1f1';
-                    document.getElementById('picker-highlight').value = data.highlightColor || '#eab308';
-                    document.getElementById('border-style').value = data.borderStyle || 'none';
-                    document.getElementById('picker-border').value = data.borderColor || '#3b82f6';
-                    document.getElementById('card-shadow').value = data.cardShadow || 'shadow-2xl';
-                    
-                    // Crop layout parameters
-                    if (data.aspectRatio) document.getElementById('aspect-ratio-select').value = data.aspectRatio;
-                    if (data.cardWidth) document.getElementById('slider-card-width').value = data.cardWidth;
-                    if (data.canvasPadding) document.getElementById('slider-canvas-padding').value = data.canvasPadding;
-
-                    // Sync corresponding hex input elements
-                    document.getElementById('picker-card-bg-hex').value = data.cardBg || '#0f0f0f';
-                    document.getElementById('picker-text-hex').value = data.textColor || '#f1f1f1';
-                    document.getElementById('picker-highlight-hex').value = data.highlightColor || '#eab308';
-
-                    if (data.pfpUrl) {
-                        document.getElementById('pfp-preview').src = data.pfpUrl;
-                        document.getElementById('card-pfp').src = data.pfpUrl;
-                    }
-                    if (data.creatorPfpUrl) {
-                        document.getElementById('creator-pfp-preview').src = data.creatorPfpUrl;
-                        document.getElementById('card-creator-pfp').src = data.creatorPfpUrl;
-                    }
-
+                    loadPayloadIntoUi(data);
                     updatePreview();
                     updateWorkspaceRatio();
                     updateSaveStatus('saved', 'Draft loaded');
@@ -745,10 +793,22 @@
         // Change the workspace environment background style
         function changeWorkspaceBg(style) {
             const ws = document.getElementById('workspace-container');
-            // Keep basic dimensions and border properties intact
-            const currentRatioClasses = Array.from(ws.classList).filter(c => c.startsWith('aspect-') || c.startsWith('max-w-'));
-            ws.className = "flex-1 w-full rounded-2xl flex items-center justify-center border border-slate-800 transition-all relative overflow-hidden " + currentRatioClasses.join(' ');
+            // Keep style dimensions while changing bg pattern classes
+            const currentStyleWidth = ws.style.width;
+            const currentStyleHeight = ws.style.height;
+            const currentStyleMaxWidth = ws.style.maxWidth;
+            const currentStyleMaxHeight = ws.style.maxHeight;
+            const currentStyleAspect = ws.style.aspectRatio;
+
+            ws.className = "flex-1 w-full rounded-2xl flex items-center justify-center border border-slate-800 transition-all relative overflow-hidden";
             
+            // Restore styles
+            ws.style.width = currentStyleWidth;
+            ws.style.height = currentStyleHeight;
+            ws.style.maxWidth = currentStyleMaxWidth;
+            ws.style.maxHeight = currentStyleMaxHeight;
+            ws.style.aspectRatio = currentStyleAspect;
+
             if (style === 'checkerboard') {
                 ws.classList.add('checkerboard');
             } else if (style === 'pure-black') {
@@ -760,20 +820,32 @@
             }
         }
 
-        // Apply selected Aspect Ratio preset and styles to the parent wrapper
+        // Apply selected Aspect Ratio preset and styles with complete layout protection
         function updateWorkspaceRatio() {
             const ws = document.getElementById('workspace-container');
             const ratio = document.getElementById('aspect-ratio-select').value;
             
-            // Strip aspect utilities
-            ws.classList.remove('aspect-video', 'aspect-square', 'h-auto', 'max-w-2xl', 'max-w-md');
+            // Completely reset styling constraints to prevent flex collapsing
+            ws.style.aspectRatio = '';
+            ws.style.width = '100%';
+            ws.style.height = '';
+            ws.style.maxWidth = '';
+            ws.style.maxHeight = '';
             
             if (ratio === '1-1') {
-                ws.classList.add('aspect-square', 'max-w-[480px]');
+                ws.style.aspectRatio = '1 / 1';
+                ws.style.maxWidth = '480px';
             } else if (ratio === '16-9') {
-                ws.classList.add('aspect-video', 'max-w-3xl');
+                ws.style.aspectRatio = '16 / 9';
+                ws.style.maxWidth = '768px';
             } else if (ratio === '9-16') {
-                ws.classList.add('aspect-[9/16]', 'max-w-[340px]');
+                ws.style.aspectRatio = '9 / 16';
+                ws.style.height = '100%';
+                ws.style.maxHeight = '500px';
+                ws.style.width = 'auto';
+            } else {
+                // Freeform / Auto Fit
+                ws.style.height = 'auto';
             }
         }
 
@@ -960,7 +1032,6 @@
         function exportComment(type) {
             let exportElement = document.getElementById('yt-comment-card');
             
-            // If exporting the custom crop space with customized ratios & borders
             if (type === 'cropped') {
                 exportElement = document.getElementById('workspace-container');
             }
@@ -976,7 +1047,6 @@
                 logging: false
             };
 
-            // Remove checkers dynamically for rendering pure backgrounds if needed
             const hadCheckerboard = exportElement.classList.contains('checkerboard');
             if (hadCheckerboard) {
                 exportElement.classList.remove('checkerboard');
