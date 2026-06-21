@@ -81,7 +81,7 @@
         <!-- Control Panel (Left Sidebar) -->
         <aside class="w-full lg:w-[480px] bg-slate-950 border-r border-slate-800 flex flex-col h-full overflow-y-auto shrink-0 pb-12">
             
-            <!-- Quick Alert Message Box (Custom notification replacing alert) -->
+            <!-- Quick Alert Message Box -->
             <div id="notification" class="hidden m-4 p-4 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-400 flex items-center justify-between shadow-xl transition-all duration-300">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-circle-check text-lg"></i>
@@ -319,7 +319,7 @@
                     </div>
                 </div>
 
-                <!-- Section 6: Crop & Aspect Ratio Modifiers (NEW FEATURE) -->
+                <!-- Section 6: Crop & Aspect Ratio Modifiers -->
                 <div>
                     <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-crop text-red-500"></i>
@@ -399,9 +399,9 @@
                                 <!-- Handle -->
                                 <span id="card-handle" class="text-white font-bold text-sm tracking-wide">@user-legend</span>
                                 
-                                <!-- Verified badge -->
-                                <span id="card-verified" class="inline-flex items-center text-[#aaaaaa]">
-                                    <svg class="w-[14px] h-[14px] fill-current" viewBox="0 0 24 24">
+                                <!-- Verified badge (Strict dimensions to prevent export misalignment) -->
+                                <span id="card-verified" class="inline-flex items-center shrink-0" style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; vertical-align: middle; margin-left: 4px;">
+                                    <svg id="verified-icon-svg" width="14" height="14" viewBox="0 0 24 24" style="fill: #aaaaaa; display: block;">
                                         <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
                                     </svg>
                                 </span>
@@ -418,24 +418,24 @@
 
                             <!-- Interactive Likes and Action row (Replies excluded for clean look) -->
                             <div class="flex items-center gap-6 mt-4 select-none">
-                                <div class="flex items-center gap-2 text-slate-400">
-                                    <svg class="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
+                                <div class="flex items-center gap-1.5 leading-none">
+                                    <svg id="like-icon-svg" width="15" height="15" viewBox="0 0 24 24" style="fill: #aaaaaa; display: inline-block; vertical-align: middle;">
                                         <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path>
                                     </svg>
-                                    <span id="card-likes" class="text-xs text-[#aaaaaa]">12K</span>
+                                    <span id="card-likes" class="text-xs text-[#aaaaaa] font-yt" style="display: inline-block; vertical-align: middle; line-height: 15px;">12K</span>
                                 </div>
                                 
-                                <!-- Optional Creator Heart badge -->
-                                <div id="card-heart-container" class="hidden flex items-center">
-                                    <div class="relative flex items-center">
-                                        <img id="card-creator-pfp" src="https://placehold.co/100x100/dc2626/ffffff?text=C" alt="Creator PFP" class="w-5 h-5 rounded-full border border-[#0f0f0f] object-cover relative z-10">
-                                        <div class="absolute -right-2 -bottom-1 z-20 bg-red-600 rounded-full w-4.5 h-4.5 flex items-center justify-center p-0.5 border border-[#0f0f0f]">
-                                            <svg class="w-2.5 h-2.5 text-white fill-current" viewBox="0 0 24 24">
+                                <!-- Optional Creator Heart badge (Strict rendering to prevent export shifts) -->
+                                <div id="card-heart-container" class="hidden flex items-center gap-2">
+                                    <div class="relative w-7 h-5 flex items-center shrink-0">
+                                        <img id="card-creator-pfp" src="https://placehold.co/100x100/dc2626/ffffff?text=C" alt="Creator PFP" class="w-5 h-5 rounded-full border border-[#0f0f0f] object-cover absolute left-0 top-0 z-10">
+                                        <div class="absolute left-3 top-2 bg-red-600 rounded-full w-[14px] h-[14px] flex items-center justify-center border border-[#0f0f0f] z-20">
+                                            <svg width="8" height="8" viewBox="0 0 24 24" style="fill: #ffffff; display: block;">
                                                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
                                             </svg>
                                         </div>
                                     </div>
-                                    <span id="card-creator-heart-label" class="text-xs text-[#aaaaaa] ml-3">Hearted by MrBeast</span>
+                                    <span id="card-creator-heart-label" class="text-xs text-[#aaaaaa]">Hearted by MrBeast</span>
                                 </div>
                             </div>
 
@@ -464,6 +464,38 @@
 
     </div>
 
+    <!-- Global Early Save Handler to prevent crashes before module loads -->
+    <script>
+        let firestoreSaveBridge = null;
+        let localSaveTimeout = null;
+
+        // Define triggerAutoSave globally so input elements don't throw Uncaught ReferenceErrors
+        window.triggerAutoSave = function() {
+            const statusDot = document.getElementById('cloud-status-dot');
+            const statusText = document.getElementById('cloud-status-text');
+            
+            if (statusDot && statusText) {
+                statusDot.className = "w-2 h-2 rounded-full animate-pulse bg-amber-500";
+                statusText.innerText = "Saving changes...";
+            }
+
+            if (firestoreSaveBridge) {
+                firestoreSaveBridge();
+            } else {
+                // Graceful fallback for single-session modes
+                clearTimeout(localSaveTimeout);
+                localSaveTimeout = setTimeout(() => {
+                    const dot = document.getElementById('cloud-status-dot');
+                    const txt = document.getElementById('cloud-status-text');
+                    if (dot && txt) {
+                        dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                        txt.innerText = "Single-session Mode (Saved)";
+                    }
+                }, 1000);
+            }
+        };
+    </script>
+
     <!-- Firebase Script Configuration (Standard & Realtime sync) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -481,7 +513,7 @@
         const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
 
         window.addEventListener('load', async () => {
-            // Apply a default random avatar first
+            // Apply default initial random avatar
             setPresetPfp('random-retro');
             updatePreview();
 
@@ -505,6 +537,14 @@
                             currentUser = user;
                             updateSaveStatus('syncing', 'Loading your draft...');
                             await loadSavedComment();
+                            
+                            // Bind the active cloud save function to the global autoSave trigger
+                            window.firestoreSaveBridge = function() {
+                                clearTimeout(saveTimeout);
+                                saveTimeout = setTimeout(() => {
+                                    saveComment();
+                                }, 1000);
+                            };
                         }
                     });
                 } catch (e) {
@@ -512,7 +552,7 @@
                     updateSaveStatus('failed', 'Cloud Offline');
                 }
             } else {
-                updateSaveStatus('failed', 'Single-session Mode');
+                updateSaveStatus('failed', 'Single-session Mode (Ready)');
             }
         });
 
@@ -564,7 +604,7 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
 
-                    // Restore state variables
+                    // Restore state variables safely
                     document.getElementById('input-username').value = data.username || 'Commenter Extraordinaire';
                     document.getElementById('input-handle').value = data.handle || '@user-legend';
                     document.getElementById('toggle-verified').checked = !!data.verified;
@@ -614,21 +654,13 @@
             }
         }
 
-        // Handle auto-save trigger with simple 1 second debounce
-        window.triggerAutoSave = function() {
-            if (!db || !currentUser) return;
-            updateSaveStatus('saving', 'Saving...');
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                saveComment();
-            }, 1000);
-        };
-
         // Manage Save state badges inside the header
         function updateSaveStatus(state, message) {
             const dot = document.getElementById('cloud-status-dot');
             const txt = document.getElementById('cloud-status-text');
             const bg = document.getElementById('cloud-status');
+
+            if (!dot || !txt || !bg) return;
 
             txt.innerText = message;
             dot.className = "w-2 h-2 rounded-full animate-pulse ";
@@ -815,20 +847,28 @@
             const creatorHearted = document.getElementById('toggle-hearted').checked;
             const creatorName = document.getElementById('input-creator-name').value;
 
-            // Update Header Line
+            // Update Header Line text values
             document.getElementById('card-handle').innerText = handle;
             document.getElementById('card-time').innerText = time;
             document.getElementById('card-likes').innerText = likes;
 
+            // Choose colors based on theme contrast
+            const cardBgColor = document.getElementById('picker-card-bg').value;
+            const isBgLight = isLightColor(cardBgColor);
+            const contrastMutedColor = isBgLight ? '#606060' : '#aaaaaa';
+
             // Handle Verified Toggle
             const vBadge = document.getElementById('card-verified');
+            const vSvg = document.getElementById('verified-icon-svg');
             if (verified) {
                 vBadge.classList.remove('hidden');
-                const cardBg = document.getElementById('picker-card-bg').value;
-                vBadge.style.color = isLightColor(cardBg) ? '#606060' : '#aaaaaa';
+                vSvg.style.fill = contrastMutedColor;
             } else {
                 vBadge.classList.add('hidden');
             }
+
+            // Sync Like icon SVG color
+            document.getElementById('like-icon-svg').style.fill = contrastMutedColor;
 
             // Parse content formatting: **bold** and ==highlighted==
             const highlightColor = document.getElementById('picker-highlight').value;
@@ -861,11 +901,9 @@
 
             // Sync background colors
             const cardEl = document.getElementById('yt-comment-card');
-            const cardBgColor = document.getElementById('picker-card-bg').value;
             cardEl.style.backgroundColor = cardBgColor;
 
             // Sync visual contrast
-            const isBgLight = isLightColor(cardBgColor);
             if (isBgLight) {
                 document.getElementById('card-handle').style.color = '#0f0f0f';
                 document.getElementById('card-time').style.color = '#606060';
