@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comment Card Generator</title>
+    <!-- Google Fonts: Roboto for YT authenticity, Inter for UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2canvas for image generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        yt: ['Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for control panel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b1329;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        /* Custom background pattern for the preview checkerboard */
+        .checkerboard {
+            background-color: #0f172a;
+            background-image: linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+                              linear-gradient(-45deg, #1e293b 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+                              linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+    </style>
+</head>
+<body class="font-sans h-full flex flex-col overflow-hidden">
+
+    <!-- App Header -->
+    <header class="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-800 shrink-0 z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-red-600 text-white p-2 rounded-xl shadow-lg shadow-red-900/30 flex items-center justify-center">
+                <i class="fa-brands fa-youtube text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">YT Comment Thumb-Gen</h1>
+                <p class="text-xs text-slate-400">Create eye-catching comment popups for thumbnails & videos</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 text-sm">
+            <span class="bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-medium border border-slate-700/50 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                YouTube Ready
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Workspace Split Container -->
+    <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        
+        <!-- Control Panel (Left Sidebar) -->
+        <aside class="w-full lg:w-[480px] bg-slate-950 border-r border-slate-800 flex flex-col h-full overflow-y-auto shrink-0 pb-12">
+            
+            <!-- Quick Alert Message Box (Custom notification replacing alert) -->
+            <div id="notification" class="hidden m-4 p-4 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-400 flex items-center justify-between shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-lg"></i>
+                    <span id="notification-msg" class="text-xs font-medium">Action completed successfully!</span>
+                </div>
+                <button onclick="dismissNotification()" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Configuration Sections -->
+            <div class="p-6 space-y-8">
+                
+                <!-- Section 1: Presets & Styles -->
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-red-500"></i>
+                        1. Style & Preset Theme
+                    </h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="applyPreset('classic-dark')" class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-left hover:border-slate-700 hover:bg-slate-850 transition duration-200">
+                            <p class="font-semibold text-xs text-white">Classic Dark</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Standard YT Dark Mode</p>
+                        </button>
+                        <button type="button" onclick="applyPreset('classic-light')" class="p-3 rounded-xl bg-white border border-slate-200 text-left hover:bg-slate-50 transition duration-200">
+                            <p class="font-semibold text-xs text-slate-900">Classic Light</p>
+                            <p class="text-[10px] text-slate-500 mt-1">Standard YT Light Mode</p>
+                        </button>
+                        <button type="button" onclick="applyPreset('thumbnail-yellow')" class="p-3 rounded-xl bg-slate-900 border border-amber-500/50 text-left hover:bg-slate-850 transition duration-200">
+                            <p class="font-semibold text-xs text-amber-400">Thumbnail Highlight</p>
+                            <p class="text-[10px] text-slate-400 mt-1">High-contrast accent yellow</p>
+                        </button>
+                        <button type="button" onclick="applyPreset('neon-gamer')" class="p-3 rounded-xl bg-slate-900 border border-purple-500/50 text-left hover:bg-slate-850 transition duration-200">
+                            <p class="font-semibold text-xs text-purple-400">Cyber Neon</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Bold outline shadow glow</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 2: User Identity -->
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-user text-red-500"></i>
+                        2. User Identity
+                    </h2>
+                    <div class="space-y-4">
+                        <!-- Profile Picture selection -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-2">Profile Picture (PFP)</label>
+                            <div class="flex items-center gap-4">
+                                <div class="relative group">
+                                    <img id="pfp-preview" src="https://placehold.co/150x150/1e293b/ffffff?text=U" alt="PFP" class="w-16 h-16 rounded-full object-cover border-2 border-slate-800 bg-slate-800">
+                                    <label for="pfp-upload" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                        <i class="fa-solid fa-camera text-xs text-white"></i>
+                                    </label>
+                                    <input type="file" id="pfp-upload" accept="image/*" class="hidden" onchange="handlePfpUpload(event)">
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button type="button" onclick="setPresetPfp('mrbeast')" class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-850 rounded-lg text-slate-300 border border-slate-800 flex items-center justify-center gap-1">
+                                            <span>🐯 Beast</span>
+                                        </button>
+                                        <button type="button" onclick="setPresetPfp('pewdiepie')" class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-850 rounded-lg text-slate-300 border border-slate-800 flex items-center justify-center gap-1">
+                                            <span>🌀 Pewds</span>
+                                        </button>
+                                        <button type="button" onclick="setPresetPfp('random-retro')" class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-850 rounded-lg text-slate-300 border border-slate-800 flex items-center justify-center gap-1">
+                                            <span>👾 Retro</span>
+                                        </button>
+                                        <button type="button" onclick="setPresetPfp('random-bot')" class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-850 rounded-lg text-slate-300 border border-slate-800 flex items-center justify-center gap-1">
+                                            <span>🤖 Robot</span>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="pfp-url-input" placeholder="Or paste image URL..." oninput="setPfpUrl(this.value)" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Username and Handle -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="input-username" class="block text-xs font-semibold text-slate-300 mb-1.5">Display Name</label>
+                                <input type="text" id="input-username" value="Commenter Extraordinaire" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <div>
+                                <label for="input-handle" class="block text-xs font-semibold text-slate-300 mb-1.5">Handle (@)</label>
+                                <input type="text" id="input-handle" value="@user-legend" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            </div>
+                        </div>
+
+                        <!-- Badges Toggle -->
+                        <div class="flex items-center justify-between p-3 bg-slate-900/60 rounded-xl border border-slate-800/80">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-gray-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px]"><i class="fa-solid fa-check"></i></span>
+                                <div>
+                                    <p class="text-xs font-medium text-slate-200">Verified Badge</p>
+                                    <p class="text-[10px] text-slate-400">Adds verification checkmark</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggle-verified" onchange="updatePreview()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Comment Text Details -->
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-comment-dots text-red-500"></i>
+                        3. Comment Content
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label for="input-content" class="text-xs font-semibold text-slate-300">Comment Text</label>
+                                <span class="text-[10px] text-slate-500 font-medium">Use **word** for <b class="text-white">bold</b> & ==word== for <span class="bg-yellow-500 text-black px-1 rounded">highlight</span></span>
+                            </div>
+                            <textarea id="input-content" rows="4" oninput="updatePreview()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500 resize-none font-yt">Can't believe this only took ==5 minutes== to build. This feature is absolutely **GAME CHANGING**! 🚀🔥</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="input-time" class="block text-xs font-semibold text-slate-300 mb-1.5">Time Stamp</label>
+                                <input type="text" id="input-time" value="3 hours ago" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <div>
+                                <label for="input-likes" class="block text-xs font-semibold text-slate-300 mb-1.5">Likes Count</label>
+                                <input type="text" id="input-likes" value="12K" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Creator Loved (Heart Badge) -->
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-heart text-red-500"></i>
+                        4. Creator Loved Badge
+                    </h2>
+                    <div class="space-y-4 p-4 bg-slate-900/40 rounded-xl border border-slate-800/80">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-200">Enable Creator Heart</p>
+                                <p class="text-[10px] text-slate-400">Shows creator pinned heart</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggle-hearted" onchange="updatePreview()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+                        <div id="hearted-options" class="hidden space-y-3 pt-3 border-t border-slate-800/80">
+                            <div>
+                                <label for="input-creator-name" class="block text-xs font-medium text-slate-300 mb-1">Creator Name</label>
+                                <input type="text" id="input-creator-name" value="MrBeast" oninput="updatePreview()" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Creator Avatar</label>
+                                <div class="flex items-center gap-2">
+                                    <img id="creator-pfp-preview" src="https://placehold.co/100x100/dc2626/ffffff?text=C" alt="Creator Avatar" class="w-8 h-8 rounded-full object-cover">
+                                    <input type="text" id="creator-pfp-url" placeholder="Or paste creator avatar URL..." oninput="setCreatorPfpUrl(this.value)" class="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: High Contrast Thumbnail Settings (Aesthetic Optimization) -->
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-red-500"></i>
+                        5. Thumbnail Boost Modifiers
+                    </h2>
+                    <div class="space-y-4">
+                        <!-- Font Size Modifier -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-semibold text-slate-300">Comment Text Size</label>
+                                <span id="font-size-val" class="text-xs text-red-400 font-mono">24px</span>
+                            </div>
+                            <input type="range" id="slider-font-size" min="14" max="42" value="22" oninput="updatePreview()" class="w-full accent-red-600 bg-slate-800 rounded-lg appearance-none h-1.5 cursor-pointer">
+                        </div>
+
+                        <!-- Card Background Color -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Card Background Color</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="picker-card-bg" value="#0f0f0f" oninput="updatePreview()" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="text" id="picker-card-bg-hex" value="#0f0f0f" oninput="syncColorInput(this.value, 'card')" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500 uppercase">
+                            </div>
+                        </div>
+
+                        <!-- Text Color -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Comment Text Color</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="picker-text" value="#f1f1f1" oninput="updatePreview()" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="text" id="picker-text-hex" value="#f1f1f1" oninput="syncColorInput(this.value, 'text')" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500 uppercase">
+                            </div>
+                        </div>
+
+                        <!-- Highlight (Yellow/Accent) Color -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Comment Highlight Color (==text==)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="picker-highlight" value="#eab308" oninput="updatePreview()" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="text" id="picker-highlight-hex" value="#eab308" oninput="syncColorInput(this.value, 'highlight')" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500 uppercase">
+                            </div>
+                        </div>
+
+                        <!-- Thumbnail Stroke / Border -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Card Stroke / Border</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <select id="border-style" onchange="updatePreview()" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                    <option value="none">No Border</option>
+                                    <option value="thin">Thin Border</option>
+                                    <option value="thick">Thick Border</option>
+                                    <option value="neon">Neon Outer Glow</option>
+                                </select>
+                                <input type="color" id="picker-border" value="#3b82f6" oninput="updatePreview()" class="w-full h-9 border-0 bg-transparent rounded-lg cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- Drop Shadow Customization -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Card Drop Shadow Depth</label>
+                            <select id="card-shadow" onchange="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <option value="shadow-none">No Shadow</option>
+                                <option value="shadow-md">Soft Shadow</option>
+                                <option value="shadow-2xl">Extreme Realistic Shadow</option>
+                                <option value="shadow-neon">Mega Colorful Shadow</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Live Preview Canvas Area (Right Workspace) -->
+        <main class="flex-1 bg-slate-900 flex flex-col items-center justify-between p-6 overflow-y-auto relative">
+            
+            <!-- Canvas Settings Bar -->
+            <div class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 backdrop-blur px-4 py-3 rounded-2xl border border-slate-800 mb-6 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Canvas:</span>
+                    <button type="button" onclick="changeWorkspaceBg('checkerboard')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Grid Pattern</button>
+                    <button type="button" onclick="changeWorkspaceBg('pure-black')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Pure Dark</button>
+                    <button type="button" onclick="changeWorkspaceBg('pure-white')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Pure Light</button>
+                    <button type="button" onclick="changeWorkspaceBg('neon-grad')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Retro Wave Gradient</button>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <!-- Zoom/Scale visualizer status -->
+                    <span class="text-slate-400 text-xs hidden sm:inline">Use for thumbnail export layout!</span>
+                </div>
+            </div>
+
+            <!-- Comment Card Container Wrap -->
+            <div id="workspace-container" class="checkerboard flex-1 w-full rounded-2xl flex items-center justify-center p-8 border border-slate-800 min-h-[400px] transition-all relative overflow-hidden">
+                
+                <!-- THE COMMENT CARD -->
+                <div id="yt-comment-card" class="bg-[#0f0f0f] p-8 rounded-2xl w-full max-w-3xl font-yt transition-all duration-200 select-none relative" style="box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);">
+                    <div class="flex items-start gap-4">
+                        
+                        <!-- PFP Wrapper -->
+                        <div class="shrink-0 pt-0.5">
+                            <img id="card-pfp" src="https://placehold.co/150x150/1e293b/ffffff?text=U" alt="Profile Picture" class="w-14 h-14 rounded-full object-cover">
+                        </div>
+
+                        <!-- Card Content Column -->
+                        <div class="flex-1 min-w-0">
+                            
+                            <!-- Header Info Line (Names, verified, badges, timestamp) -->
+                            <div class="flex items-center flex-wrap gap-x-2 gap-y-1 mb-1.5 leading-none">
+                                <!-- Handle -->
+                                <span id="card-handle" class="text-white font-bold text-sm tracking-wide">@user-legend</span>
+                                
+                                <!-- Verified badge -->
+                                <span id="card-verified" class="inline-flex items-center text-[#aaaaaa]">
+                                    <svg class="w-[14px] h-[14px] fill-current" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+                                    </svg>
+                                </span>
+
+                                <!-- Relative Time Stamp -->
+                                <span id="card-time" class="text-[#aaaaaa] text-xs font-normal">3 hours ago</span>
+                            </div>
+
+                            <!-- Comment Content Line (Main Text) -->
+                            <!-- Highlight and text-size will modify this specifically -->
+                            <div id="card-content" class="text-[#f1f1f1] font-normal leading-relaxed break-words whitespace-pre-wrap select-text pr-2" style="font-size: 22px;">
+                                <!-- Dynamically populated in JS -->
+                            </div>
+
+                            <!-- Interactive Likes and Action row (Replies excluded for clean look) -->
+                            <div class="flex items-center gap-6 mt-4 select-none">
+                                <div class="flex items-center gap-2 text-slate-400">
+                                    <svg class="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
+                                        <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path>
+                                    </svg>
+                                    <span id="card-likes" class="text-xs text-[#aaaaaa]">12K</span>
+                                </div>
+                                
+                                <!-- Optional Creator Heart badge -->
+                                <div id="card-heart-container" class="hidden flex items-center">
+                                    <div class="relative flex items-center">
+                                        <img id="card-creator-pfp" src="https://placehold.co/100x100/dc2626/ffffff?text=C" alt="Creator PFP" class="w-5 h-5 rounded-full border border-[#0f0f0f] object-cover relative z-10">
+                                        <div class="absolute -right-2 -bottom-1 z-20 bg-red-600 rounded-full w-4.5 h-4.5 flex items-center justify-center p-0.5 border border-[#0f0f0f]">
+                                            <svg class="w-2.5 h-2.5 text-white fill-current" viewBox="0 0 24 24">
+                                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <span id="card-creator-heart-label" class="text-xs text-[#aaaaaa] ml-3">Hearted by MrBeast</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Export Action Buttons -->
+            <div class="w-full max-w-4xl flex flex-wrap gap-4 items-center justify-center mt-6 shrink-0 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80">
+                <button type="button" onclick="exportComment('png')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-bold shadow-lg shadow-red-900/40 hover:from-red-500 hover:to-rose-500 hover:shadow-red-800/50 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download text-lg"></i>
+                    Download High-Res PNG
+                </button>
+                <button type="button" onclick="exportComment('clipboard')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-slate-800 text-white rounded-xl font-semibold border border-slate-700 hover:bg-slate-700 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-copy text-lg"></i>
+                    Copy to Clipboard
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Preset Avatars Data
+        const PRESET_PFPS = {
+            mrbeast: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=200&h=200',
+            pewdiepie: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200',
+            'random-retro': 'https://robohash.org/yt-comment-retro?set=set2',
+            'random-bot': 'https://robohash.org/yt-comment-robot?set=set3'
+        };
+
+        // On Load Setup
+        window.onload = function() {
+            // Pick a beautiful random preset to start with
+            setPresetPfp('random-retro');
+            updatePreview();
+        }
+
+        // Apply a complete layout theme preset
+        function applyPreset(theme) {
+            const cardBgInput = document.getElementById('picker-card-bg');
+            const textInput = document.getElementById('picker-text');
+            const highlightInput = document.getElementById('picker-highlight');
+            const borderStyle = document.getElementById('border-style');
+            const borderInput = document.getElementById('picker-border');
+            const cardShadow = document.getElementById('card-shadow');
+            const sliderFontSize = document.getElementById('slider-font-size');
+
+            if (theme === 'classic-dark') {
+                cardBgInput.value = '#0f0f0f';
+                textInput.value = '#f1f1f1';
+                highlightInput.value = '#eab308';
+                borderStyle.value = 'none';
+                cardShadow.value = 'shadow-2xl';
+                sliderFontSize.value = '22';
+            } else if (theme === 'classic-light') {
+                cardBgInput.value = '#ffffff';
+                textInput.value = '#0f0f0f';
+                highlightInput.value = '#2563eb';
+                borderStyle.value = 'none';
+                cardShadow.value = 'shadow-2xl';
+                sliderFontSize.value = '22';
+            } else if (theme === 'thumbnail-yellow') {
+                cardBgInput.value = '#0b0f19';
+                textInput.value = '#ffffff';
+                highlightInput.value = '#facc15';
+                borderStyle.value = 'thick';
+                borderInput.value = '#facc15';
+                cardShadow.value = 'shadow-neon';
+                sliderFontSize.value = '28'; // Prominent text for YT thumbnail
+            } else if (theme === 'neon-gamer') {
+                cardBgInput.value = '#05050a';
+                textInput.value = '#ffffff';
+                highlightInput.value = '#ec4899';
+                borderStyle.value = 'neon';
+                borderInput.value = '#a855f7';
+                cardShadow.value = 'shadow-neon';
+                sliderFontSize.value = '24';
+            }
+
+            // Sync text HEX values
+            document.getElementById('picker-card-bg-hex').value = cardBgInput.value;
+            document.getElementById('picker-text-hex').value = textInput.value;
+            document.getElementById('picker-highlight-hex').value = highlightInput.value;
+
+            updatePreview();
+            showNotification(`Applied Theme: ${theme.replace('-', ' ').toUpperCase()}`);
+        }
+
+        // Change the workspace environment background style
+        function changeWorkspaceBg(style) {
+            const ws = document.getElementById('workspace-container');
+            ws.className = "flex-1 w-full rounded-2xl flex items-center justify-center p-8 border border-slate-800 min-h-[400px] transition-all relative overflow-hidden ";
+            
+            if (style === 'checkerboard') {
+                ws.classList.add('checkerboard');
+            } else if (style === 'pure-black') {
+                ws.classList.add('bg-[#030712]');
+            } else if (style === 'pure-white') {
+                ws.classList.add('bg-white');
+            } else if (style === 'neon-grad') {
+                ws.classList.add('bg-gradient-to-br', 'from-rose-500', 'via-purple-600', 'to-blue-700');
+            }
+        }
+
+        // Handle profile picture image upload
+        function handlePfpUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Url = e.target.result;
+                    document.getElementById('pfp-preview').src = base64Url;
+                    document.getElementById('card-pfp').src = base64Url;
+                    document.getElementById('pfp-url-input').value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Set PFP to a selected preset
+        function setPresetPfp(key) {
+            const url = PRESET_PFPS[key];
+            if (url) {
+                document.getElementById('pfp-preview').src = url;
+                document.getElementById('card-pfp').src = url;
+                document.getElementById('pfp-url-input').value = url;
+            }
+        }
+
+        // Set Custom PFP from direct URL
+        function setPfpUrl(url) {
+            if (url.trim() !== "") {
+                document.getElementById('pfp-preview').src = url;
+                document.getElementById('card-pfp').src = url;
+            }
+        }
+
+        // Set Creator avatar URL
+        function setCreatorPfpUrl(url) {
+            if (url.trim() !== "") {
+                document.getElementById('creator-pfp-preview').src = url;
+                document.getElementById('card-creator-pfp').src = url;
+            }
+        }
+
+        // Sync HEX inputs with color pickers
+        function syncColorInput(val, target) {
+            if (val.startsWith('#') && val.length === 7) {
+                if (target === 'card') {
+                    document.getElementById('picker-card-bg').value = val;
+                } else if (target === 'text') {
+                    document.getElementById('picker-text').value = val;
+                } else if (target === 'highlight') {
+                    document.getElementById('picker-highlight').value = val;
+                }
+                updatePreview();
+            }
+        }
+
+        // Main live compiler updating card elements in real-time
+        function updatePreview() {
+            // Get text values
+            const username = document.getElementById('input-username').value;
+            const handle = document.getElementById('input-handle').value;
+            const verified = document.getElementById('toggle-verified').checked;
+            const rawContent = document.getElementById('input-content').value;
+            const time = document.getElementById('input-time').value;
+            const likes = document.getElementById('input-likes').value;
+            const creatorHearted = document.getElementById('toggle-hearted').checked;
+            const creatorName = document.getElementById('input-creator-name').value;
+
+            // Update Header Line
+            document.getElementById('card-handle').innerText = handle;
+            document.getElementById('card-time').innerText = time;
+            document.getElementById('card-likes').innerText = likes;
+
+            // Handle Verified Toggle
+            const vBadge = document.getElementById('card-verified');
+            if (verified) {
+                vBadge.classList.remove('hidden');
+                // Auto adapt checkmark color depending on card background brightness
+                const cardBg = document.getElementById('picker-card-bg').value;
+                if (isLightColor(cardBg)) {
+                    vBadge.style.color = '#606060';
+                } else {
+                    vBadge.style.color = '#aaaaaa';
+                }
+            } else {
+                vBadge.classList.add('hidden');
+            }
+
+            // Parse content with formatting: **bold** and ==highlighted==
+            const highlightColor = document.getElementById('picker-highlight').value;
+            let formattedContent = escapeHtml(rawContent)
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/==(.*?)==/g, `<span class="px-1.5 py-0.5 rounded font-bold" style="background-color: ${highlightColor}; color: ${isLightColor(highlightColor) ? '#000000' : '#ffffff'}">$1</span>`);
+            
+            const cardContentEl = document.getElementById('card-content');
+            cardContentEl.innerHTML = formattedContent;
+
+            // Apply sizing and text color
+            const fontSize = document.getElementById('slider-font-size').value;
+            document.getElementById('font-size-val').innerText = `${fontSize}px`;
+            cardContentEl.style.fontSize = `${fontSize}px`;
+            
+            const textColor = document.getElementById('picker-text').value;
+            cardContentEl.style.color = textColor;
+
+            // Handle Heart Panel display
+            const heartedOptions = document.getElementById('hearted-options');
+            const cardHeartContainer = document.getElementById('card-heart-container');
+            if (creatorHearted) {
+                heartedOptions.classList.remove('hidden');
+                cardHeartContainer.classList.remove('hidden');
+                document.getElementById('card-creator-heart-label').innerText = `Hearted by ${creatorName}`;
+            } else {
+                heartedOptions.classList.add('hidden');
+                cardHeartContainer.classList.add('hidden');
+            }
+
+            // Sync background colors
+            const cardEl = document.getElementById('yt-comment-card');
+            const cardBgColor = document.getElementById('picker-card-bg').value;
+            cardEl.style.backgroundColor = cardBgColor;
+
+            // Sync visual aesthetics (username colors, likes icons, etc) based on contrast
+            const isBgLight = isLightColor(cardBgColor);
+            if (isBgLight) {
+                document.getElementById('card-handle').style.color = '#0f0f0f';
+                document.getElementById('card-time').style.color = '#606060';
+                document.getElementById('card-likes').style.color = '#606060';
+                document.getElementById('card-creator-heart-label').style.color = '#606060';
+            } else {
+                document.getElementById('card-handle').style.color = '#ffffff';
+                document.getElementById('card-time').style.color = '#aaaaaa';
+                document.getElementById('card-likes').style.color = '#aaaaaa';
+                document.getElementById('card-creator-heart-label').style.color = '#aaaaaa';
+            }
+
+            // Custom Borders / Glow Styling
+            const borderStyle = document.getElementById('border-style').value;
+            const borderColor = document.getElementById('picker-border').value;
+            cardEl.style.border = 'none';
+            cardEl.style.outline = 'none';
+
+            if (borderStyle === 'thin') {
+                cardEl.style.border = `2px solid ${borderColor}`;
+            } else if (borderStyle === 'thick') {
+                cardEl.style.border = `6px solid ${borderColor}`;
+            } else if (borderStyle === 'neon') {
+                cardEl.style.border = `3px solid ${borderColor}`;
+                cardEl.style.boxShadow = `0 0 15px ${borderColor}, inset 0 0 15px ${borderColor}`;
+            }
+
+            // Card Shadow Depth Style
+            const shadowStyle = document.getElementById('card-shadow').value;
+            if (borderStyle !== 'neon') {
+                cardEl.className = cardEl.className.replace(/\bshadow-\S+/g, '');
+                if (shadowStyle === 'shadow-neon') {
+                    cardEl.style.boxShadow = `0 20px 40px -10px ${borderColor}80`;
+                } else if (shadowStyle === 'shadow-2xl') {
+                    cardEl.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.75)';
+                } else if (shadowStyle === 'shadow-md') {
+                    cardEl.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.3)';
+                } else {
+                    cardEl.style.boxShadow = 'none';
+                }
+            }
+        }
+
+        // Generates PNG or copies image using html2canvas
+        function exportComment(type) {
+            const cardElement = document.getElementById('yt-comment-card');
+            
+            // Temporary scale up for crisp screenshot rendering
+            const prevTransform = cardElement.style.transform;
+            cardElement.style.transform = 'none';
+
+            // Configure html2canvas options
+            const options = {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: null, // Keeps background transparent if needed
+                scale: 3, // Premium ultra-high quality export
+                logging: false,
+                onclone: (clonedDoc) => {
+                    // Force display/adjust block states inside cloned element if necessary
+                }
+            };
+
+            html2canvas(cardElement, options).then(canvas => {
+                // Restore transform state
+                cardElement.style.transform = prevTransform;
+
+                if (type === 'png') {
+                    // Trigger dynamic PNG download file
+                    const link = document.createElement('a');
+                    const username = document.getElementById('input-username').value.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    link.download = `yt_comment_${username || 'card'}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    showNotification("Card exported as ultra high-quality PNG!");
+                } else if (type === 'clipboard') {
+                    // Export to System Clipboard
+                    canvas.toBlob(blob => {
+                        try {
+                            const item = new ClipboardItem({ "image/png": blob });
+                            navigator.clipboard.write([item]).then(() => {
+                                showNotification("Copied high-res image directly to clipboard!");
+                            }).catch(err => {
+                                // Fallback copy notification
+                                fallbackCopyToClipboard(canvas.toDataURL());
+                            });
+                        } catch (e) {
+                            fallbackCopyToClipboard(canvas.toDataURL());
+                        }
+                    }, 'image/png');
+                }
+            }).catch(error => {
+                console.error("Export failure: ", error);
+                showNotification("Export process encountered a CORS or image issue. Try using built-in presets.", true);
+            });
+        }
+
+        // Fallback copy using secondary browser methods
+        function fallbackCopyToClipboard(dataUrl) {
+            const textarea = document.createElement('textarea');
+            textarea.value = dataUrl;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showNotification("Copied image data URL! (In-browser clipboard fallback active)");
+        }
+
+        // Helper: Check visual brightness score for black/white text contrast
+        function isLightColor(color) {
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 140;
+        }
+
+        // Helper: Escape standard HTML characters
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // UI Notification system
+        function showNotification(message, isError = false) {
+            const banner = document.getElementById('notification');
+            const msgEl = document.getElementById('notification-msg');
+            msgEl.innerText = message;
+            
+            if (isError) {
+                banner.className = "m-4 p-4 rounded-xl bg-slate-900 border border-red-500/30 text-red-400 flex items-center justify-between shadow-xl transition-all duration-300";
+            } else {
+                banner.className = "m-4 p-4 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-400 flex items-center justify-between shadow-xl transition-all duration-300";
+            }
+
+            banner.classList.remove('hidden');
+            setTimeout(() => {
+                dismissNotification();
+            }, 4000);
+        }
+
+        function dismissNotification() {
+            document.getElementById('notification').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
