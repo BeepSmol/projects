@@ -63,14 +63,15 @@
             </div>
             <div>
                 <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">YT Comment Thumb-Gen</h1>
-                <p class="text-xs text-slate-400">Create eye-catching comment popups for thumbnails & videos</p>
+                <p class="text-xs text-slate-400">Create eye-catching comment popups with aspect-ratio crops</p>
             </div>
         </div>
-        <div class="flex items-center gap-3 text-sm">
-            <span class="bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-medium border border-slate-700/50 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                YouTube Ready
-            </span>
+        <div class="flex items-center gap-4 text-sm">
+            <!-- Cloud Save Status Badge -->
+            <div id="cloud-status" class="bg-slate-800 text-slate-400 px-3 py-1.5 rounded-full font-medium border border-slate-700/50 flex items-center gap-2 transition-all">
+                <span id="cloud-status-dot" class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+                <span id="cloud-status-text" class="text-xs">Connecting...</span>
+            </div>
         </div>
     </header>
 
@@ -153,7 +154,7 @@
                                             <span>🤖 Robot</span>
                                         </button>
                                     </div>
-                                    <input type="text" id="pfp-url-input" placeholder="Or paste image URL..." oninput="setPfpUrl(this.value)" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                    <input type="text" id="pfp-url-input" placeholder="Or paste image URL..." oninput="setPfpUrl(this.value); triggerAutoSave();" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                                 </div>
                             </div>
                         </div>
@@ -162,11 +163,11 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label for="input-username" class="block text-xs font-semibold text-slate-300 mb-1.5">Display Name</label>
-                                <input type="text" id="input-username" value="Commenter Extraordinaire" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <input type="text" id="input-username" value="Commenter Extraordinaire" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                             </div>
                             <div>
                                 <label for="input-handle" class="block text-xs font-semibold text-slate-300 mb-1.5">Handle (@)</label>
-                                <input type="text" id="input-handle" value="@user-legend" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <input type="text" id="input-handle" value="@user-legend" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                             </div>
                         </div>
 
@@ -180,7 +181,7 @@
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="toggle-verified" onchange="updatePreview()" class="sr-only peer">
+                                <input type="checkbox" id="toggle-verified" onchange="updatePreview(); triggerAutoSave();" class="sr-only peer">
                                 <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white"></div>
                             </label>
                         </div>
@@ -199,17 +200,17 @@
                                 <label for="input-content" class="text-xs font-semibold text-slate-300">Comment Text</label>
                                 <span class="text-[10px] text-slate-500 font-medium">Use **word** for <b class="text-white">bold</b> & ==word== for <span class="bg-yellow-500 text-black px-1 rounded">highlight</span></span>
                             </div>
-                            <textarea id="input-content" rows="4" oninput="updatePreview()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500 resize-none font-yt">Can't believe this only took ==5 minutes== to build. This feature is absolutely **GAME CHANGING**! 🚀🔥</textarea>
+                            <textarea id="input-content" rows="4" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500 resize-none font-yt">Can't believe this only took ==5 minutes== to build. This feature is absolutely **GAME CHANGING**! 🚀🔥</textarea>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label for="input-time" class="block text-xs font-semibold text-slate-300 mb-1.5">Time Stamp</label>
-                                <input type="text" id="input-time" value="3 hours ago" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <input type="text" id="input-time" value="3 hours ago" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                             </div>
                             <div>
                                 <label for="input-likes" class="block text-xs font-semibold text-slate-300 mb-1.5">Likes Count</label>
-                                <input type="text" id="input-likes" value="12K" oninput="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <input type="text" id="input-likes" value="12K" oninput="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                             </div>
                         </div>
                     </div>
@@ -228,20 +229,20 @@
                                 <p class="text-[10px] text-slate-400">Shows creator pinned heart</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="toggle-hearted" onchange="updatePreview()" class="sr-only peer">
+                                <input type="checkbox" id="toggle-hearted" onchange="updatePreview(); triggerAutoSave();" class="sr-only peer">
                                 <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white"></div>
                             </label>
                         </div>
                         <div id="hearted-options" class="hidden space-y-3 pt-3 border-t border-slate-800/80">
                             <div>
                                 <label for="input-creator-name" class="block text-xs font-medium text-slate-300 mb-1">Creator Name</label>
-                                <input type="text" id="input-creator-name" value="MrBeast" oninput="updatePreview()" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <input type="text" id="input-creator-name" value="MrBeast" oninput="updatePreview(); triggerAutoSave();" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-300 mb-1">Creator Avatar</label>
                                 <div class="flex items-center gap-2">
                                     <img id="creator-pfp-preview" src="https://placehold.co/100x100/dc2626/ffffff?text=C" alt="Creator Avatar" class="w-8 h-8 rounded-full object-cover">
-                                    <input type="text" id="creator-pfp-url" placeholder="Or paste creator avatar URL..." oninput="setCreatorPfpUrl(this.value)" class="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                    <input type="text" id="creator-pfp-url" placeholder="Or paste creator avatar URL..." oninput="setCreatorPfpUrl(this.value); triggerAutoSave();" class="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                                 </div>
                             </div>
                         </div>
@@ -259,16 +260,16 @@
                         <div>
                             <div class="flex justify-between items-center mb-1.5">
                                 <label class="text-xs font-semibold text-slate-300">Comment Text Size</label>
-                                <span id="font-size-val" class="text-xs text-red-400 font-mono">24px</span>
+                                <span id="font-size-val" class="text-xs text-red-400 font-mono">22px</span>
                             </div>
-                            <input type="range" id="slider-font-size" min="14" max="42" value="22" oninput="updatePreview()" class="w-full accent-red-600 bg-slate-800 rounded-lg appearance-none h-1.5 cursor-pointer">
+                            <input type="range" id="slider-font-size" min="14" max="42" value="22" oninput="updatePreview(); triggerAutoSave();" class="w-full accent-red-600 bg-slate-800 rounded-lg appearance-none h-1.5 cursor-pointer">
                         </div>
 
                         <!-- Card Background Color -->
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Card Background Color</label>
                             <div class="flex items-center gap-2">
-                                <input type="color" id="picker-card-bg" value="#0f0f0f" oninput="updatePreview()" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="color" id="picker-card-bg" value="#0f0f0f" oninput="updatePreview(); triggerAutoSave();" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
                                 <input type="text" id="picker-card-bg-hex" value="#0f0f0f" oninput="syncColorInput(this.value, 'card')" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500 uppercase">
                             </div>
                         </div>
@@ -277,7 +278,7 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Comment Text Color</label>
                             <div class="flex items-center gap-2">
-                                <input type="color" id="picker-text" value="#f1f1f1" oninput="updatePreview()" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="color" id="picker-text" value="#f1f1f1" oninput="updatePreview(); triggerAutoSave();" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
                                 <input type="text" id="picker-text-hex" value="#f1f1f1" oninput="syncColorInput(this.value, 'text')" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500 uppercase">
                             </div>
                         </div>
@@ -286,7 +287,7 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Comment Highlight Color (==text==)</label>
                             <div class="flex items-center gap-2">
-                                <input type="color" id="picker-highlight" value="#eab308" oninput="updatePreview()" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="color" id="picker-highlight" value="#eab308" oninput="updatePreview(); triggerAutoSave();" class="w-10 h-10 border-0 bg-transparent rounded-lg cursor-pointer">
                                 <input type="text" id="picker-highlight-hex" value="#eab308" oninput="syncColorInput(this.value, 'highlight')" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500 uppercase">
                             </div>
                         </div>
@@ -295,25 +296,63 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Card Stroke / Border</label>
                             <div class="grid grid-cols-2 gap-2">
-                                <select id="border-style" onchange="updatePreview()" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <select id="border-style" onchange="updatePreview(); triggerAutoSave();" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                                     <option value="none">No Border</option>
                                     <option value="thin">Thin Border</option>
                                     <option value="thick">Thick Border</option>
                                     <option value="neon">Neon Outer Glow</option>
                                 </select>
-                                <input type="color" id="picker-border" value="#3b82f6" oninput="updatePreview()" class="w-full h-9 border-0 bg-transparent rounded-lg cursor-pointer">
+                                <input type="color" id="picker-border" value="#3b82f6" oninput="updatePreview(); triggerAutoSave();" class="w-full h-9 border-0 bg-transparent rounded-lg cursor-pointer">
                             </div>
                         </div>
 
                         <!-- Drop Shadow Customization -->
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Card Drop Shadow Depth</label>
-                            <select id="card-shadow" onchange="updatePreview()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            <select id="card-shadow" onchange="updatePreview(); triggerAutoSave();" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
                                 <option value="shadow-none">No Shadow</option>
                                 <option value="shadow-md">Soft Shadow</option>
                                 <option value="shadow-2xl">Extreme Realistic Shadow</option>
                                 <option value="shadow-neon">Mega Colorful Shadow</option>
                             </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Crop & Aspect Ratio Modifiers (NEW FEATURE) -->
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-crop text-red-500"></i>
+                        6. Crop & Workspace Layout
+                    </h2>
+                    <div class="space-y-4">
+                        <!-- Aspect Ratio Selector -->
+                        <div>
+                            <label for="aspect-ratio-select" class="block text-xs font-semibold text-slate-300 mb-1.5">Workspace Aspect Ratio</label>
+                            <select id="aspect-ratio-select" onchange="updateWorkspaceRatio(); triggerAutoSave();" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <option value="auto">Free / Auto Fit (Card Size)</option>
+                                <option value="1-1">1:1 Square (Feed Post)</option>
+                                <option value="16-9">16:9 Landscape (Video Overlay)</option>
+                                <option value="9-16">9:16 Portrait (Shorts / Tik Tok)</option>
+                            </select>
+                        </div>
+
+                        <!-- Card Width Slider -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-semibold text-slate-300">Comment Box Width (Crop X)</label>
+                                <span id="card-width-val" class="text-xs text-red-400 font-mono">768px</span>
+                            </div>
+                            <input type="range" id="slider-card-width" min="320" max="900" value="768" oninput="updatePreview(); triggerAutoSave();" class="w-full accent-red-600 bg-slate-800 rounded-lg appearance-none h-1.5 cursor-pointer">
+                        </div>
+
+                        <!-- Canvas Padding Slider -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-semibold text-slate-300">Workspace Border Crop Padding</label>
+                                <span id="canvas-padding-val" class="text-xs text-red-400 font-mono">32px</span>
+                            </div>
+                            <input type="range" id="slider-canvas-padding" min="0" max="120" value="32" oninput="updatePreview(); triggerAutoSave();" class="w-full accent-red-600 bg-slate-800 rounded-lg appearance-none h-1.5 cursor-pointer">
                         </div>
                     </div>
                 </div>
@@ -327,21 +366,21 @@
             <!-- Canvas Settings Bar -->
             <div class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 backdrop-blur px-4 py-3 rounded-2xl border border-slate-800 mb-6 shrink-0">
                 <div class="flex items-center gap-2">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Canvas:</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Canvas Style:</span>
                     <button type="button" onclick="changeWorkspaceBg('checkerboard')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Grid Pattern</button>
                     <button type="button" onclick="changeWorkspaceBg('pure-black')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Pure Dark</button>
                     <button type="button" onclick="changeWorkspaceBg('pure-white')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Pure Light</button>
-                    <button type="button" onclick="changeWorkspaceBg('neon-grad')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Retro Wave Gradient</button>
+                    <button type="button" onclick="changeWorkspaceBg('neon-grad')" class="p-1 px-2 text-xs font-medium rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors">Neon Wave</button>
                 </div>
                 
                 <div class="flex items-center gap-2">
-                    <!-- Zoom/Scale visualizer status -->
-                    <span class="text-slate-400 text-xs hidden sm:inline">Use for thumbnail export layout!</span>
+                    <span class="text-slate-400 text-xs hidden sm:inline"><i class="fa-solid fa-arrows-to-eye"></i> Export matches aspect ratio settings below!</span>
                 </div>
             </div>
 
             <!-- Comment Card Container Wrap -->
-            <div id="workspace-container" class="checkerboard flex-1 w-full rounded-2xl flex items-center justify-center p-8 border border-slate-800 min-h-[400px] transition-all relative overflow-hidden">
+            <!-- Workspace container is what gets cropped according to controls -->
+            <div id="workspace-container" class="checkerboard flex-1 w-full rounded-2xl flex items-center justify-center border border-slate-800 min-h-[420px] transition-all relative overflow-hidden p-8">
                 
                 <!-- THE COMMENT CARD -->
                 <div id="yt-comment-card" class="bg-[#0f0f0f] p-8 rounded-2xl w-full max-w-3xl font-yt transition-all duration-200 select-none relative" style="box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);">
@@ -408,11 +447,15 @@
 
             <!-- Export Action Buttons -->
             <div class="w-full max-w-4xl flex flex-wrap gap-4 items-center justify-center mt-6 shrink-0 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80">
-                <button type="button" onclick="exportComment('png')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-bold shadow-lg shadow-red-900/40 hover:from-red-500 hover:to-rose-500 hover:shadow-red-800/50 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
+                <button type="button" onclick="exportComment('card')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-bold shadow-lg shadow-red-900/40 hover:from-red-500 hover:to-rose-500 hover:shadow-red-800/50 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-download text-lg"></i>
-                    Download High-Res PNG
+                    Download Card Only
                 </button>
-                <button type="button" onclick="exportComment('clipboard')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-slate-800 text-white rounded-xl font-semibold border border-slate-700 hover:bg-slate-700 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
+                <button type="button" onclick="exportComment('cropped')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-slate-800 text-slate-200 rounded-xl font-semibold border border-slate-700 hover:bg-slate-700 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-expand text-lg"></i>
+                    Download Cropped Canvas
+                </button>
+                <button type="button" onclick="exportComment('clipboard')" class="flex-1 min-w-[180px] px-6 py-3.5 bg-slate-900 text-slate-300 rounded-xl font-semibold border border-slate-800 hover:bg-slate-850 hover:scale-[1.01] active:scale-[0.99] transition duration-200 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-copy text-lg"></i>
                     Copy to Clipboard
                 </button>
@@ -421,9 +464,193 @@
 
     </div>
 
-    <!-- Application Logic Script -->
+    <!-- Firebase Script Configuration (Standard & Realtime sync) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase state references
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let saveTimeout = null;
+
+        // Extract credentials
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'yt-comment-gen';
+        const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+
+        window.addEventListener('load', async () => {
+            // Apply a default random avatar first
+            setPresetPfp('random-retro');
+            updatePreview();
+
+            if (rawConfig) {
+                try {
+                    const firebaseConfig = JSON.parse(rawConfig);
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    // Standard authentication setup
+                    updateSaveStatus('connecting', 'Authenticating...');
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            currentUser = user;
+                            updateSaveStatus('syncing', 'Loading your draft...');
+                            await loadSavedComment();
+                        }
+                    });
+                } catch (e) {
+                    console.error("Firebase startup failed:", e);
+                    updateSaveStatus('failed', 'Cloud Offline');
+                }
+            } else {
+                updateSaveStatus('failed', 'Single-session Mode');
+            }
+        });
+
+        // Save layout configurations in Firestore
+        async function saveComment() {
+            if (!db || !currentUser) return;
+            updateSaveStatus('saving', 'Saving draft...');
+            try {
+                const data = {
+                    username: document.getElementById('input-username').value,
+                    handle: document.getElementById('input-handle').value,
+                    verified: document.getElementById('toggle-verified').checked,
+                    content: document.getElementById('input-content').value,
+                    time: document.getElementById('input-time').value,
+                    likes: document.getElementById('input-likes').value,
+                    creatorHearted: document.getElementById('toggle-hearted').checked,
+                    creatorName: document.getElementById('input-creator-name').value,
+                    creatorPfpUrl: document.getElementById('creator-pfp-url').value,
+                    pfpUrl: document.getElementById('pfp-url-input').value,
+                    fontSize: document.getElementById('slider-font-size').value,
+                    cardBg: document.getElementById('picker-card-bg').value,
+                    textColor: document.getElementById('picker-text').value,
+                    highlightColor: document.getElementById('picker-highlight').value,
+                    borderStyle: document.getElementById('border-style').value,
+                    borderColor: document.getElementById('picker-border').value,
+                    cardShadow: document.getElementById('card-shadow').value,
+                    // Cropper properties
+                    aspectRatio: document.getElementById('aspect-ratio-select').value,
+                    cardWidth: document.getElementById('slider-card-width').value,
+                    canvasPadding: document.getElementById('slider-canvas-padding').value,
+                    savedAt: new Date().toISOString()
+                };
+
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'current_comment');
+                await setDoc(docRef, data);
+                updateSaveStatus('saved', 'Draft Saved');
+            } catch (e) {
+                console.error("Auto-saving draft failed:", e);
+                updateSaveStatus('failed', 'Save Error');
+            }
+        }
+
+        // Load comment draft from Firestore
+        async function loadSavedComment() {
+            if (!db || !currentUser) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'current_comment');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+
+                    // Restore state variables
+                    document.getElementById('input-username').value = data.username || 'Commenter Extraordinaire';
+                    document.getElementById('input-handle').value = data.handle || '@user-legend';
+                    document.getElementById('toggle-verified').checked = !!data.verified;
+                    document.getElementById('input-content').value = data.content || '';
+                    document.getElementById('input-time').value = data.time || '3 hours ago';
+                    document.getElementById('input-likes').value = data.likes || '12K';
+                    document.getElementById('toggle-hearted').checked = !!data.creatorHearted;
+                    document.getElementById('input-creator-name').value = data.creatorName || 'MrBeast';
+                    document.getElementById('creator-pfp-url').value = data.creatorPfpUrl || '';
+                    document.getElementById('pfp-url-input').value = data.pfpUrl || '';
+                    document.getElementById('slider-font-size').value = data.fontSize || '22';
+                    document.getElementById('picker-card-bg').value = data.cardBg || '#0f0f0f';
+                    document.getElementById('picker-text').value = data.textColor || '#f1f1f1';
+                    document.getElementById('picker-highlight').value = data.highlightColor || '#eab308';
+                    document.getElementById('border-style').value = data.borderStyle || 'none';
+                    document.getElementById('picker-border').value = data.borderColor || '#3b82f6';
+                    document.getElementById('card-shadow').value = data.cardShadow || 'shadow-2xl';
+                    
+                    // Crop layout parameters
+                    if (data.aspectRatio) document.getElementById('aspect-ratio-select').value = data.aspectRatio;
+                    if (data.cardWidth) document.getElementById('slider-card-width').value = data.cardWidth;
+                    if (data.canvasPadding) document.getElementById('slider-canvas-padding').value = data.canvasPadding;
+
+                    // Sync corresponding hex input elements
+                    document.getElementById('picker-card-bg-hex').value = data.cardBg || '#0f0f0f';
+                    document.getElementById('picker-text-hex').value = data.textColor || '#f1f1f1';
+                    document.getElementById('picker-highlight-hex').value = data.highlightColor || '#eab308';
+
+                    if (data.pfpUrl) {
+                        document.getElementById('pfp-preview').src = data.pfpUrl;
+                        document.getElementById('card-pfp').src = data.pfpUrl;
+                    }
+                    if (data.creatorPfpUrl) {
+                        document.getElementById('creator-pfp-preview').src = data.creatorPfpUrl;
+                        document.getElementById('card-creator-pfp').src = data.creatorPfpUrl;
+                    }
+
+                    updatePreview();
+                    updateWorkspaceRatio();
+                    updateSaveStatus('saved', 'Draft loaded');
+                } else {
+                    updateSaveStatus('saved', 'Ready');
+                }
+            } catch (e) {
+                console.error("Failed to restore cloud draft:", e);
+                updateSaveStatus('failed', 'Load Error');
+            }
+        }
+
+        // Handle auto-save trigger with simple 1 second debounce
+        window.triggerAutoSave = function() {
+            if (!db || !currentUser) return;
+            updateSaveStatus('saving', 'Saving...');
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveComment();
+            }, 1000);
+        };
+
+        // Manage Save state badges inside the header
+        function updateSaveStatus(state, message) {
+            const dot = document.getElementById('cloud-status-dot');
+            const txt = document.getElementById('cloud-status-text');
+            const bg = document.getElementById('cloud-status');
+
+            txt.innerText = message;
+            dot.className = "w-2 h-2 rounded-full animate-pulse ";
+
+            if (state === 'saved') {
+                dot.classList.add('bg-emerald-500');
+                bg.className = "bg-emerald-950/40 text-emerald-400 px-3 py-1.5 rounded-full font-medium border border-emerald-800/50 flex items-center gap-2 transition-all";
+            } else if (state === 'saving' || state === 'syncing') {
+                dot.classList.add('bg-amber-500');
+                bg.className = "bg-amber-950/40 text-amber-400 px-3 py-1.5 rounded-full font-medium border border-amber-800/50 flex items-center gap-2 transition-all";
+            } else if (state === 'connecting') {
+                dot.classList.add('bg-blue-500');
+                bg.className = "bg-blue-950/40 text-blue-400 px-3 py-1.5 rounded-full font-medium border border-blue-800/50 flex items-center gap-2 transition-all";
+            } else {
+                dot.classList.add('bg-rose-500');
+                bg.className = "bg-rose-950/40 text-rose-400 px-3 py-1.5 rounded-full font-medium border border-rose-800/50 flex items-center gap-2 transition-all";
+            }
+        }
+    </script>
+
+    <!-- General Application Logic Script -->
     <script>
-        // Preset Avatars Data
         const PRESET_PFPS = {
             mrbeast: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=200&h=200',
             pewdiepie: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200',
@@ -431,14 +658,7 @@
             'random-bot': 'https://robohash.org/yt-comment-robot?set=set3'
         };
 
-        // On Load Setup
-        window.onload = function() {
-            // Pick a beautiful random preset to start with
-            setPresetPfp('random-retro');
-            updatePreview();
-        }
-
-        // Apply a complete layout theme preset
+        // Apply a layout theme preset
         function applyPreset(theme) {
             const cardBgInput = document.getElementById('picker-card-bg');
             const textInput = document.getElementById('picker-text');
@@ -469,7 +689,7 @@
                 borderStyle.value = 'thick';
                 borderInput.value = '#facc15';
                 cardShadow.value = 'shadow-neon';
-                sliderFontSize.value = '28'; // Prominent text for YT thumbnail
+                sliderFontSize.value = '28';
             } else if (theme === 'neon-gamer') {
                 cardBgInput.value = '#05050a';
                 textInput.value = '#ffffff';
@@ -486,13 +706,16 @@
             document.getElementById('picker-highlight-hex').value = highlightInput.value;
 
             updatePreview();
-            showNotification(`Applied Theme: ${theme.replace('-', ' ').toUpperCase()}`);
+            if (window.triggerAutoSave) window.triggerAutoSave();
+            showNotification(`Applied Preset Theme: ${theme.replace('-', ' ').toUpperCase()}`);
         }
 
         // Change the workspace environment background style
         function changeWorkspaceBg(style) {
             const ws = document.getElementById('workspace-container');
-            ws.className = "flex-1 w-full rounded-2xl flex items-center justify-center p-8 border border-slate-800 min-h-[400px] transition-all relative overflow-hidden ";
+            // Keep basic dimensions and border properties intact
+            const currentRatioClasses = Array.from(ws.classList).filter(c => c.startsWith('aspect-') || c.startsWith('max-w-'));
+            ws.className = "flex-1 w-full rounded-2xl flex items-center justify-center border border-slate-800 transition-all relative overflow-hidden " + currentRatioClasses.join(' ');
             
             if (style === 'checkerboard') {
                 ws.classList.add('checkerboard');
@@ -502,6 +725,23 @@
                 ws.classList.add('bg-white');
             } else if (style === 'neon-grad') {
                 ws.classList.add('bg-gradient-to-br', 'from-rose-500', 'via-purple-600', 'to-blue-700');
+            }
+        }
+
+        // Apply selected Aspect Ratio preset and styles to the parent wrapper
+        function updateWorkspaceRatio() {
+            const ws = document.getElementById('workspace-container');
+            const ratio = document.getElementById('aspect-ratio-select').value;
+            
+            // Strip aspect utilities
+            ws.classList.remove('aspect-video', 'aspect-square', 'h-auto', 'max-w-2xl', 'max-w-md');
+            
+            if (ratio === '1-1') {
+                ws.classList.add('aspect-square', 'max-w-[480px]');
+            } else if (ratio === '16-9') {
+                ws.classList.add('aspect-video', 'max-w-3xl');
+            } else if (ratio === '9-16') {
+                ws.classList.add('aspect-[9/16]', 'max-w-[340px]');
             }
         }
 
@@ -515,6 +755,7 @@
                     document.getElementById('pfp-preview').src = base64Url;
                     document.getElementById('card-pfp').src = base64Url;
                     document.getElementById('pfp-url-input').value = '';
+                    if (window.triggerAutoSave) window.triggerAutoSave();
                 };
                 reader.readAsDataURL(file);
             }
@@ -527,6 +768,7 @@
                 document.getElementById('pfp-preview').src = url;
                 document.getElementById('card-pfp').src = url;
                 document.getElementById('pfp-url-input').value = url;
+                if (window.triggerAutoSave) window.triggerAutoSave();
             }
         }
 
@@ -557,6 +799,7 @@
                     document.getElementById('picker-highlight').value = val;
                 }
                 updatePreview();
+                if (window.triggerAutoSave) window.triggerAutoSave();
             }
         }
 
@@ -581,18 +824,13 @@
             const vBadge = document.getElementById('card-verified');
             if (verified) {
                 vBadge.classList.remove('hidden');
-                // Auto adapt checkmark color depending on card background brightness
                 const cardBg = document.getElementById('picker-card-bg').value;
-                if (isLightColor(cardBg)) {
-                    vBadge.style.color = '#606060';
-                } else {
-                    vBadge.style.color = '#aaaaaa';
-                }
+                vBadge.style.color = isLightColor(cardBg) ? '#606060' : '#aaaaaa';
             } else {
                 vBadge.classList.add('hidden');
             }
 
-            // Parse content with formatting: **bold** and ==highlighted==
+            // Parse content formatting: **bold** and ==highlighted==
             const highlightColor = document.getElementById('picker-highlight').value;
             let formattedContent = escapeHtml(rawContent)
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -626,7 +864,7 @@
             const cardBgColor = document.getElementById('picker-card-bg').value;
             cardEl.style.backgroundColor = cardBgColor;
 
-            // Sync visual aesthetics (username colors, likes icons, etc) based on contrast
+            // Sync visual contrast
             const isBgLight = isLightColor(cardBgColor);
             if (isBgLight) {
                 document.getElementById('card-handle').style.color = '#0f0f0f';
@@ -640,7 +878,7 @@
                 document.getElementById('card-creator-heart-label').style.color = '#aaaaaa';
             }
 
-            // Custom Borders / Glow Styling
+            // Apply Custom Borders / Glow Styling
             const borderStyle = document.getElementById('border-style').value;
             const borderColor = document.getElementById('picker-border').value;
             cardEl.style.border = 'none';
@@ -669,49 +907,61 @@
                     cardEl.style.boxShadow = 'none';
                 }
             }
+
+            // CROP MODIFIERS LOGIC: Change card layout width & crop padding inside workspace
+            const cardWidthVal = document.getElementById('slider-card-width').value;
+            document.getElementById('card-width-val').innerText = `${cardWidthVal}px`;
+            cardEl.style.maxWidth = `${cardWidthVal}px`;
+
+            const canvasPaddingVal = document.getElementById('slider-canvas-padding').value;
+            document.getElementById('canvas-padding-val').innerText = `${canvasPaddingVal}px`;
+            document.getElementById('workspace-container').style.padding = `${canvasPaddingVal}px`;
         }
 
-        // Generates PNG or copies image using html2canvas
+        // Capture canvas and initiate download action
         function exportComment(type) {
-            const cardElement = document.getElementById('yt-comment-card');
+            let exportElement = document.getElementById('yt-comment-card');
             
-            // Temporary scale up for crisp screenshot rendering
-            const prevTransform = cardElement.style.transform;
-            cardElement.style.transform = 'none';
+            // If exporting the custom crop space with customized ratios & borders
+            if (type === 'cropped') {
+                exportElement = document.getElementById('workspace-container');
+            }
 
-            // Configure html2canvas options
+            const prevTransform = exportElement.style.transform;
+            exportElement.style.transform = 'none';
+
             const options = {
                 useCORS: true,
                 allowTaint: true,
-                backgroundColor: null, // Keeps background transparent if needed
-                scale: 3, // Premium ultra-high quality export
-                logging: false,
-                onclone: (clonedDoc) => {
-                    // Force display/adjust block states inside cloned element if necessary
-                }
+                backgroundColor: type === 'card' ? null : window.getComputedStyle(exportElement).backgroundColor,
+                scale: 3, // Ultra-sharp 3x high-definition export
+                logging: false
             };
 
-            html2canvas(cardElement, options).then(canvas => {
-                // Restore transform state
-                cardElement.style.transform = prevTransform;
+            // Remove checkers dynamically for rendering pure backgrounds if needed
+            const hadCheckerboard = exportElement.classList.contains('checkerboard');
+            if (hadCheckerboard) {
+                exportElement.classList.remove('checkerboard');
+            }
 
-                if (type === 'png') {
-                    // Trigger dynamic PNG download file
+            html2canvas(exportElement, options).then(canvas => {
+                exportElement.style.transform = prevTransform;
+                if (hadCheckerboard) exportElement.classList.add('checkerboard');
+
+                if (type === 'card' || type === 'cropped') {
                     const link = document.createElement('a');
                     const username = document.getElementById('input-username').value.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                    link.download = `yt_comment_${username || 'card'}.png`;
+                    link.download = `yt_comment_crop_${username || 'card'}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
-                    showNotification("Card exported as ultra high-quality PNG!");
+                    showNotification("Exported ultra high-quality PNG!");
                 } else if (type === 'clipboard') {
-                    // Export to System Clipboard
                     canvas.toBlob(blob => {
                         try {
                             const item = new ClipboardItem({ "image/png": blob });
                             navigator.clipboard.write([item]).then(() => {
                                 showNotification("Copied high-res image directly to clipboard!");
                             }).catch(err => {
-                                // Fallback copy notification
                                 fallbackCopyToClipboard(canvas.toDataURL());
                             });
                         } catch (e) {
@@ -720,12 +970,12 @@
                     }, 'image/png');
                 }
             }).catch(error => {
-                console.error("Export failure: ", error);
-                showNotification("Export process encountered a CORS or image issue. Try using built-in presets.", true);
+                console.error("Export failure:", error);
+                if (hadCheckerboard) exportElement.classList.add('checkerboard');
+                showNotification("Export process failed. Try checking external image URLs.", true);
             });
         }
 
-        // Fallback copy using secondary browser methods
         function fallbackCopyToClipboard(dataUrl) {
             const textarea = document.createElement('textarea');
             textarea.value = dataUrl;
@@ -733,10 +983,9 @@
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            showNotification("Copied image data URL! (In-browser clipboard fallback active)");
+            showNotification("Copied image URL! (Clipboard fallback active)");
         }
 
-        // Helper: Check visual brightness score for black/white text contrast
         function isLightColor(color) {
             const hex = color.replace('#', '');
             const r = parseInt(hex.substr(0, 2), 16);
@@ -746,7 +995,6 @@
             return brightness > 140;
         }
 
-        // Helper: Escape standard HTML characters
         function escapeHtml(text) {
             return text
                 .replace(/&/g, "&amp;")
@@ -756,17 +1004,14 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // UI Notification system
         function showNotification(message, isError = false) {
             const banner = document.getElementById('notification');
             const msgEl = document.getElementById('notification-msg');
             msgEl.innerText = message;
             
-            if (isError) {
-                banner.className = "m-4 p-4 rounded-xl bg-slate-900 border border-red-500/30 text-red-400 flex items-center justify-between shadow-xl transition-all duration-300";
-            } else {
-                banner.className = "m-4 p-4 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-400 flex items-center justify-between shadow-xl transition-all duration-300";
-            }
+            banner.className = isError 
+                ? "m-4 p-4 rounded-xl bg-slate-900 border border-red-500/30 text-red-400 flex items-center justify-between shadow-xl transition-all duration-300"
+                : "m-4 p-4 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-400 flex items-center justify-between shadow-xl transition-all duration-300";
 
             banner.classList.remove('hidden');
             setTimeout(() => {
