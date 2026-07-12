@@ -15,6 +15,11 @@
         canvas { display: block; width: 100%; height: 100%; }
         .player-card { transition: all 0.2s; }
         .avatar-img { image-rendering: pixelated; }
+        #lobby-screen { overflow-y: scroll; overscroll-behavior: contain; }
+        #lobby-screen::-webkit-scrollbar { width: 6px; }
+        #lobby-screen::-webkit-scrollbar-track { background: #111; }
+        #lobby-screen::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        #lobby-screen::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
     </style>
 </head>
 <body class="bg-black overflow-hidden font-sans select-none text-sm">
@@ -27,7 +32,7 @@
 <div class="grid-bg"></div>
 
 <!-- LOBBY SCREEN -->
-<div id="lobby-screen" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 text-white overflow-y-auto py-10">
+<div id="lobby-screen" class="absolute inset-0 z-20 flex flex-col items-center bg-black/90 text-white py-10">
     <!-- Auth Modal -->
     <div id="auth-modal" class="hidden absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
         <div class="bg-neutral-900 border border-neutral-700 p-8 rounded flex flex-col items-center w-80 shadow-[0_0_20px_rgba(0,0,0,1)]">
@@ -166,9 +171,60 @@
         </div>
     </div>
 
-    <div class="flex gap-4 mt-8">
+    <div class="flex gap-4 mt-8 mb-2">
         <button id="btn-start" onclick="initGame()" class="hidden px-10 py-4 bg-white text-black font-bold rounded hover:bg-amber-400 transition shadow-[0_0_15px_rgba(255,255,255,0.5)]">LAUNCH MISSION</button>
         <button id="btn-ready" onclick="toggleReady()" class="hidden px-10 py-4 bg-amber-600 text-white font-bold rounded hover:bg-amber-500 transition shadow-[0_0_15px_rgba(217,119,6,0.5)]">READY UP</button>
+    </div>
+
+    <!-- How to Play / About -->
+    <div class="w-full max-w-5xl px-4 mt-6 mb-10">
+        <button onclick="document.getElementById('how-to-play').classList.toggle('hidden')" class="w-full text-left flex justify-between items-center bg-neutral-900 border border-neutral-700 p-4 rounded hover:border-amber-500/50 transition group">
+            <span class="text-neutral-300 font-bold tracking-wider group-hover:text-amber-400 transition">❓ HOW TO PLAY &amp; ABOUT</span>
+            <span class="text-neutral-500 text-xs">CLICK TO EXPAND</span>
+        </button>
+        <div id="how-to-play" class="hidden border border-t-0 border-neutral-700 rounded-b bg-neutral-950 p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-amber-500 font-black tracking-widest border-b border-amber-500/20 pb-2">🌑 ABOUT</h3>
+                    <p class="text-neutral-400 leading-relaxed">Shadow Defense is a <span class="text-white font-bold">co-op multiplayer survival game</span> where you and your team protect a glowing <span class="text-amber-400">Core</span> from waves of shadow enemies.</p>
+                    <p class="text-neutral-400 leading-relaxed">You ARE the shadow — position yourself between the Core and the enemies to block their light and destroy them.</p>
+                    <p class="text-neutral-400 leading-relaxed">Each wave gets harder. Survive as long as you can, upgrade between waves, and don't let the Core's HP hit zero!</p>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-amber-500 font-black tracking-widest border-b border-amber-500/20 pb-2">🎮 CONTROLS</h3>
+                    <div class="flex flex-col gap-2 text-neutral-300">
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">Mouse</span><span class="text-neutral-400">Move toward cursor</span></div>
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">Click + Hold</span><span class="text-neutral-400">Focus shadow — deals 5× damage</span></div>
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">WASD / Arrows</span><span class="text-neutral-400">Move (local split-screen)</span></div>
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">Space / Enter</span><span class="text-neutral-400">Focus (WASD / Arrow players)</span></div>
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">T</span><span class="text-neutral-400">Open chat</span></div>
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">Tab</span><span class="text-neutral-400">Scoreboard</span></div>
+                        <div class="flex items-center gap-2"><span class="bg-neutral-800 border border-neutral-600 px-2 py-0.5 rounded text-xs font-mono text-white">Esc</span><span class="text-neutral-400">Pause menu</span></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-amber-500 font-black tracking-widest border-b border-amber-500/20 pb-2">⚡ TIPS</h3>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2 text-neutral-400"><span class="text-amber-400 flex-shrink-0">▸</span><span>Stay close to the Core — your shadow cone only blocks enemies in your line-of-sight from it.</span></div>
+                        <div class="flex gap-2 text-neutral-400"><span class="text-amber-400 flex-shrink-0">▸</span><span><span class="text-white">Hold click / Space</span> to Focus your shadow — smaller cone but 5× damage. Use it when enemies are lined up.</span></div>
+                        <div class="flex gap-2 text-neutral-400"><span class="text-amber-400 flex-shrink-0">▸</span><span><span class="text-white">Obelisks</span> cast permanent shadows. Place them to cover angles your team can't watch.</span></div>
+                        <div class="flex gap-2 text-neutral-400"><span class="text-amber-400 flex-shrink-0">▸</span><span><span class="text-red-400">Boss waves</span> appear every 5 waves — they orbit the Core and take massive HP. Focus them!</span></div>
+                        <div class="flex gap-2 text-neutral-400"><span class="text-amber-400 flex-shrink-0">▸</span><span>In multiplayer, spread out and cover all angles around the Core as a team.</span></div>
+                    </div>
+
+                    <h3 class="text-amber-500 font-black tracking-widest border-b border-amber-500/20 pb-2 mt-2">🌐 MULTIPLAYER</h3>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2 text-neutral-400"><span class="text-cyan-400 flex-shrink-0">▸</span><span>Host clicks <span class="text-white">HOST SERVER</span>, shares the ID with friends.</span></div>
+                        <div class="flex gap-2 text-neutral-400"><span class="text-cyan-400 flex-shrink-0">▸</span><span>Clients paste the ID and click <span class="text-white">CONNECT</span>, then ready up.</span></div>
+                        <div class="flex gap-2 text-neutral-400"><span class="text-cyan-400 flex-shrink-0">▸</span><span>Max <span class="text-white">5 players</span> per lobby.</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1004,7 +1060,7 @@
             clientPrediction.players[id].targetX = hp.x;
             clientPrediction.players[id].targetY = hp.y;
             clientPrediction.players[id].act = hp.inputs ? hp.inputs.act : false;
-            clientPrediction.players[id].avatar = hp.avatar;
+            if(hp.avatar !== undefined) clientPrediction.players[id].avatar = hp.avatar; // preserve cached avatar
             clientPrediction.players[id].name = hp.name;
             clientPrediction.players[id].takingDmg = hp.takingDmg;
             // Sync chat bubbles from host
@@ -1192,7 +1248,29 @@
             }
 
             updateHUD();
-            clients.forEach(c => c.send({type: 'state', state: GS}));
+            
+            // Throttle state broadcast to ~20hz to avoid flooding the data channel
+            if(!GS._lastBroadcast || Date.now() - GS._lastBroadcast >= 50) {
+                GS._lastBroadcast = Date.now();
+                // Build a lean state without avatar blobs (already cached by clients)
+                let leanPlayers = {};
+                for(let id in GS.players) {
+                    let p = GS.players[id];
+                    leanPlayers[id] = { x: p.x, y: p.y, r: p.r, connId: p.connId, name: p.name, type: p.type, inputs: p.inputs, takingDmg: p.takingDmg, waveKills: p.waveKills, chatMsg: p.chatMsg, chatTimer: p.chatTimer, isReady: p.isReady };
+                }
+                let leanSpectators = {};
+                for(let id in GS.spectators) {
+                    let p = GS.spectators[id];
+                    leanSpectators[id] = { x: p.x, y: p.y, r: p.r, connId: p.connId, name: p.name, type: p.type, inputs: p.inputs, takingDmg: p.takingDmg };
+                }
+                let leanState = {
+                    core: GS.core, wave: GS.wave, embers: GS.embers,
+                    obelisks: GS.obelisks, enemies: GS.enemies, particles: GS.particles,
+                    players: leanPlayers, spectators: leanSpectators,
+                    shopVotes: GS.shopVotes, lastMvpText: GS.lastMvpText
+                };
+                clients.forEach(c => c.send({type: 'state', state: leanState}));
+            }
         } else {
             // Client Input Sync
             if (myConnId) {
