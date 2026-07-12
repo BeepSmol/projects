@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHADOW DEFENSE - DELUXE NETWORK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; color: white; font-family: monospace; user-select: none; }
+        .crt-overlay { position: absolute; inset: 0; background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%), linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06)); background-size: 100% 4px, 6px 100%; pointer-events: none; z-index: 50; opacity: 0.3; }
+        .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+        #status-log::-webkit-scrollbar { width: 4px; } #status-log::-webkit-scrollbar-thumb { background: #444; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .player-card { transition: all 0.2s; }
+        .avatar-img { image-rendering: pixelated; }
+    </style>
+</head>
+<body class="bg-black overflow-hidden font-sans select-none text-sm">
+
+<!-- Notification Toast -->
+<div id="notification-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-900/90 text-white px-6 py-3 rounded border border-red-500 shadow-[0_0_15px_rgba(255,0,0,0.5)] transition-transform duration-300 -translate-y-24">
+    <span id="notification-msg" class="font-bold"></span>
+</div>
+
+<div class="grid-bg"></div>
+
+<!-- LOBBY SCREEN -->
+<div id="lobby-screen" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 text-white overflow-y-auto py-10">
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="hidden absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
+        <div class="bg-neutral-900 border border-neutral-700 p-8 rounded flex flex-col items-center w-80 shadow-[0_0_20px_rgba(0,0,0,1)]">
+            <h2 class="text-white font-bold mb-4">PASSWORD REQUIRED</h2>
+            <input type="password" id="auth-password" class="w-full bg-black border border-neutral-700 p-2 text-white mb-4 outline-none" placeholder="Enter lobby password...">
+            <div class="flex gap-4 w-full">
+                <button onclick="cancelAuth()" class="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white py-2">CANCEL</button>
+                <button onclick="submitAuth()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold py-2">JOIN</button>
+            </div>
+        </div>
+    </div>
+    <h1 class="text-5xl font-black mb-2 tracking-tighter">SHADOW DEFENSE</h1>
+    <h2 class="text-xl text-amber-500 tracking-[0.2em] mb-8">MULTIPLAYER TERMINAL</h2>
+
+    <div class="w-full max-w-5xl px-4 mb-8">
+        <div class="bg-neutral-900 border border-neutral-700 p-6 rounded flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="flex-1">
+                <h3 class="text-white border-b border-neutral-700 pb-2 mb-4">GLOBAL PROFILE</h3>
+                <div class="flex gap-4 items-center">
+                    <img id="profile-avatar-preview" class="w-16 h-16 bg-black border border-neutral-700 hidden avatar-img">
+                    <div class="flex-1 flex flex-col gap-2">
+                        <input id="profile-name" placeholder="Global Profile Name..." class="bg-black border border-neutral-700 p-2 text-white outline-none w-full" oninput="saveProfile()">
+                        <input type="file" id="global-avatar-upload" accept="image/*" class="text-xs text-neutral-400 file:bg-neutral-800 file:border-0 file:text-white file:px-4 file:py-2 hover:file:bg-neutral-700 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex flex-col md:flex-row gap-8 w-full max-w-5xl px-4">
+        <!-- Connection Config -->
+        <div class="flex-1 bg-neutral-900 border border-neutral-700 p-6 rounded flex flex-col gap-4">
+            <h3 class="text-white border-b border-neutral-700 pb-2">NETWORK CONFIG</h3>
+            
+            <div class="flex flex-col gap-2 mb-2">
+                <input id="lobby-name" placeholder="Lobby Name..." class="bg-black border border-neutral-700 p-2 text-white outline-none">
+                <input id="host-password" placeholder="Password (Optional)..." type="password" class="bg-black border border-neutral-700 p-2 text-white outline-none">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="hostServer()" id="btn-host" class="flex-1 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 transition">HOST SERVER</button>
+            </div>
+            
+            <div id="host-info" class="hidden flex-col gap-2">
+                <label class="text-cyan-400 text-xs">YOUR SERVER ID (SHARE THIS)</label>
+                <div class="flex gap-2">
+                    <input id="host-id" readonly class="bg-black border border-neutral-700 p-2 text-cyan-400 w-full outline-none">
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('host-id').value)" class="bg-neutral-700 px-4 hover:bg-neutral-600">COPY</button>
+                </div>
+            </div>
+
+            <div class="border-t border-neutral-800 my-2"></div>
+            
+            <label class="text-amber-500 text-xs">JOIN SERVER</label>
+            <div class="flex flex-col gap-2">
+                <div class="flex gap-2">
+                    <input id="join-id" placeholder="Paste Host ID..." class="bg-black border border-neutral-700 p-2 text-white w-full outline-none">
+                    <button onclick="joinServer()" class="bg-neutral-800 px-4 hover:bg-neutral-700 border border-neutral-600 transition">CONNECT</button>
+                </div>
+            </div>
+            <div id="conn-status" class="text-xs text-neutral-500">Awaiting action...</div>
+        </div>
+
+        <!-- Player Setup -->
+        <div class="flex-1 bg-neutral-900 border border-neutral-700 p-6 rounded flex flex-col gap-4">
+            <h3 class="text-white border-b border-neutral-700 pb-2">LOCAL CONFIG</h3>
+            <div class="flex flex-col gap-2">
+                <label class="text-neutral-400 text-xs">MASTER VOLUME</label>
+                <input type="range" id="master-volume" min="0" max="100" value="50" class="w-full accent-amber-500" onchange="updateVolume(this.value)">
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="local-screenshake" checked class="accent-amber-500 w-4 h-4" onchange="localScreenShake = this.checked">
+                <label class="text-neutral-400 text-xs">ENABLE SCREEN SHAKE</label>
+            </div>
+            
+            <label class="text-neutral-400 text-xs">LOCAL PLAYERS</label>
+            <div id="local-players-list" class="flex flex-col gap-2 mb-2">
+                <!-- populated dynamically -->
+            </div>
+            
+            <div class="flex gap-2">
+                <select id="ctrl-select" class="bg-black border border-neutral-700 p-2 text-white outline-none flex-1">
+                    <option value="mouse">Mouse (Click to Focus)</option>
+                    <option value="wasd">WASD + Space</option>
+                    <option value="arrows">Arrows + Enter</option>
+                </select>
+                <button onclick="addLocalPlayer()" class="bg-neutral-800 px-4 hover:bg-neutral-700 border border-neutral-600 transition">ADD</button>
+            </div>
+            
+            <button onclick="startSingleplayer()" class="w-full mt-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-[0_0_10px_rgba(245,158,11,0.5)]">PLAY OFFLINE (LOCAL)</button>
+        </div>
+    </div>
+
+    <!-- Game Settings -->
+    <div id="game-settings-panel" class="w-full max-w-5xl px-4 mt-4 hidden">
+        <h3 class="text-white border-b border-neutral-700 pb-2 mb-4">GAME SETTINGS (HOST ONLY)</h3>
+        <div class="flex flex-col md:flex-row gap-4 bg-neutral-900 border border-neutral-700 p-4 rounded flex-wrap">
+            <label class="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                <input type="checkbox" id="setting-hardcore" class="accent-amber-500 w-4 h-4" onchange="syncSettings()">
+                Hardcore Mode
+            </label>
+            <label class="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                <input type="checkbox" id="setting-friendlyfire" class="accent-amber-500 w-4 h-4" onchange="syncSettings()">
+                Friendly Shadows
+            </label>
+            <label class="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                <input type="checkbox" id="setting-shopvoting" class="accent-amber-500 w-4 h-4" onchange="syncSettings()">
+                Shop Democracy (Voting)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-neutral-300">
+                Max Waves: 
+                <input type="number" id="setting-maxwaves" value="0" min="0" class="bg-black border border-neutral-700 p-1 w-16 text-white text-center" onchange="syncSettings()"> (0=Endless)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-neutral-300">
+                Enemy Speed Mult: 
+                <input type="number" id="setting-enemyspeed" value="1.0" min="0.1" step="0.1" class="bg-black border border-neutral-700 p-1 w-16 text-white text-center" onchange="syncSettings()">
+            </label>
+            <label class="flex items-center gap-2 text-sm text-neutral-300">
+                Starting Core HP: 
+                <input type="number" id="setting-corehp" value="100" min="10" step="10" class="bg-black border border-neutral-700 p-1 w-16 text-white text-center" onchange="syncSettings()">
+            </label>
+        </div>
+    </div>
+
+    <!-- Connected Players Visuals & Lobby Chat -->
+    <div class="w-full max-w-5xl px-4 mt-8 flex flex-col md:flex-row gap-8">
+        <div class="flex-1">
+            <h3 class="text-white border-b border-neutral-700 pb-2 mb-4">CONNECTED AGENTS</h3>
+            <div id="player-grid" class="flex flex-wrap gap-4">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        <div class="w-full md:w-80 bg-neutral-900 border border-neutral-700 p-4 rounded flex flex-col gap-2 h-64">
+            <h3 class="text-white border-b border-neutral-700 pb-2">LOBBY CHAT</h3>
+            <div id="lobby-chat-log" class="flex-1 overflow-y-auto text-xs text-neutral-300 space-y-1"></div>
+            <input type="text" id="lobby-chat-input" class="bg-black border border-neutral-700 p-2 text-white text-xs rounded outline-none" placeholder="Press [Enter] to send...">
+        </div>
+    </div>
+
+    <div class="flex gap-4 mt-8">
+        <button id="btn-start" onclick="initGame()" class="hidden px-10 py-4 bg-white text-black font-bold rounded hover:bg-amber-400 transition shadow-[0_0_15px_rgba(255,255,255,0.5)]">LAUNCH MISSION</button>
+        <button id="btn-ready" onclick="toggleReady()" class="hidden px-10 py-4 bg-amber-600 text-white font-bold rounded hover:bg-amber-500 transition shadow-[0_0_15px_rgba(217,119,6,0.5)]">READY UP</button>
+    </div>
+</div>
+
+<!-- Obelisk Placement UI -->
+<div id="obelisk-placement-ui" class="hidden pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center">
+    <h1 class="text-5xl font-black text-amber-500 animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,1)]">CLICK TO PLACE OBELISK</h1>
+    <h2 class="text-xl font-bold text-red-500 mt-4 drop-shadow-[0_0_10px_rgba(239,68,68,1)]">RIGHT CLICK TO CANCEL (+50 Embers)</h2>
+</div>
+
+<!-- Wave Announcement Overlay -->
+<div id="wave-announcement" class="hidden absolute inset-0 z-15 flex flex-col items-center justify-center pointer-events-none">
+    <h1 id="wave-announcement-text" class="text-8xl font-black text-amber-500 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,1)] transition-all duration-1000 scale-150 opacity-0">WAVE 1</h1>
+</div>
+
+<!-- Scoreboard Overlay -->
+<div id="scoreboard-overlay" class="hidden absolute inset-0 z-25 bg-black/80 flex flex-col items-center justify-center pointer-events-none backdrop-blur-sm">
+    <div class="bg-neutral-900 border border-neutral-700 p-6 rounded w-[600px] shadow-[0_0_20px_rgba(0,0,0,1)]">
+        <h2 class="text-white font-bold text-xl mb-4 border-b border-neutral-700 pb-2">SCOREBOARD</h2>
+        <div class="flex text-neutral-500 text-xs font-bold mb-2 px-2">
+            <div class="w-12"></div>
+            <div class="flex-1">AGENT</div>
+            <div class="w-20 text-center">KILLS</div>
+            <div class="w-20 text-center">PING</div>
+        </div>
+        <div id="scoreboard-list" class="flex flex-col gap-2">
+            <!-- populated dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-4">
+    <div class="flex justify-between items-start w-full">
+        <div class="bg-black/80 border border-neutral-800 p-3 rounded backdrop-blur-sm min-w-[200px]">
+            <div class="text-neutral-400 text-xs mb-1">CORE INTEGRITY</div>
+            <div class="flex justify-between mb-1"><span id="hp-val" class="text-amber-400 font-bold">100%</span></div>
+            <div class="w-full bg-neutral-800 h-2 rounded-full mb-2 overflow-hidden"><div id="hp-bar" class="bg-amber-400 h-full w-full"></div></div>
+            <div class="flex justify-between text-sm"><span>EMBERS:</span><span id="ember-val" class="text-orange-500">0</span></div>
+            <div class="flex justify-between text-sm text-neutral-400"><span>WAVE:</span><span id="wave-val">1</span></div>
+            <div class="flex justify-between text-sm text-neutral-400"><span>PING:</span><span id="ping-val">0ms</span></div>
+        </div>
+        <div class="flex flex-col gap-2">
+            <div class="bg-black/80 border border-neutral-800 p-2 rounded backdrop-blur-sm h-40 w-64 overflow-y-auto flex flex-col justify-start text-xs text-neutral-300 pointer-events-auto" id="status-log-container">
+                <div id="status-log" class="flex flex-col justify-end min-h-full space-y-1"></div>
+            </div>
+            <input type="text" id="chat-input" class="hidden pointer-events-auto bg-black/90 border border-neutral-700 p-2 text-white text-xs rounded outline-none w-64 shadow-[0_0_10px_rgba(0,0,0,0.5)]" placeholder="Press [Enter] to send...">
+        </div>
+    </div>
+    <div class="text-center text-xs text-neutral-500 bg-black/50 p-2 rounded backdrop-blur-sm mx-auto pointer-events-auto">
+        Press [ESC] for Pause / Save Menu
+    </div>
+</div>
+
+<!-- PAUSE MENU -->
+<div id="pause-menu" class="hidden absolute inset-0 z-30 bg-black/90 flex flex-col items-center justify-center pointer-events-auto overflow-y-auto py-10">
+    <h2 class="text-3xl font-bold text-white mb-8" id="pause-title">SYSTEM PAUSED</h2>
+    
+    <div class="flex flex-col gap-2 mb-8 w-64">
+        <label class="text-neutral-400 text-xs text-center">MASTER VOLUME</label>
+        <input type="range" id="pause-master-volume" min="0" max="100" value="50" class="w-full accent-amber-500" onchange="updateVolume(this.value)">
+    </div>
+    
+    <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl px-4 mb-8">
+        <div id="pause-admin-panel" class="hidden flex-1 bg-neutral-900 border border-neutral-700 p-4 rounded flex flex-col gap-4">
+            <h3 class="text-white border-b border-neutral-700 pb-2">HOST ADMIN</h3>
+            <div id="pause-settings-container"></div>
+            <h4 class="text-xs text-neutral-400 mt-2 border-b border-neutral-800 pb-1">CONNECTED PLAYERS</h4>
+            <div id="pause-players-list" class="flex flex-col gap-1 max-h-40 overflow-y-auto"></div>
+            <h4 class="text-xs text-neutral-400 mt-2 border-b border-neutral-800 pb-1">SPECTATORS (LATE JOINERS)</h4>
+            <div id="pause-spectators-list" class="flex flex-col gap-1 max-h-40 overflow-y-auto"></div>
+        </div>
+        
+        <div class="flex flex-col gap-4 w-64 mx-auto md:mx-0 justify-center">
+            <button id="btn-resume" onclick="togglePause()" class="py-2 bg-neutral-800 hover:bg-neutral-700 text-white">RESUME</button>
+            <button id="btn-return-lobby" onclick="returnToLobby()" class="py-2 bg-red-800 hover:bg-red-700 text-white font-bold">RETURN TO LOBBY</button>
+            <button id="btn-save" onclick="exportSave()" class="py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 hidden">EXPORT SAVE</button>
+            <input id="import-data" placeholder="Paste save data here..." class="hidden bg-black border border-neutral-700 p-2 text-white outline-none">
+            <button id="btn-load" onclick="importSave()" class="py-2 bg-neutral-800 hover:bg-neutral-700 text-amber-500 hidden">IMPORT SAVE</button>
+        </div>
+    </div>
+</div>
+
+<!-- GAME OVER SCREEN -->
+<div id="game-over-screen" class="hidden absolute inset-0 z-40 bg-red-900/90 flex flex-col items-center justify-center pointer-events-auto backdrop-blur-md">
+    <h2 class="text-6xl font-black text-black mb-2 animate-pulse shadow-red-500 drop-shadow-[0_0_15px_rgba(0,0,0,1)]">CORE DESTROYED</h2>
+    <p class="text-white text-xl mb-4">The shadows have consumed the terminal.</p>
+    <div class="flex gap-8 mb-8 text-neutral-300">
+        <div class="text-center">
+            <div class="text-xs text-neutral-400">WAVES SURVIVED</div>
+            <div id="go-wave-val" class="text-3xl font-bold text-white">0</div>
+        </div>
+        <div class="text-center">
+            <div class="text-xs text-neutral-400">EMBERS COLLECTED</div>
+            <div id="go-ember-val" class="text-3xl font-bold text-orange-500">0</div>
+        </div>
+    </div>
+    <div id="game-over-controls" class="flex gap-4">
+        <button onclick="playAgain()" class="px-8 py-3 bg-neutral-800 text-white font-bold rounded hover:bg-neutral-700 border border-neutral-600 hidden" id="btn-play-again">PLAY AGAIN</button>
+        <button onclick="returnToLobby()" class="px-8 py-3 bg-black text-white font-bold rounded hover:bg-neutral-800 border border-red-500 shadow-[0_0_10px_rgba(255,0,0,0.5)]">RETURN TO LOBBY</button>
+    </div>
+</div>
+
+<!-- SHOP SCREEN -->
+<div id="shop-screen" class="hidden absolute inset-0 z-30 bg-black/90 flex flex-col items-center justify-center pointer-events-auto backdrop-blur-md">
+    <h2 class="text-3xl font-bold text-white mb-2">WAVE CLEARED</h2>
+    <p class="text-neutral-400 mb-8">AVAILABLE EMBERS: <span id="shop-ember-val" class="text-orange-500 font-bold">0</span></p>
+    
+    <div id="shop-mvp-container" class="hidden text-amber-400 text-sm font-bold mb-8 text-center bg-amber-500/10 border border-amber-500/30 p-2 rounded w-80 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+        MVP: <span id="shop-mvp-name" class="text-white"></span>
+    </div>
+    <div class="flex gap-4 mb-4">
+        <div class="bg-neutral-900 border border-neutral-700 p-4 rounded w-48 text-center cursor-pointer hover:border-amber-500 relative" onclick="buyItem('obelisk')">
+            <h3 class="text-white font-bold">Obelisk</h3><p class="text-xs text-neutral-400 my-2">Static shadow caster.</p><span class="text-orange-400">50 Embers</span>
+            <div id="vote-obelisk" class="absolute -top-3 -right-3 bg-amber-500 text-black font-bold rounded-full w-8 h-8 flex items-center justify-center hidden">0</div>
+        </div>
+        <div class="bg-neutral-900 border border-neutral-700 p-4 rounded w-48 text-center cursor-pointer hover:border-amber-500 relative" onclick="buyItem('tuning')">
+            <h3 class="text-white font-bold">Core Tuning</h3><p class="text-xs text-neutral-400 my-2">Max HP +20, Heal 30%</p><span class="text-orange-400">30 Embers</span>
+            <div id="vote-tuning" class="absolute -top-3 -right-3 bg-amber-500 text-black font-bold rounded-full w-8 h-8 flex items-center justify-center hidden">0</div>
+        </div>
+        <div class="bg-neutral-900 border border-neutral-700 p-4 rounded w-48 text-center cursor-pointer hover:border-amber-500 relative" onclick="buyItem('next')">
+            <h3 class="text-white font-bold">Next Wave</h3><p class="text-xs text-neutral-400 my-2">Skip upgrades.</p><span class="text-neutral-500">Ready</span>
+            <div id="vote-next" class="absolute -top-3 -right-3 bg-amber-500 text-black font-bold rounded-full w-8 h-8 flex items-center justify-center hidden">0</div>
+        </div>
+    </div>
+    
+    <div id="host-shop-controls" class="hidden mt-4 flex gap-4">
+        <button onclick="triggerNextWave()" class="px-8 py-3 bg-white text-black font-bold rounded hover:bg-amber-400 shadow-[0_0_10px_rgba(255,255,255,0.5)]">START NEXT WAVE (FORCE)</button>
+        <button id="btn-execute-vote" onclick="executeVote()" class="hidden px-8 py-3 bg-amber-500 text-black font-bold rounded hover:bg-amber-400">EXECUTE MAJORITY VOTE</button>
+    </div>
+    <div id="waiting-msg" class="text-neutral-500 mt-8">Waiting for host...</div>
+</div>
+
+<canvas id="gameCanvas" class="z-0 relative"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Core Engine Globals
+    const TIME_STEP = 0.016; // ~60 ticks per sec for physics stability
+    let accumulator = 0, lastTime = 0;
+    let isHost = true, peer = null, connToHost = null, clients = [];
+    let myConnId = null;
+    let gameState = 'lobby'; // lobby, playing, shop, paused
+    let localPlayers = [];
+    let gameSettings = { hardcore: false, friendlyFire: false, shopVoting: false, maxWaves: 0 };
+    let engineLoopRunning = false;
+    
+    let myAvatarBase64 = localStorage.getItem('shadowDefenseProfileAvatar') || null;
+    let globalProfileName = localStorage.getItem('shadowDefenseProfileName') || "Player";
+    let currentVolume = 50;
+
+    function showToast(msg) {
+        const toast = document.getElementById('notification-toast');
+        document.getElementById('notification-msg').innerText = msg;
+        toast.classList.remove('-translate-y-24');
+        setTimeout(() => { toast.classList.add('-translate-y-24'); }, 3000);
+    }
+
+    let isReady = false;
+    function toggleReady() {
+        if(isHost) return;
+        isReady = !isReady;
+        if(isReady) {
+            document.getElementById('btn-ready').classList.add('bg-green-600', 'shadow-[0_0_15px_rgba(22,163,7,0.5)]');
+            document.getElementById('btn-ready').classList.remove('bg-amber-600', 'shadow-[0_0_15px_rgba(217,119,6,0.5)]');
+            document.getElementById('btn-ready').innerText = "READY";
+        } else {
+            document.getElementById('btn-ready').classList.remove('bg-green-600', 'shadow-[0_0_15px_rgba(22,163,7,0.5)]');
+            document.getElementById('btn-ready').classList.add('bg-amber-600', 'shadow-[0_0_15px_rgba(217,119,6,0.5)]');
+            document.getElementById('btn-ready').innerText = "READY UP";
+        }
+        if(connToHost && connToHost.open) connToHost.send({type: 'ready', state: isReady});
+    }
+
+    function checkAllReady() {
+        if(!isHost) return;
+        let allReady = true;
+        for(let id in GS.players) {
+            if(GS.players[id].type === 'remote' && !GS.players[id].isReady) { allReady = false; break; }
+        }
+        if(allReady) {
+            document.getElementById('btn-start').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-start').innerText = "LAUNCH MISSION";
+        } else {
+            document.getElementById('btn-start').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-start').disabled = true;
+            document.getElementById('btn-start').innerText = "WAITING FOR PLAYERS";
+        }
+    }
+
+    document.getElementById('lobby-chat-input').addEventListener('keydown', e => {
+        if(e.code === 'Enter') {
+            e.preventDefault();
+            let msg = document.getElementById('lobby-chat-input').value.trim();
+            if(msg) {
+                let name = localPlayers[0] ? localPlayers[0].name : "Agent";
+                if(isHost) {
+                    let fullMsg = `[${name}]: ${msg}`;
+                    logLobbyMsg(fullMsg, '#38bdf8');
+                    clients.forEach(c => c.send({type: 'lobby_chat', msg: fullMsg}));
+                } else if(connToHost && connToHost.open) {
+                    connToHost.send({type: 'lobby_chat', name: name, msg: msg});
+                }
+            }
+            document.getElementById('lobby-chat-input').value = '';
+        }
+    });
+
+    function logLobbyMsg(msg, color='#fff') {
+        const div = document.createElement('div'); div.textContent = `> ${msg}`; div.style.color = color;
+        const log = document.getElementById('lobby-chat-log');
+        log.appendChild(div); if(log.children.length > 50) log.removeChild(log.firstChild);
+        log.parentElement.scrollTop = log.parentElement.scrollHeight;
+    }
+
+    function updateVolume(val) {
+        currentVolume = val;
+        document.getElementById('master-volume').value = val;
+        document.getElementById('pause-master-volume').value = val;
+        if(audio.ready) {
+            if (val == 0) { Tone.Destination.mute = true; }
+            else { 
+                Tone.Destination.mute = false;
+                Tone.Destination.volume.value = -40 + (val / 100) * 40;
+            }
+        }
+    }
+
+    function saveProfile() {
+        globalProfileName = document.getElementById('profile-name').value.trim() || "Player";
+        localStorage.setItem('shadowDefenseProfileName', globalProfileName);
+        if(localPlayers.length > 0) {
+            localPlayers[0].name = globalProfileName;
+            renderLocalPlayers();
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('profile-name').value = globalProfileName;
+        if(myAvatarBase64) {
+            document.getElementById('profile-avatar-preview').src = myAvatarBase64;
+            document.getElementById('profile-avatar-preview').classList.remove('hidden');
+        }
+        localPlayers = [{id: 'local_' + Date.now(), name: globalProfileName, ctrl: 'mouse'}];
+        renderLocalPlayers();
+    });
+    
+    // Audio (Tone.js)
+    const audio = {
+        ready: false, synth: null, noise: null, metal: null,
+        init() {
+            if (this.ready) return;
+            Tone.start();
+            this.synth = new Tone.PolySynth(Tone.Synth).toDestination(); this.synth.volume.value = -12;
+            this.noise = new Tone.NoiseSynth().toDestination(); this.noise.volume.value = -15;
+            this.metal = new Tone.MetalSynth({ frequency: 150, resonance: 4000 }).toDestination(); this.metal.volume.value = -10;
+            this.ready = true;
+        },
+        hit() { if(this.ready) this.noise.triggerAttackRelease("32n"); },
+        coreHit() { if(this.ready) this.metal.triggerAttackRelease("8n"); },
+        death() { if(this.ready) this.synth.triggerAttackRelease(["C3","E3"], "16n"); }
+    };
+
+    // State Objects
+    let GS = {
+        core: { x: window.innerWidth/2, y: window.innerHeight/2, hp: 100, maxHp: 100, r: 25 },
+        wave: 1, embers: 0, 
+        players: {}, spectators: {}, enemies: [], obelisks: [], particles: [],
+        spawnTimer: 0, enemiesToSpawn: 0, activeWave: false, placingObelisk: false,
+        shopVotes: { obelisk: [], tuning: [], next: [] }
+    };
+    
+    let hostConfig = { name: "Shadow Terminal", password: "" };
+
+    let clientPrediction = { players: {} };
+
+    // Input Abstraction
+    const keys = {};
+    const mouse = { x: 0, y: 0, down: false };
+    let localScreenShake = true;
+    
+    function updateScoreboard() {
+        const list = document.getElementById('scoreboard-list');
+        list.innerHTML = '';
+        for(let id in GS.players) {
+            let p = GS.players[id];
+            let pingText = p.type === 'remote' ? '---' : 'Host';
+            list.innerHTML += `<div class="flex items-center text-white bg-neutral-800 p-2 border border-neutral-700 rounded">
+                <div class="w-12"><img src="${p.avatar || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='}" class="w-8 h-8 rounded avatar-img border border-neutral-600 bg-neutral-900 ${p.avatar?'':'opacity-20'}"></div>
+                <div class="flex-1 font-bold text-amber-500">${p.name || id}</div>
+                <div class="w-20 text-center font-mono">${p.waveKills || 0}</div>
+                <div class="w-20 text-center font-mono text-neutral-500">${pingText}</div>
+            </div>`;
+        }
+    }
+
+    window.addEventListener('keydown', e => { 
+        if(e.code === 'Tab') {
+            e.preventDefault();
+            if(gameState === 'playing' || gameState === 'shop') {
+                updateScoreboard();
+                document.getElementById('scoreboard-overlay').classList.remove('hidden');
+            }
+        }
+        if(gameState === 'playing' && document.activeElement !== document.getElementById('chat-input')) {
+            if(e.code === 'KeyT' || e.code === 'Enter') {
+                e.preventDefault();
+                document.getElementById('chat-input').classList.remove('hidden');
+                document.getElementById('chat-input').focus();
+                return;
+            }
+        }
+        if(document.activeElement === document.getElementById('chat-input') && e.code === 'Enter') {
+            e.preventDefault();
+            let msg = document.getElementById('chat-input').value.trim();
+            if(msg) {
+                let name = localPlayers[0] ? localPlayers[0].name : "Agent";
+                let fullMsg = `[${name}]: ${msg}`;
+                if(isHost) {
+                    logMsg(fullMsg, '#38bdf8');
+                    let pId = Object.keys(GS.players).find(id => GS.players[id].name === name);
+                    if(pId) { GS.players[pId].chatMsg = msg; GS.players[pId].chatTimer = 5.0; }
+                    clients.forEach(c => c.send({type: 'chat', name: name, rawMsg: msg, msg: fullMsg}));
+                } else if(connToHost && connToHost.open) {
+                    connToHost.send({type: 'chat', name: name, msg: msg});
+                }
+            }
+            document.getElementById('chat-input').value = '';
+            document.getElementById('chat-input').classList.add('hidden');
+            document.getElementById('chat-input').blur();
+            return;
+        }
+        if(document.activeElement === document.getElementById('chat-input') && e.code === 'Escape') {
+            e.preventDefault();
+            document.getElementById('chat-input').value = '';
+            document.getElementById('chat-input').classList.add('hidden');
+            document.getElementById('chat-input').blur();
+            return;
+        }
+        
+        if(document.activeElement !== document.getElementById('chat-input') && document.activeElement.tagName !== 'INPUT') {
+            keys[e.code] = true; if(e.code==='Escape') togglePause(); 
+        }
+    });
+    window.addEventListener('keyup', e => {
+        keys[e.code] = false;
+        if(e.code === 'Tab') {
+            document.getElementById('scoreboard-overlay').classList.add('hidden');
+        }
+    });
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    window.addEventListener('mousedown', e => { 
+        if(e.button===0) { mouse.down = true; handlePlacement(); }
+        if(e.button===2 && GS.placingObelisk) {
+            GS.placingObelisk = false;
+            document.getElementById('obelisk-placement-ui').classList.add('hidden');
+            if(isHost) { GS.embers += 50; }
+        }
+    });
+    window.addEventListener('mouseup', e => { if(e.button===0) mouse.down = false; });
+    window.addEventListener('contextmenu', e => { if(GS.placingObelisk) e.preventDefault(); });
+    window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; if(isHost) { GS.core.x = canvas.width/2; GS.core.y = canvas.height/2; } });
+
+    // Custom Avatar Handling
+    const loadedImages = {}; // Cache for base64 to Image objects
+
+    document.getElementById('global-avatar-upload').addEventListener('change', e => {
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+                const tmpCanvas = document.createElement('canvas'); tmpCanvas.width = 64; tmpCanvas.height = 64;
+                const tCtx = tmpCanvas.getContext('2d'); tCtx.drawImage(img, 0, 0, 64, 64);
+                myAvatarBase64 = tmpCanvas.toDataURL('image/jpeg', 0.8);
+                localStorage.setItem('shadowDefenseProfileAvatar', myAvatarBase64);
+                document.getElementById('profile-avatar-preview').src = myAvatarBase64;
+                document.getElementById('profile-avatar-preview').classList.remove('hidden');
+                updateLobbyVisuals();
+                if(!isHost && connToHost) connToHost.send({type: 'avatar', players: localPlayers, data: myAvatarBase64});
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function getAvatarImage(base64) {
+        if(!base64) return null;
+        if(loadedImages[base64]) return loadedImages[base64];
+        const img = new Image(); img.src = base64;
+        loadedImages[base64] = img;
+        return img;
+    }
+
+    // Networking (PeerJS) & Lobby Setup
+    function renderLocalPlayers() {
+        const list = document.getElementById('local-players-list');
+        if(!list) return;
+        list.innerHTML = '';
+        
+        let select = document.getElementById('ctrl-select');
+        if (select) {
+            Array.from(select.options).forEach(opt => {
+                opt.disabled = localPlayers.some(p => p.ctrl === opt.value);
+            });
+        }
+
+        localPlayers.forEach((lp, i) => {
+            list.innerHTML += `<div class="flex justify-between items-center text-sm bg-black p-2 border border-neutral-700">
+                <span>${lp.name} (${lp.ctrl})</span>
+                ${i > 0 ? `<button onclick="removeLocalPlayer('${lp.id}')" class="text-red-500 hover:text-red-400 font-bold px-2">X</button>` : ''}
+            </div>`;
+        });
+    }
+
+    function addLocalPlayer() {
+        if(localPlayers.length >= 3) return;
+        let ctrlSelect = document.getElementById('ctrl-select');
+        let ctrl = ctrlSelect.value;
+        let name = globalProfileName + (localPlayers.length > 0 ? " (" + (localPlayers.length + 1) + ")" : "");
+        
+        if (localPlayers.some(p => p.ctrl === ctrl)) return;
+
+        localPlayers.push({id: 'local_' + Date.now(), name, ctrl});
+        renderLocalPlayers();
+    }
+
+    function removeLocalPlayer(id) {
+        localPlayers = localPlayers.filter(p => p.id !== id);
+        renderLocalPlayers();
+    }
+
+    function startSingleplayer() {
+        isHost = true;
+        document.getElementById('game-settings-panel').classList.remove('hidden');
+        syncSettings();
+        document.getElementById('btn-start').classList.remove('hidden');
+        document.getElementById('btn-save').classList.remove('hidden');
+        document.getElementById('import-data').classList.remove('hidden');
+        document.getElementById('btn-load').classList.remove('hidden');
+        
+        GS.players = {};
+        localPlayers.forEach((lp, i) => {
+            GS.players[lp.id] = { x: canvas.width/2 + (i*30) - 50, y: canvas.height/2 + 50, r: 15, name: lp.name, avatar: i===0 ? myAvatarBase64 : null, type: lp.ctrl, inputs: {vx:0, vy:0, act:false} };
+        });
+        updateLobbyVisuals();
+        initGame();
+    }
+
+    function syncSettings() {
+        if(!isHost) return;
+        gameSettings = {
+            hardcore: document.getElementById('setting-hardcore').checked,
+            friendlyFire: document.getElementById('setting-friendlyfire').checked,
+            shopVoting: document.getElementById('setting-shopvoting').checked,
+            maxWaves: parseInt(document.getElementById('setting-maxwaves').value) || 0,
+            enemySpeed: parseFloat(document.getElementById('setting-enemyspeed').value) || 1.0,
+            coreHp: parseInt(document.getElementById('setting-corehp').value) || 100
+        };
+        clients.forEach(c => c.send({type: 'settings', settings: gameSettings}));
+    }
+
+    function hostServer() {
+        hostConfig.name = document.getElementById('lobby-name').value.trim() || "Shadow Terminal";
+        hostConfig.password = document.getElementById('host-password').value;
+        peer = new Peer();
+        document.getElementById('host-info').classList.remove('hidden');
+        document.getElementById('game-settings-panel').classList.remove('hidden');
+        document.getElementById('conn-status').innerText = "Initializing Host...";
+        
+        peer.on('open', id => {
+            document.getElementById('host-id').value = id;
+            document.getElementById('conn-status').innerText = "Hosting Server. Waiting for agents...";
+            document.getElementById('btn-start').classList.remove('hidden');
+            document.getElementById('btn-save').classList.remove('hidden'); // Host only feature
+            document.getElementById('import-data').classList.remove('hidden');
+            document.getElementById('btn-load').classList.remove('hidden');
+            
+            GS.players = {};
+            localPlayers.forEach((lp, i) => {
+                GS.players[lp.id] = { x: canvas.width/2 + (i*30) - 50, y: canvas.height/2 + 50, r: 15, name: lp.name, avatar: i===0 ? myAvatarBase64 : null, type: lp.ctrl, inputs: {vx:0, vy:0, act:false} };
+            });
+            updateLobbyVisuals();
+        });
+
+        peer.on('connection', conn => {
+            const setupConn = () => {
+                let connId = 'conn_' + Date.now() + Math.floor(Math.random()*1000);
+                conn.connId = connId; // Store directly on connection
+                
+                conn.on('data', data => {
+                    if(data.type === 'join_attempt') {
+                        let totalPlayers = Object.keys(GS.players).length + data.players.length;
+                        if(totalPlayers > 5) {
+                            conn.send({type: 'kick', reason: 'Lobby is full (Max 5 players).'});
+                            setTimeout(() => conn.close(), 500);
+                            return;
+                        }
+                        if(hostConfig.password) {
+                            conn.send({type: 'auth_challenge'});
+                        } else {
+                            conn.send({type: 'auth_success'});
+                        }
+                    }
+                    if(data.type === 'join') {
+                        if(hostConfig.password && data.password !== hostConfig.password) {
+                            conn.send({type: 'kick', reason: 'Invalid Password'});
+                            setTimeout(() => conn.close(), 500);
+                        } else {
+                            let acceptedPlayers = [];
+                            data.players.forEach(p => {
+                                let pid = connId + '_' + p.id;
+                                acceptedPlayers.push(pid);
+                                GS.players[pid] = { x: canvas.width/2 + (Math.random()*100-50), y: canvas.height/2 + (Math.random()*100-50), r: 15, connId: connId, name: p.name, avatar: data.avatar, type: 'remote', inputs: {vx:0, vy:0, act:false}, isReady: false, waveKills: 0 };
+                            });
+                            clients.push(conn);
+                            conn.send({type: 'settings', settings: gameSettings, lobbyName: hostConfig.name});
+                            conn.send({ type: 'init', connId: connId, state: GS });
+                            updateLobbyVisuals();
+                            updatePauseAdminUI();
+                        }
+                    }
+                    if(data.type === 'input') {
+                        for(let lid in data.inputs) {
+                            let pid = connId + '_' + lid;
+                            if(GS.players[pid]) GS.players[pid].inputs = data.inputs[lid];
+                        }
+                    }
+                    if(data.type === 'avatar') {
+                        if(data.players) {
+                            data.players.forEach(p => {
+                                let pid = connId + '_' + p.id;
+                                if(GS.players[pid]) GS.players[pid].avatar = data.avatar;
+                                if(GS.spectators[pid]) GS.spectators[pid].avatar = data.avatar;
+                            });
+                            updateLobbyVisuals();
+                        }
+                    }
+                    if(data.type === 'vote') {
+                        if(['obelisk', 'tuning', 'next'].includes(data.item)) {
+                            for(let k in GS.shopVotes) {
+                                GS.shopVotes[k] = GS.shopVotes[k].filter(v => v !== connId);
+                            }
+                            GS.shopVotes[data.item].push(connId);
+                            clients.forEach(c => c.send({type: 'vote_update', votes: GS.shopVotes}));
+                        }
+                    }
+                    if(data.type === 'ping') {
+                        conn.send({type: 'pong', time: data.time});
+                    }
+                    if(data.type === 'chat') {
+                        let fullMsg = `[${data.name}]: ${data.msg}`;
+                        logMsg(fullMsg, '#38bdf8');
+                        let pId = Object.keys(GS.players).find(id => GS.players[id].name === data.name);
+                        if(pId) { GS.players[pId].chatMsg = data.msg; GS.players[pId].chatTimer = 5.0; }
+                        clients.forEach(c => c.send({type: 'chat', name: data.name, rawMsg: data.msg, msg: fullMsg}));
+                    }
+                    if(data.type === 'lobby_chat') {
+                        let fullMsg = `[${data.name}]: ${data.msg}`;
+                        logLobbyMsg(fullMsg, '#38bdf8');
+                        clients.forEach(c => c.send({type: 'lobby_chat', msg: fullMsg})); // Broadcast to all
+                    }
+                    if(data.type === 'ready') {
+                        for(let id in GS.players) {
+                            if(GS.players[id].connId === connId) GS.players[id].isReady = data.state;
+                        }
+                        updateLobbyVisuals();
+                    }
+                    if(data.type === 'return_lobby') {
+                        returnToLobby();
+                    }
+                });
+                
+                conn.on('close', () => { handleClientDisconnect(connId); });
+                conn.on('error', () => { handleClientDisconnect(connId); });
+            };
+            if(conn.open) setupConn();
+            else conn.on('open', setupConn);
+        });
+    }
+
+    function handleClientDisconnect(connId) {
+        clients = clients.filter(c => c.connId !== connId);
+        for(let id in GS.players) { if(GS.players[id].connId === connId) delete GS.players[id]; }
+        for(let id in GS.spectators) { if(GS.spectators[id].connId === connId) delete GS.spectators[id]; }
+        updateLobbyVisuals();
+        updatePauseAdminUI();
+    }
+
+    function kickPlayer(connId) {
+        let conn = clients.find(c => c.connId === connId);
+        if(conn) {
+            conn.send({type: 'kick', reason: 'You have been kicked by the host.'});
+            setTimeout(() => conn.close(), 500);
+            handleClientDisconnect(connId);
+        }
+    }
+
+    function approveSpectator(pid) {
+        if(GS.spectators[pid]) {
+            GS.players[pid] = GS.spectators[pid];
+            delete GS.spectators[pid];
+            updatePauseAdminUI();
+        }
+    }
+
+    function updatePauseAdminUI() {
+        if(!isHost || gameState === 'lobby') return;
+        const pList = document.getElementById('pause-players-list'); pList.innerHTML = '';
+        const sList = document.getElementById('pause-spectators-list'); sList.innerHTML = '';
+        
+        let groupedPlayers = {}; let groupedSpectators = {};
+        for(let id in GS.players) { if(GS.players[id].type === 'remote') { groupedPlayers[GS.players[id].connId] = groupedPlayers[GS.players[id].connId] || []; groupedPlayers[GS.players[id].connId].push(GS.players[id].name); } }
+        for(let id in GS.spectators) { groupedSpectators[GS.spectators[id].connId] = groupedSpectators[GS.spectators[id].connId] || []; groupedSpectators[GS.spectators[id].connId].push(GS.spectators[id].name); }
+        
+        for(let cId in groupedPlayers) {
+            pList.innerHTML += `<div class="flex justify-between items-center text-xs bg-black p-1 border border-neutral-700"><span>${groupedPlayers[cId].join(', ')}</span> <button onclick="kickPlayer('${cId}')" class="text-red-500 hover:text-red-400 px-2 font-bold">KICK</button></div>`;
+        }
+        for(let id in GS.spectators) {
+            sList.innerHTML += `<div class="flex justify-between items-center text-xs bg-black p-1 border border-neutral-700"><span>${GS.spectators[id].name}</span> <button onclick="approveSpectator('${id}')" class="text-green-500 hover:text-green-400 px-2 font-bold">APPROVE</button></div>`;
+        }
+    }
+
+    function joinServer() {
+        isHost = false;
+        let target = document.getElementById('join-id').value;
+        if(!target) return;
+        peer = new Peer();
+        document.getElementById('conn-status').innerText = "Connecting...";
+        
+        peer.on('open', () => {
+            connToHost = peer.connect(target);
+            const onConnHostOpen = () => {
+                document.getElementById('conn-status').innerText = "Authenticating...";
+                connToHost.send({type: 'join_attempt', players: localPlayers});
+            };
+            if(connToHost.open) onConnHostOpen();
+            else connToHost.on('open', onConnHostOpen);
+            
+            connToHost.on('close', () => { showToast("Connection to Host closed."); returnToLobby(); });
+            connToHost.on('error', () => { showToast("Connection error."); returnToLobby(); });
+
+            connToHost.on('data', data => {
+                if(data.type === 'auth_challenge') {
+                    document.getElementById('auth-modal').classList.remove('hidden');
+                }
+                if(data.type === 'auth_success') {
+                    document.getElementById('conn-status').innerText = "Joining...";
+                    connToHost.send({type: 'join', password: null, players: localPlayers, avatar: myAvatarBase64});
+                }
+                if(data.type === 'kick') {
+                    showToast(`${data.reason}`);
+                    returnToLobby();
+                }
+                if(data.type === 'settings') {
+                    if(data.lobbyName) document.getElementById('conn-status').innerText = `Connected to: ${data.lobbyName}`;
+                    gameSettings = data.settings;
+                    document.getElementById('game-settings-panel').classList.remove('hidden');
+                    
+                    document.getElementById('btn-start').classList.add('hidden');
+                    document.getElementById('btn-ready').classList.remove('hidden');
+
+                    document.getElementById('setting-hardcore').checked = gameSettings.hardcore;
+                    document.getElementById('setting-hardcore').disabled = true;
+                    document.getElementById('setting-friendlyfire').checked = gameSettings.friendlyFire;
+                    document.getElementById('setting-friendlyfire').disabled = true;
+                    document.getElementById('setting-shopvoting').checked = gameSettings.shopVoting;
+                    document.getElementById('setting-shopvoting').disabled = true;
+                    document.getElementById('setting-maxwaves').value = gameSettings.maxWaves;
+                    document.getElementById('setting-maxwaves').disabled = true;
+                    document.getElementById('setting-enemyspeed').value = gameSettings.enemySpeed;
+                    document.getElementById('setting-enemyspeed').disabled = true;
+                    document.getElementById('setting-corehp').value = gameSettings.coreHp;
+                    document.getElementById('setting-corehp').disabled = true;
+                }
+                if(data.type === 'init') myConnId = data.connId;
+                if(data.type === 'state') processServerState(data.state);
+                if(data.type === 'start') launchEngine();
+                if(data.type === 'resume_wave') { document.getElementById('shop-screen').classList.add('hidden'); gameState = 'playing'; }
+                if(data.type === 'shop') openShop();
+                if(data.type === 'vote_update') updateShopVotes(data.votes);
+                if(data.type === 'event_coreHit') { screenShake = 10; audio.coreHit(); }
+                if(data.type === 'event_log') logMsg(data.msg);
+                if(data.type === 'lobby_update') { Object.assign(GS.players, data.players); updateLobbyVisuals(); }
+                if(data.type === 'pong') { document.getElementById('ping-val').innerText = (Date.now() - data.time) + 'ms'; }
+                if(data.type === 'chat') { 
+                    logMsg(data.msg, '#38bdf8');
+                    // Show bubble on local predicted player if found
+                    let pId = Object.keys(GS.players).find(id => GS.players[id].name === data.name);
+                    if(pId) { GS.players[pId].chatMsg = data.rawMsg || data.msg; GS.players[pId].chatTimer = 5.0; }
+                    // Also check clientPrediction
+                    if(!pId) {
+                        for(let id in clientPrediction.players) {
+                            if(clientPrediction.players[id].name === data.name) {
+                                clientPrediction.players[id].chatMsg = data.rawMsg || data.msg;
+                                clientPrediction.players[id].chatTimer = 5.0;
+                            }
+                        }
+                    }
+                }
+                if(data.type === 'lobby_chat') { logLobbyMsg(data.msg, '#38bdf8'); }
+                if(data.type === 'pause') {
+                    gameState = 'paused';
+                    document.getElementById('pause-menu').classList.remove('hidden');
+                    document.getElementById('pause-title').innerText = "HOST PAUSED THE GAME";
+                    document.getElementById('btn-resume').classList.add('hidden');
+                    document.getElementById('btn-return-lobby').classList.add('hidden');
+                }
+                if(data.type === 'resume') {
+                    gameState = 'playing';
+                    document.getElementById('pause-menu').classList.add('hidden');
+                }
+                if(data.type === 'return_lobby') {
+                    returnToLobby();
+                }
+            });
+        });
+        
+        setInterval(() => {
+            if(!isHost && connToHost && connToHost.open) {
+                connToHost.send({type: 'ping', time: Date.now()});
+            }
+        }, 1000);
+    }
+
+    function submitAuth() {
+        document.getElementById('auth-modal').classList.add('hidden');
+        let pwd = document.getElementById('auth-password').value;
+        connToHost.send({type: 'join', password: pwd, players: localPlayers, avatar: myAvatarBase64});
+    }
+
+    function cancelAuth() {
+        document.getElementById('auth-modal').classList.add('hidden');
+        if(connToHost) connToHost.close();
+        returnToLobby();
+    }
+
+    function updateLobbyVisuals() {
+        if(isHost) clients.forEach(c => c.send({type: 'lobby_update', players: GS.players}));
+        const grid = document.getElementById('player-grid'); grid.innerHTML = '';
+        for(let id in GS.players) {
+            let p = GS.players[id];
+            let readyBadge = p.type === 'remote' ? (p.isReady ? `<span class="absolute top-1 right-1 bg-green-500 text-black text-[10px] font-bold px-1 rounded shadow-[0_0_5px_rgba(34,197,94,0.8)]">READY</span>` : `<span class="absolute top-1 right-1 bg-neutral-600 text-black text-[10px] font-bold px-1 rounded">WAITING</span>`) : '';
+            let kickBtn = (isHost && p.type === 'remote') ? `<button class="absolute top-1 left-1 text-red-500 hover:text-red-400 font-bold bg-black rounded-full w-5 h-5 flex items-center justify-center border border-red-500" onclick="kickPlayer('${p.connId}')">X</button>` : '';
+            let html = `<div class="player-card bg-neutral-800 p-4 border border-neutral-600 rounded flex flex-col items-center w-32 relative">
+                ${readyBadge} ${kickBtn}
+                ${p.avatar ? `<img src="${p.avatar}" class="w-16 h-16 mb-2 border border-neutral-500 avatar-img">` : `<div class="w-16 h-16 bg-neutral-700 mb-2 border border-neutral-500 flex items-center justify-center text-xs text-neutral-400">NO IMG</div>`}
+                <span class="text-xs font-bold text-amber-500 truncate w-full text-center">${p.name || id}</span>
+            </div>`;
+            grid.innerHTML += html;
+        }
+        if(isHost) checkAllReady();
+    }
+
+    // Engine & Logic
+    function initGame() {
+        audio.init();
+        updateVolume(currentVolume);
+        if(isHost) {
+            clients.forEach(c => c.send({type: 'start'}));
+            startWave();
+        }
+        launchEngine();
+    }
+
+    function launchEngine() {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        document.getElementById('lobby-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        gameState = 'playing';
+        if(!engineLoopRunning) {
+            engineLoopRunning = true;
+            requestAnimationFrame(loop);
+        }
+    }
+
+    function startWave() {
+        if(!isHost) return;
+        let pCount = Object.keys(GS.players).length;
+        GS.enemiesToSpawn = Math.floor((5 + (GS.wave * 5)) * pCount);
+        
+        // Failsafe: Boss wave
+        if(GS.wave % 5 === 0) { GS.enemiesToSpawn = 1; logMsg("WARNING: BOSS ENTITY DETECTED."); }
+        else { logMsg(`Wave ${GS.wave} initialized.`); }
+        
+        for(let id in GS.players) GS.players[id].waveKills = 0; // reset kills
+        GS.activeWave = true; GS.spawnTimer = 0;
+        clients.forEach(c => c.send({type: 'event_log', msg: `Wave ${GS.wave} incoming...`}));
+        
+        let textEl = document.getElementById('wave-announcement-text');
+        textEl.innerText = GS.wave % 5 === 0 ? "BOSS WAVE" : `WAVE ${GS.wave}`;
+        let ann = document.getElementById('wave-announcement');
+        ann.classList.remove('hidden');
+        
+        void textEl.offsetWidth; // trigger reflow
+        textEl.classList.remove('scale-150', 'opacity-0');
+        textEl.classList.add('scale-100', 'opacity-100');
+        
+        setTimeout(() => {
+            textEl.classList.remove('scale-100', 'opacity-100');
+            textEl.classList.add('scale-150', 'opacity-0');
+            setTimeout(() => { ann.classList.add('hidden'); }, 1000);
+        }, 2000);
+    }
+
+    let screenShake = 0;
+    function logMsg(msg, color='#fff') {
+        const div = document.createElement('div'); div.textContent = `> ${msg}`; div.style.color = color;
+        const log = document.getElementById('status-log');
+        log.appendChild(div); if(log.children.length > 15) log.removeChild(log.firstChild);
+        log.parentElement.scrollTop = log.parentElement.scrollHeight;
+    }
+
+    // Client Interpolation
+    function processServerState(serverState) {
+        GS.core = serverState.core;
+        GS.wave = serverState.wave; GS.embers = serverState.embers;
+        GS.obelisks = serverState.obelisks; GS.enemies = serverState.enemies; GS.particles = serverState.particles;
+        GS.spectators = serverState.spectators; GS.players = serverState.players;
+        GS.shopVotes = serverState.shopVotes || { obelisk: [], tuning: [], next: [] };
+        
+        for(let id in clientPrediction.players) {
+            if(!serverState.players[id] && !serverState.spectators[id]) delete clientPrediction.players[id];
+        }
+
+        let allHostPlayers = { ...serverState.players, ...serverState.spectators };
+        for(let id in allHostPlayers) {
+            let hp = allHostPlayers[id]; // safe reference
+            if(!clientPrediction.players[id]) clientPrediction.players[id] = { ...hp };
+            clientPrediction.players[id].targetX = hp.x;
+            clientPrediction.players[id].targetY = hp.y;
+            clientPrediction.players[id].act = hp.inputs ? hp.inputs.act : false;
+            clientPrediction.players[id].avatar = hp.avatar;
+            clientPrediction.players[id].name = hp.name;
+            clientPrediction.players[id].takingDmg = hp.takingDmg;
+            // Sync chat bubbles from host
+            if(hp.chatMsg !== undefined) clientPrediction.players[id].chatMsg = hp.chatMsg;
+            if(hp.chatTimer !== undefined) clientPrediction.players[id].chatTimer = hp.chatTimer;
+        }
+        updateHUD();
+    }
+
+    function getMovement(ctrl, pX, pY) {
+        let vx = 0, vy = 0, act = false;
+        if(ctrl === 'mouse') {
+            vx = (mouse.x - pX)*10; vy = (mouse.y - pY)*10; act = mouse.down;
+        } else if(ctrl === 'wasd') {
+            let dx=0, dy=0;
+            if(keys['KeyW'])dy-=1; if(keys['KeyS'])dy+=1; if(keys['KeyA'])dx-=1; if(keys['KeyD'])dx+=1; act = keys['Space'];
+            let len = Math.hypot(dx,dy); if(len>0){ vx = (dx/len)*300; vy = (dy/len)*300; }
+        } else if(ctrl === 'arrows') {
+            let dx=0, dy=0;
+            if(keys['ArrowUp'])dy-=1; if(keys['ArrowDown'])dy+=1; if(keys['ArrowLeft'])dx-=1; if(keys['ArrowRight'])dx+=1; act = keys['Enter'];
+            let len = Math.hypot(dx,dy); if(len>0){ vx = (dx/len)*300; vy = (dy/len)*300; }
+        }
+        return {vx, vy, act};
+    }
+
+    // Failsafe Physics Sub-stepping
+    function physicsUpdate(dt) {
+        if(gameState !== 'playing') return;
+
+        if(isHost) {
+            // Process Inputs
+            for(let id in GS.players) {
+                let p = GS.players[id];
+                
+                let isLocal = localPlayers.find(lp => lp.id === id);
+                if (isLocal) {
+                    p.inputs = getMovement(isLocal.ctrl, p.x, p.y);
+                }
+
+                p.x += (p.inputs.vx || 0) * dt; 
+                p.y += (p.inputs.vy || 0) * dt;
+                
+                if(p.chatTimer > 0) p.chatTimer -= dt;
+
+                // Core Collision Failsafe
+                let dx = p.x - GS.core.x, dy = p.y - GS.core.y, d = Math.hypot(dx,dy), md = GS.core.r + p.r + 5;
+                if(d < md && d > 0) { p.x = GS.core.x + (dx/d)*md; p.y = GS.core.y + (dy/d)*md; }
+            }
+
+            let occluders = [...Object.values(GS.players), ...GS.obelisks];
+            if(gameSettings.friendlyFire) {
+                for(let pid in GS.players) {
+                    let p = GS.players[pid];
+                    let pd = Math.hypot(p.x - GS.core.x, p.y - GS.core.y);
+                    for(let occ of occluders) {
+                        if(occ === p) continue;
+                        let odx = occ.x - GS.core.x, ody = occ.y - GS.core.y, odist = Math.hypot(odx, ody);
+                        if(odist < 10 || pd < odist) continue;
+                        let occAngle = Math.atan2(ody, odx), pAngle = Math.atan2(p.y - GS.core.y, p.x - GS.core.x);
+                        let diff = Math.abs((pAngle - occAngle + Math.PI*3) % (Math.PI*2) - Math.PI);
+                        let w = Math.asin(Math.min(0.99, (occ.r||15)/odist));
+                        if(occ.inputs && occ.inputs.act) w *= 0.3;
+                        if(diff <= w) {
+                            p.takingDmg = true;
+                            GS.core.hp -= 5 * dt;
+                            if(Math.random() < 0.05) GS.particles.push({x: p.x, y: p.y, text: `OUCH`, life: 0.5, type: 'text'});
+                            break;
+                        } else { p.takingDmg = false; }
+                    }
+                }
+            }
+
+            // Spawning
+            if(GS.activeWave && GS.enemiesToSpawn > 0) {
+                GS.spawnTimer += dt;
+                if(GS.spawnTimer > (GS.wave%5===0 ? 5 : 1.0)) {
+                    let a = Math.random() * Math.PI*2, dist = Math.max(canvas.width, canvas.height) / 2 + 50;
+                    let isBoss = GS.wave % 5 === 0;
+                    let pCount = Object.keys(GS.players).length;
+                    
+                    let baseHp = isBoss ? 200 * GS.wave : 20 + (GS.wave*5);
+                    let hpMult = 1 + (pCount - 1) * 0.5; // +50% HP per extra player
+                    if(gameSettings.hardcore) hpMult *= 1.5;
+                    let finalHp = baseHp * hpMult;
+                    
+                    let speed = isBoss ? 40 : 60 + GS.wave*2;
+                    speed *= (gameSettings.enemySpeed || 1.0);
+                    if(gameSettings.hardcore) speed *= 1.25;
+
+                    GS.enemies.push({
+                        x: GS.core.x + Math.cos(a)*dist, y: GS.core.y + Math.sin(a)*dist,
+                        hp: finalHp, maxHp: finalHp, r: isBoss ? 30 : 10,
+                        speed: speed, takingDmg: false, isBoss: isBoss, phase: 0
+                    });
+                    GS.enemiesToSpawn--; GS.spawnTimer = 0;
+                }
+            }
+
+            // AI & Damage
+            for(let i = GS.enemies.length - 1; i >= 0; i--) {
+                let e = GS.enemies[i]; e.takingDmg = false; e.phase += dt;
+                
+                let dx = GS.core.x - e.x, dy = GS.core.y - e.y, d = Math.hypot(dx, dy);
+                if(d < GS.core.r + e.r) {
+                    GS.core.hp -= e.isBoss ? 50 : 10;
+                    if(localScreenShake) { screenShake = 15; }
+                    audio.coreHit(); clients.forEach(c => c.send({type: 'event_coreHit'}));
+                    GS.enemies.splice(i, 1);
+                    if(GS.core.hp <= 0) {
+                        gameState = 'paused';
+                        document.getElementById('go-wave-val').innerText = GS.wave;
+                        document.getElementById('go-ember-val').innerText = GS.embers;
+                        document.getElementById('game-over-screen').classList.remove('hidden');
+                        if (isHost) {
+                            document.getElementById('btn-play-again').classList.remove('hidden');
+                        }
+                    }
+                    continue;
+                }
+
+                // Boss orbit behavior
+                if(e.isBoss && d > 200) { e.x += (dx/d)*e.speed*dt + Math.cos(e.phase)*50*dt; e.y += (dy/d)*e.speed*dt + Math.sin(e.phase)*50*dt; }
+                else { e.x += (dx/d)*e.speed*dt; e.y += (dy/d)*e.speed*dt; }
+
+                // Shadows
+                for(let occ of occluders) {
+                    let odx = occ.x - GS.core.x, ody = occ.y - GS.core.y, odist = Math.hypot(odx, ody);
+                    if(odist < 10 || d < odist) continue;
+                    let occAngle = Math.atan2(ody, odx), eAngle = Math.atan2(e.y - GS.core.y, e.x - GS.core.x);
+                    let diff = Math.abs((eAngle - occAngle + Math.PI*3) % (Math.PI*2) - Math.PI);
+                    let w = Math.asin(Math.min(0.99, (occ.r||15)/odist));
+                    if(occ.inputs && occ.inputs.act) w *= 0.3; // Focus
+
+                    if(diff <= w) {
+                        e.hp -= (occ.inputs && occ.inputs.act ? 150 : 30) * dt;
+                        e.takingDmg = true;
+                        if(occ.waveKills !== undefined) e.lastDamagedBy = Object.keys(GS.players).find(key => GS.players[key] === occ); 
+                        break;
+                    }
+                }
+
+                if(e.hp <= 0) {
+                    audio.hit(); 
+                    if(e.lastDamagedBy && GS.players[e.lastDamagedBy]) {
+                        GS.players[e.lastDamagedBy].waveKills = (GS.players[e.lastDamagedBy].waveKills || 0) + 1;
+                    }
+                    let gain = e.isBoss ? 50 : 5;
+                    GS.embers += gain;
+                    GS.particles.push({x: e.x, y: e.y, text: `+${gain}`, life: 1, type: 'text'});
+                    for(let p=0; p<10; p++) GS.particles.push({x: e.x, y: e.y, vx: (Math.random()-0.5)*100, vy: (Math.random()-0.5)*100, life: 1});
+                    GS.enemies.splice(i, 1);
+                }
+            }
+
+            // Wave end logic
+            if(GS.activeWave && GS.enemiesToSpawn <= 0 && GS.enemies.length === 0) {
+                GS.activeWave = false; 
+                
+                let maxKills = -1;
+                let mvps = [];
+                for(let id in GS.players) {
+                    let k = GS.players[id].waveKills || 0;
+                    if(k > maxKills) { maxKills = k; mvps = [GS.players[id].name]; }
+                    else if(k === maxKills) { mvps.push(GS.players[id].name); }
+                }
+                if(maxKills > 0) GS.lastMvpText = mvps.join(', ') + ` (${maxKills} Kills)`;
+                else GS.lastMvpText = "None";
+                
+                if(gameSettings.maxWaves > 0 && GS.wave >= gameSettings.maxWaves) {
+                    clients.forEach(c => c.send({type: 'event_log', msg: `VICTORY! All ${gameSettings.maxWaves} waves cleared.`}));
+                    logMsg(`VICTORY! All ${gameSettings.maxWaves} waves cleared.`);
+                    setTimeout(() => returnToLobby(), 5000);
+                } else {
+                    GS.wave++;
+                    setTimeout(() => { gameState = 'shop'; clients.forEach(c => c.send({type: 'shop'})); openShop(); }, 1500);
+                }
+            }
+
+            // Particles
+            for(let i=GS.particles.length-1; i>=0; i--) {
+                let p = GS.particles[i]; 
+                if(p.type !== 'text') { p.x += p.vx*dt; p.y += p.vy*dt; }
+                p.life -= dt;
+                if(p.life <= 0) GS.particles.splice(i,1);
+            }
+
+            updateHUD();
+            clients.forEach(c => c.send({type: 'state', state: GS}));
+        } else {
+            // Client Input Sync
+            if (myConnId) {
+                let inputsMap = {};
+                localPlayers.forEach(lp => {
+                    let pid = myConnId + '_' + lp.id;
+                    // Only send input if we are officially in the game (not a spectator)
+                    if (GS.players && GS.players[pid] && clientPrediction.players[pid]) {
+                        inputsMap[lp.id] = getMovement(lp.ctrl, clientPrediction.players[pid].targetX, clientPrediction.players[pid].targetY);
+                    }
+                });
+                if(Object.keys(inputsMap).length > 0 && connToHost && connToHost.open) {
+                    connToHost.send({type: 'input', inputs: inputsMap});
+                }
+            }
+
+            // Local interpolation & timers
+            for(let id in clientPrediction.players) {
+                let p = clientPrediction.players[id];
+                if(p.chatTimer > 0) p.chatTimer -= dt;
+                p.x += (p.targetX - p.x) * 10 * dt;
+                p.y += (p.targetY - p.y) * 10 * dt;
+            }
+        }
+    }
+
+    function updateHUD() {
+        let pct = Math.max(0, (GS.core.hp / GS.core.maxHp) * 100);
+        document.getElementById('hp-val').innerText = Math.ceil(pct) + '%';
+        document.getElementById('hp-bar').style.width = pct + '%';
+        document.getElementById('ember-val').innerText = GS.embers;
+        document.getElementById('wave-val').innerText = GS.wave;
+        document.getElementById('shop-ember-val').innerText = GS.embers;
+    }
+
+    // Rendering
+    function drawWedge(occX, occY, r, isFocused) {
+        let dx = occX - GS.core.x, dy = occY - GS.core.y, d = Math.hypot(dx,dy); if(d<10) return;
+        let angle = Math.atan2(dy, dx), w = Math.asin(Math.min(0.99, r/d));
+        if(isFocused) w *= 0.3;
+        let l = 3000, a1 = angle - w, a2 = angle + w;
+        
+        ctx.fillStyle = isFocused ? 'rgba(20,5,30,0.95)' : 'rgba(0,0,0,0.85)';
+        ctx.beginPath();
+        ctx.moveTo(occX + Math.cos(angle-Math.PI/2)*r, occY + Math.sin(angle-Math.PI/2)*r);
+        ctx.lineTo(GS.core.x + Math.cos(a1)*l, GS.core.y + Math.sin(a1)*l);
+        ctx.lineTo(GS.core.x + Math.cos(a2)*l, GS.core.y + Math.sin(a2)*l);
+        ctx.lineTo(occX + Math.cos(angle+Math.PI/2)*r, occY + Math.sin(angle+Math.PI/2)*r);
+        ctx.fill();
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        if(gameState === 'lobby') return;
+        ctx.save();
+        if(screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake *= 0.9; }
+
+        let activePlayers = isHost ? { ...GS.players, ...GS.spectators } : clientPrediction.players;
+
+        // Core Ambient
+        let bgGlow = ctx.createRadialGradient(GS.core.x, GS.core.y, GS.core.r, GS.core.x, GS.core.y, 800);
+        bgGlow.addColorStop(0, `rgba(255, ${Math.floor((GS.core.hp/GS.core.maxHp)*215)}, 0, 0.15)`); bgGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = bgGlow; ctx.globalCompositeOperation = 'screen'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.globalCompositeOperation = 'source-over';
+
+        // Shadows
+        GS.obelisks.forEach(o => drawWedge(o.x, o.y, o.r, false));
+        for(let id in activePlayers) {
+            let p = activePlayers[id]; drawWedge(p.x, p.y, p.r || 15, isHost ? p.inputs.act : p.act);
+        }
+
+        // Entities
+        ctx.globalCompositeOperation = 'lighter';
+        GS.enemies.forEach(e => {
+            ctx.fillStyle = e.takingDmg ? '#ffaaaa' : (e.isBoss ? '#ff5555' : '#fff');
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
+            
+            // Healthbar
+            let hpPct = Math.max(0, e.hp / (e.maxHp || 1));
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(e.x - 10, e.y + e.r + 4, 20, 3);
+            ctx.fillStyle = '#ff3333';
+            ctx.fillRect(e.x - 10, e.y + e.r + 4, 20 * hpPct, 3);
+        });
+        ctx.globalCompositeOperation = 'source-over';
+
+        GS.obelisks.forEach(o => { ctx.fillStyle = '#555'; ctx.fillRect(o.x-o.r, o.y-o.r, o.r*2, o.r*2); });
+
+        // Players & Avatars
+        for(let id in activePlayers) {
+            let p = activePlayers[id];
+            let act = isHost ? p.inputs.act : p.act;
+            
+            ctx.save(); ctx.translate(p.x, p.y);
+            if(p.takingDmg) { ctx.translate((Math.random()-0.5)*4, (Math.random()-0.5)*4); }
+            let img = getAvatarImage(p.avatar);
+            if(img) {
+                ctx.shadowBlur = act ? 15 : 0; ctx.shadowColor = '#a855f7';
+                ctx.drawImage(img, -p.r, -p.r, p.r*2, p.r*2);
+                if(act) { ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.strokeRect(-p.r, -p.r, p.r*2, p.r*2); }
+            } else {
+                ctx.shadowBlur = act ? 20 : 10; ctx.shadowColor = act ? '#a855f7' : '#fff'; 
+                if(p.takingDmg && Math.random() < 0.2) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(-p.r - 2, -p.r - 2, p.r*2 + 4, p.r*2 + 4);
+                }
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, p.r||15, 0, Math.PI*2); ctx.fill();
+            }
+            
+            // Chat bubble (drawn for all players, outside avatar if/else)
+            if(p.chatTimer > 0 && p.chatMsg) {
+                ctx.save();
+                ctx.shadowBlur = 0;
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                let w = ctx.measureText(p.chatMsg).width + 12;
+                let bx = 0, by = -(p.r||15) - 28;
+                let alpha = Math.min(1, p.chatTimer);
+                
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = 'rgba(0,0,0,0.85)';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.5;
+                
+                let bw = w, bh = 20, br = 4;
+                ctx.beginPath();
+                ctx.roundRect(bx - bw/2, by - bh/2, bw, bh, br);
+                ctx.fill(); ctx.stroke();
+                
+                // Tail
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.moveTo(bx - 5, by + bh/2);
+                ctx.lineTo(bx + 5, by + bh/2);
+                ctx.lineTo(bx, by + bh/2 + 7);
+                ctx.closePath(); ctx.fill();
+                
+                ctx.fillStyle = '#fff';
+                ctx.fillText(p.chatMsg, bx, by + 4);
+                ctx.restore();
+            }
+            
+            ctx.restore();
+        }
+
+        // Core
+        ctx.globalCompositeOperation = 'lighter'; ctx.shadowBlur = 40; ctx.shadowColor = `rgb(255, ${Math.floor((GS.core.hp/GS.core.maxHp)*215)}, 0)`;
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(GS.core.x, GS.core.y, GS.core.r, 0, Math.PI*2); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+
+        GS.particles.forEach(p => { 
+            if(p.type === 'text') {
+                ctx.fillStyle = `rgba(255, 150, 0, ${p.life})`;
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.text, p.x, p.y - (1 - p.life)*20);
+            } else {
+                ctx.fillStyle = `rgba(255,255,255,${p.life})`; 
+                ctx.fillRect(p.x, p.y, 3, 3); 
+            }
+        });
+        
+        // Player Names
+        for(let id in activePlayers) {
+            let p = activePlayers[id];
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.name || id, p.x, p.y + (p.r||15) + 15);
+        }
+        
+        // Placement ghost
+        if(GS.placingObelisk) {
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillRect(mouse.x-15, mouse.y-15, 30, 30);
+        }
+
+        ctx.restore();
+    }
+
+    function loop(timestamp) {
+        let frameTime = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+        
+        if(frameTime > 0.1) frameTime = 0.1; // Failsafe clamp for lag spikes
+        accumulator += frameTime;
+
+        while(accumulator >= TIME_STEP) {
+            physicsUpdate(TIME_STEP);
+            accumulator -= TIME_STEP;
+        }
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // UI & Systems
+    function playAgain() {
+        if(!isHost) return;
+        document.getElementById('game-over-screen').classList.add('hidden');
+        
+        let startHp = gameSettings.coreHp || 100;
+        GS.core = { x: window.innerWidth/2, y: window.innerHeight/2, hp: startHp, maxHp: startHp, r: 25 };
+        GS.wave = 1; GS.embers = 0; GS.enemies = []; GS.obelisks = []; GS.particles = [];
+        GS.spawnTimer = 0; GS.enemiesToSpawn = 0; GS.activeWave = false; GS.placingObelisk = false;
+        GS.shopVotes = { obelisk: [], tuning: [], next: [] };
+        
+        let i = 0;
+        for(let id in GS.players) {
+            GS.players[id].x = window.innerWidth/2 + (i*30) - 50;
+            GS.players[id].y = window.innerWidth/2 + 50;
+            GS.players[id].takingDmg = false;
+            i++;
+        }
+        
+        clients.forEach(c => c.send({type: 'start'}));
+        gameState = 'playing';
+        startWave();
+    }
+
+    function returnToLobby() {
+        if(isHost) { clients.forEach(c => c.send({type: 'return_lobby'})); }
+        gameState = 'lobby';
+        document.getElementById('pause-menu').classList.add('hidden');
+        document.getElementById('shop-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('btn-ready').classList.add('hidden');
+        document.getElementById('btn-start').classList.add('hidden');
+        document.getElementById('host-info').classList.add('hidden');
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('lobby-screen').classList.remove('hidden');
+        
+        let startHp = gameSettings.coreHp || 100;
+        GS = {
+            core: { x: window.innerWidth/2, y: window.innerHeight/2, hp: startHp, maxHp: startHp, r: 25 },
+            wave: 1, embers: 0, 
+            players: {}, spectators: {}, enemies: [], obelisks: [], particles: [],
+            spawnTimer: 0, enemiesToSpawn: 0, activeWave: false, placingObelisk: false,
+            shopVotes: { obelisk: [], tuning: [], next: [] }
+        };
+        if(peer) peer.destroy();
+        peer = null; connToHost = null; clients = []; myConnId = null; isHost = true;
+        document.getElementById('conn-status').innerText = "Awaiting action...";
+        document.getElementById('btn-start').classList.add('hidden');
+        document.getElementById('host-info').classList.add('hidden');
+        document.getElementById('lobby-screen').appendChild(document.getElementById('game-settings-panel'));
+        document.getElementById('game-settings-panel').classList.add('hidden');
+        updateLobbyVisuals();
+    }
+
+    function togglePause() {
+        if(gameState === 'lobby') return;
+        if(gameState === 'playing') { 
+            gameState = 'paused'; 
+            document.getElementById('pause-menu').classList.remove('hidden'); 
+            document.getElementById('pause-title').innerText = "SYSTEM PAUSED";
+            document.getElementById('btn-resume').classList.remove('hidden');
+            document.getElementById('btn-return-lobby').classList.remove('hidden');
+            if(isHost) {
+                document.getElementById('pause-admin-panel').classList.remove('hidden');
+                document.getElementById('pause-settings-container').appendChild(document.getElementById('game-settings-panel'));
+                document.getElementById('game-settings-panel').classList.remove('hidden');
+                updatePauseAdminUI();
+                clients.forEach(c => c.send({type: 'pause'}));
+            }
+        }
+        else if(gameState === 'paused') { 
+            gameState = 'playing'; 
+            document.getElementById('pause-menu').classList.add('hidden'); 
+            if(isHost) {
+                document.getElementById('lobby-screen').appendChild(document.getElementById('game-settings-panel')); // return to lobby DOM
+                document.getElementById('game-settings-panel').classList.add('hidden');
+                clients.forEach(c => c.send({type: 'resume'}));
+            }
+        }
+    }
+
+    function openShop() {
+        document.getElementById('shop-screen').classList.remove('hidden');
+        GS.shopVotes = { obelisk: [], tuning: [], next: [] };
+        updateShopVotes(GS.shopVotes);
+        
+        if(isHost) {
+            document.getElementById('host-shop-controls').classList.remove('hidden');
+            document.getElementById('waiting-msg').classList.add('hidden');
+            if(gameSettings.shopVoting) {
+                document.getElementById('btn-execute-vote').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-execute-vote').classList.add('hidden');
+            }
+        }
+    }
+
+    function updateShopVotes(votes) {
+        if(!gameSettings.shopVoting) return;
+        ['obelisk', 'tuning', 'next'].forEach(item => {
+            let badge = document.getElementById('vote-' + item);
+            badge.innerText = votes[item].length;
+            if(votes[item].length > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        });
+    }
+
+    function castLocalVote(type) {
+        if(['obelisk', 'tuning', 'next'].includes(type)) {
+            for(let k in GS.shopVotes) { GS.shopVotes[k] = GS.shopVotes[k].filter(v => v !== 'local'); }
+            GS.shopVotes[type].push('local');
+            if(isHost) clients.forEach(c => c.send({type: 'vote_update', votes: GS.shopVotes}));
+            updateShopVotes(GS.shopVotes);
+        }
+    }
+
+    function buyItem(type) {
+        if(gameSettings.shopVoting) {
+            if(isHost) { castLocalVote(type); }
+            else { if(connToHost && connToHost.open) connToHost.send({type: 'vote', item: type}); }
+            return;
+        }
+        
+        // Classic Instant Buy (Host only)
+        if(!isHost) return; 
+        executePurchase(type);
+    }
+    
+    function executePurchase(type) {
+        if(type === 'next') { triggerNextWave(); return; }
+        if(type === 'obelisk' && GS.embers >= 50) { GS.embers -= 50; GS.placingObelisk = true; document.getElementById('shop-screen').classList.add('hidden'); gameState = 'playing'; document.getElementById('obelisk-placement-ui').classList.remove('hidden'); logMsg("Place obelisk..."); }
+        if(type === 'tuning' && GS.embers >= 30) { GS.embers -= 30; GS.core.maxHp += 20; GS.core.hp = Math.min(GS.core.maxHp, GS.core.hp + 30); updateHUD(); logMsg("Core tuned."); }
+    }
+    
+    function executeVote() {
+        if(!isHost || !gameSettings.shopVoting) return;
+        let highest = 'next', max = -1;
+        for(let k in GS.shopVotes) {
+            if(GS.shopVotes[k].length > max) { max = GS.shopVotes[k].length; highest = k; }
+        }
+        
+        if(max <= 0) { logMsg("No votes cast."); return; }
+        
+        GS.shopVotes[highest] = [];
+        updateShopVotes(GS.shopVotes);
+        clients.forEach(c => c.send({type: 'vote_update', votes: GS.shopVotes}));
+        
+        executePurchase(highest);
+    }
+
+    function handlePlacement() {
+        if(isHost && GS.placingObelisk) {
+            if(Math.hypot(GS.core.x - mouse.x, GS.core.y - mouse.y) > GS.core.r + 40) {
+                GS.obelisks.push({x: mouse.x, y: mouse.y, r: 15});
+                GS.placingObelisk = false;
+                document.getElementById('obelisk-placement-ui').classList.add('hidden');
+                if(!GS.activeWave) openShop();
+            } else { logMsg("Too close to core."); }
+        }
+    }
+
+    function triggerNextWave() {
+        if(isHost) { 
+            document.getElementById('shop-screen').classList.add('hidden'); 
+            gameState = 'playing'; 
+            clients.forEach(c => c.send({type: 'resume_wave'})); 
+            startWave(); 
+        }
+    }
+
+    function exportSave() {
+        if(!isHost) return;
+        let save = { wave: GS.wave, embers: GS.embers, maxHp: GS.core.maxHp, obelisks: GS.obelisks };
+        navigator.clipboard.writeText(JSON.stringify(save)); logMsg("State exported to clipboard.");
+    }
+
+    function importSave() {
+        if(!isHost) return;
+        try {
+            let data = JSON.parse(document.getElementById('import-data').value);
+            GS.wave = data.wave || 1; GS.embers = data.embers || 0; GS.core.maxHp = data.maxHp || 100; GS.core.hp = GS.core.maxHp; GS.obelisks = data.obelisks || [];
+            updateHUD(); logMsg("Save restored."); togglePause();
+        } catch(e) { logMsg("Save restore failed."); }
+    }
+</script>
+</body>
+</html>
