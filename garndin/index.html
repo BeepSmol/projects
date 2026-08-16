@@ -1,0 +1,2956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>garnd-in</title>
+<link rel="icon" type="image/x-icon" href="icon.ico">
+<style>
+
+  @import url('https://fonts.cdnfonts.com/css/more-sugar');
+
+  :root {
+    --bg-color: #5d8aa8;
+    --grass-color: #7ba659;
+    --ui-bg: #f4e8c1;
+    --ui-border: #5c3a21; 
+    --text-color: #2c1a0e;
+    --highlight: #ffd700;
+    --hotbar-btn-bg: #4a5568;
+    --hotbar-btn-hover: #606f7b;
+    --hotbar-btn-text: #ffffff;
+    --img-gray-bg: #d2d2d2;
+  }
+
+    * { 
+      box-sizing: border-box; 
+      user-select: none; 
+      font-family: 'More Sugar', cursive, sans-serif; 
+    }
+
+  body { margin: 0; padding: 0; overflow: hidden; background-color: var(--grass-color); color: var(--text-color); width: 100vw; height: 100vh; }
+
+  /* Images: Prevent warping & apply gray background to item/inventory images */
+  img { object-fit: contain; pointer-events: none; max-width: 100%; max-height: 100%; }
+  img.item-icon, .slot img, .shop-item-card img.shop-img, .tracker img, .shop-card img, .slot img.plant-img, .shop-item-card img.plant-img { background-color: var(--img-gray-bg); border-radius: 8px; padding: 4px; border: 1px solid #ababab; }
+  .plot img.plant-img, img.dialog-portrait, img.tutorial-img { background-color: transparent !important; border: none !important; padding: 0 !important; }
+
+  /* Overlays & Weather Effects (Subtle & Slight) */
+  #weather-overlay { position: fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index: 50; transition: background 2s ease; }
+  .weather-rain { background: rgba(0, 40, 120, 0.12); }
+  .weather-night { background: rgba(10, 15, 45, 0.40); }
+  .weather-blessing { background: rgba(255, 255, 180, 0.15); }
+  .weather-roaring { background: rgba(25, 0, 10, 0.50); }
+  .weather-glitch { animation: glitchAnim 0.4s infinite; }
+  @keyframes glitchAnim { 0% { background: rgba(255,0,0,0.08); } 50% { background: rgba(0,255,0,0.08); } 100% { background: rgba(0,0,255,0.08); } }
+  
+  .flash-red { animation: flashRed 1s infinite; }
+  @keyframes flashRed { 0% { box-shadow: inset 0 0 40px rgba(255,0,0,0.6); } 50% { box-shadow: inset 0 0 5px rgba(255,0,0,0.2); } 100% { box-shadow: inset 0 0 40px rgba(255,0,0,0.6); } }
+  .flash-yellow { animation: flashYellow 1s 4; }
+  @keyframes flashYellow { 0% { box-shadow: inset 0 0 40px rgba(255,255,0,0.6); } 50% { box-shadow: none; } 100% { box-shadow: inset 0 0 40px rgba(255,255,0,0.6); } }
+
+  /* Screens */
+  .screen { position: absolute; top:0; left:0; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+  .hidden { display: none !important; }
+  
+  /* Buttons & Panels */
+  button { padding: 12px 22px; margin: 6px; font-size: 18px; font-weight: bold; cursor: pointer; background: var(--ui-bg); border: 4px solid var(--ui-border); border-radius: 10px; color: var(--text-color); transition: transform 0.1s, background-color 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  button:active { transform: scale(0.95); }
+  button:hover { background: #fffdf0; }
+  
+  .btn-gray { background: var(--hotbar-btn-bg) !important; color: var(--hotbar-btn-text) !important; border-color: #2d3748 !important; }
+  .btn-gray:hover { background: var(--hotbar-btn-hover) !important; }
+
+  .panel { background: var(--ui-bg); border: 5px solid var(--ui-border); border-radius: 14px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+  
+  /* Top Bar & Eye-Catching Trackers */
+  #top-bar { position: absolute; top: 0; left: 0; width: 100%; height: 70px; background: rgba(244, 232, 193, 0.96); border-bottom: 5px solid var(--ui-border); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+  .tracker { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: bold; }
+  .tracker img { width: 32px; height: 32px; }
+
+  .tracker-pill { padding: 5px 14px; border-radius: 16px; font-weight: bold; font-size: 18px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .pill-season { background: #e8f5e9; color: #1b5e20; border: 2px solid #81c784; }
+  .pill-weather { background: #e1f5fe; color: #0277bd; border: 2px solid #4fc3f7; }
+  .pill-time { background: #fff8e1; color: #f57f17; border: 2px solid #ffd54f; }
+
+  /* Main Game Viewport Layout */
+  #game-viewport { display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; height: calc(100vh - 210px); margin-top: 70px; padding: 15px 30px; position: relative; }
+
+  /* Shop Buttons Scattered around Garden */
+  .shops-column { display: flex; flex-direction: column; gap: 20px; z-index: 20; width: 220px; }
+  .shop-card { background: var(--ui-bg); border: 4px solid var(--ui-border); border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 8px 16px rgba(0,0,0,0.3); position: relative; }
+  .shop-card:hover { transform: translateY(-5px) scale(1.04); box-shadow: 0 12px 22px rgba(0,0,0,0.4); background: #fffdf0; }
+  .shop-card img { width: 95px; height: 95px; margin-bottom: 6px; }
+  .shop-card-title { font-weight: bold; font-size: 19px; margin-bottom: 3px; color: #3e2723; }
+  .shop-card-func { font-weight: bold; font-size: 13px; color: #2e7d32; background: #e8f5e9; padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 5px; border: 1.5px solid #a5d6a7; }
+  .shop-card-npc { font-size: 14px; color: #664422; font-weight: bold; }
+  .shop-card.closed { opacity: 0.65; background: #d3c4a5; cursor: default; }
+
+  /* Garden Plots Grid */
+  #garden-container { display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 20; }
+  #garden-area { display: grid; grid-template-columns: repeat(4, 140px); gap: 18px; max-height: calc(100vh - 310px); overflow-y: auto; padding: 10px; }
+  
+  .plot { width: 140px; height: 140px; background: #6d4223; border: 5px solid #3e2723; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; position: relative; transition: transform 0.18s ease, box-shadow 0.18s ease; box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3); }
+  .plot:hover { transform: translateY(-10px) !important; box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 12px 24px rgba(0,0,0,0.45) !important; }
+  .plot img.plant-img { width: 105px; height: 105px; pointer-events: none; }
+  .plot.favourited { border-color: var(--highlight) !important; box-shadow: 0 0 15px var(--highlight); }
+  
+  /* Raccoon Repellent Shield Styling & Timer */
+  .plot.repelled { border-color: #00bcd4 !important; box-shadow: 0 0 15px #00bcd4; }
+  .repel-timer-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #00838f; color: #ffffff; font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 10px; border: 2px solid #e0f7fa; z-index: 10; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+  
+  /* Growing Plant Seconds Timer Badge */
+  .grow-timer-badge { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: #5d4037; color: #ffe0b2; font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 10px; border: 2px solid #d7ccc8; z-index: 10; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+
+  .mutation-icon { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; background: url('icon_plant_mutated.png') no-repeat center; background-size: contain; z-index: 5; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
+
+  /* Weed Plot – subtle green pulsing glow */
+  .plot.weedy { background: #3a6b2a !important; border-color: #1b5e20 !important; animation: weedPulse 2.2s ease-in-out infinite; }
+  @keyframes weedPulse { 0%,100% { box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 0 8px rgba(100,200,60,0.35); } 50% { box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 0 22px rgba(100,220,60,0.65); } }
+
+  /* Seasonal body background transition */
+  body { transition: background-color 3s ease; }
+
+  /* Hotbar & Inventory */
+  #inventory-container { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 100; }
+  
+  .btn-hotbar-square { width: 110px; height: 110px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 !important; border-radius: 16px; border: 4px solid #2d3748 !important; box-shadow: 0 6px 14px rgba(0,0,0,0.3); }
+  .btn-hotbar-square img { width: 58px; height: 58px; margin-bottom: 4px; border-radius: 8px; pointer-events: none; }
+  .btn-hotbar-square span { font-size: 14px; font-weight: bold; line-height: 1; text-align: center; }
+
+  .slot-grid { display: flex; gap: 8px; background: rgba(30, 20, 10, 0.82); padding: 12px; border-radius: 16px; border: 4px solid var(--ui-border); box-shadow: 0 6px 14px rgba(0,0,0,0.3); }
+  .slot { width: 78px; height: 78px; background: var(--ui-bg); border: 3px solid var(--ui-border); border-radius: 12px; display: flex; justify-content: center; align-items: center; position: relative; cursor: pointer; transition: transform 0.1s, border-color 0.15s; }
+  .slot:hover { transform: scale(1.05); background: #fffdf0; }
+  .slot.selected-slot { border-color: var(--highlight) !important; box-shadow: 0 0 14px var(--highlight); transform: scale(1.08); background: #ffffd0; }
+  .slot img { width: 62px; height: 62px; cursor: grab; }
+  .slot img:active { cursor: grabbing; }
+  .slot .qty { position: absolute; bottom: 3px; right: 5px; font-size: 15px; font-weight: bold; color: #ffffff; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000; pointer-events: none; }
+  .slot.favourited { border-color: var(--highlight); }
+
+  /* Seasonal Seedpack Special Background Color */
+  .seasonal-seed-bg { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important; border-color: #ff9800 !important; box-shadow: 0 0 10px rgba(255,152,0,0.5); }
+
+  /* Modals & Dialogs */
+  .modal-wrapper { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.65); display: flex; justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(3px); }
+  
+  .dialog-box { display: flex; width: 740px; height: 230px; background: var(--ui-bg); border: 5px solid var(--ui-border); border-radius: 14px; padding: 18px; position: absolute; bottom: 40px; box-shadow: 0 12px 30px rgba(0,0,0,0.5); z-index: 300; }
+  .dialog-portrait { width: 170px; height: 170px; object-fit: contain; border-right: 4px solid var(--ui-border); padding-right: 15px; margin-right: 15px; flex-shrink: 0; }
+  .dialog-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .dialog-text { font-size: 20px; line-height: 1.45; overflow-y: auto; max-height: 120px; white-space: pre-wrap; word-wrap: break-word; }
+  
+  /* Minigames */
+  #mg-planting { width: 420px; height: 55px; background: #222; border: 4px solid #fff; border-radius: 8px; position: relative; margin: 20px auto; overflow: hidden; }
+  #mg-target { position: absolute; top: 0; height: 100%; background: rgba(0,255,100,0.65); border-left: 3px solid #0f0; border-right: 3px solid #0f0; }
+  #mg-cursor { position: absolute; top: 0; width: 6px; height: 100%; background: #ff2222; box-shadow: 0 0 8px red; }
+  #mg-progress-bg { width: 100%; height: 22px; background: #444; border-radius: 6px; margin-bottom: 15px; overflow: hidden; border: 2px solid #222; }
+  #mg-progress-fill { width: 50%; height: 100%; background: linear-gradient(90deg, #ff4444, #ffff44, #44ff44); transition: width 0.1s linear; }
+
+  #mg-haggle { width: 220px; height: 220px; border-radius: 50%; background: conic-gradient(#ff4444 0% 50%, #ffdd44 50% 85%, #44ff44 85% 100%); position: relative; overflow: hidden; margin: 20px auto; border: 5px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5); cursor: pointer; }
+  #mg-haggle-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 220px; border: 5px solid #000; border-radius: 50%; pointer-events: none; }
+
+
+  /* Entities */
+  .raccoon-entity { position: absolute; z-index: 45; width: 110px; height: 110px; transition: left 7s linear, top 7s linear, transform 0.35s ease, opacity 0.35s ease; cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); pointer-events: auto; }
+
+  /* Notifications IN FRONT OF BACKDROP BLUR & MODALS */
+  #notif-container { position: fixed; top: 85px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; pointer-events: none; }
+  .notif { background: var(--ui-bg); border: 3px solid var(--ui-border); padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 12px; animation: slideIn 0.3s forwards; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+  @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+
+  /* Tooltip */
+  .tooltip { position: absolute; background: rgba(20, 15, 10, 0.93); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 15px; border: 2px solid var(--highlight); pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.15s; white-space: pre-wrap; max-width: 320px; box-shadow: 0 6px 15px rgba(0,0,0,0.5); }
+
+  /* Shop Items Layout */
+  .shop-item-card { width: 190px; background: #fffdf5; border: 3px solid var(--ui-border); border-radius: 10px; padding: 12px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+  .shop-item-card img.shop-img { width: 75px; height: 75px; margin-bottom: 8px; }
+
+  /* Volume sliders & Settings */
+  .slider-group { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; font-size: 18px; font-weight: bold; }
+  .slider-group input, .slider-group select { width: 220px; padding: 5px; font-size: 16px; border-radius: 6px; }
+
+  /* Custom overrides */
+  .weed-img-recolored { filter: brightness(0.35) sepia(1) hue-rotate(60deg) saturate(3) !important; }
+  .flash-gold { animation: flashGold 1s ease-out; }
+  @keyframes flashGold { 0% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes flashGoldAnim { 0% { background-color: rgba(255, 215, 0, 0.85); } 100% { background-color: rgba(255, 215, 0, 0); } }
+  @keyframes bannerSlideYellow { 0% { opacity: 0; transform: translateX(-50%) translateY(-30px); } 20% { opacity: 1; transform: translateX(-50%) translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+  .right-btn { transition: transform 0.2s; }
+  .right-btn:hover { transform: scale(1.1); }
+</style>
+</head>
+<body>
+
+<!-- AUDIO ENGINE PLACEHOLDER -->
+<div id="audio-pool" class="hidden"></div>
+
+<!-- WEATHER & FX OVERLAYS -->
+<div id="weather-overlay"></div>
+<div id="event-banner" class="hidden" style="position:fixed; top:25px; left:50%; transform:translateX(-50%); background:#ffe600; border:5px solid #3e2723; border-radius:12px; padding:12px 30px; font-size:26px; font-weight:bold; z-index:450; box-shadow:0 8px 20px rgba(0,0,0,0.4);">EVENT: NONE</div>
+
+<!-- SCREENS -->
+
+<!-- MENU SCREEN -->
+<div id="screen-menu" class="screen">
+  <div class="panel" style="text-align: center; max-width: 650px; padding: 35px;">
+    <h1 style="font-size: 42px; margin-top: 0; color: #3e2723; text-shadow: 2px 2px 0 #ffd700;">Flowerjam August: Garnd-in</h1>
+    <p style="font-size: 18px; font-style: italic; margin: 20px 0; line-height: 1.5; background: #fffdf0; padding: 15px; border-radius: 10px; border: 2px dashed var(--ui-border);">
+      “ <b>IMPORTANT:</b> if you are flowerhead/viewing for the August flowerjam, I’d recommend looking at credits and mini-wiki before clicking play
+    </p>
+    <div style="display:flex; flex-direction:column; gap:12px; width: 80%; margin: 0 auto;">
+      <button onclick="switchScreen('screen-saves')" style="font-size: 24px; padding: 15px;">PLAY</button>
+      <button onclick="switchScreen('screen-credits')">CREDITS</button>
+      <button onclick="openMiniWiki()">MINI-WIKI</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREDITS SCREEN -->
+<div id="screen-credits" class="screen hidden">
+  <div class="panel" style="width: 650px; max-height: 90vh; overflow-y: auto;">
+    <h2 style="font-size: 32px; text-align: center; margin-top: 0;">CREDITS</h2>
+    <ul style="text-align: left; font-size: 19px; line-height: 1.8;">
+      <li><b>Concept:</b> Beepsmol</li>
+      <li><b>Ideas:</b> BeepSmol + SpinGuy</li>
+      <li><b>Coding:</b> BeepSmol</li>
+      <li><b>Art:</b> Spinguy</li>
+      <li><b>Music:</b> Beepsmol + FlowerJammers</li>
+      <li><b>Voice Acting:</b> SupaJax & co, Cookiesmart</li>
+      <li><b>Testing:</b> BeepSmol, SpinGuy, Cookiesmart</li>
+    </ul>
+    <h3 style="font-size: 22px; margin-top: 20px;">Links:</h3>
+    <ul style="text-align: left; font-size: 16px; line-height: 1.8;">
+      <li>BeepSmol: <a href="https://beepsmol.com/" target="_blank">https://beepsmol.com/</a></li>
+      <li>SpinGuy: <a href="https://scratch.mit.edu/users/xX-LUIGISPIN-Xx/" target="_blank">https://scratch.mit.edu/users/xX-LUIGISPIN-Xx/</a></li>
+      <li>SupaJax: <a href="https://www.youtube.com/@MrGrookeyJax" target="_blank">https://www.youtube.com/@MrGrookeyJax</a></li>
+      <li>CookieSmart: <a href="https://www.youtube.com/@CS_CookieSmart" target="_blank">https://www.youtube.com/@CS_CookieSmart</a></li>
+    </ul>
+    <div style="text-align: center; margin-top: 20px;">
+      <button onclick="switchScreen('screen-menu')">Back to Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE CARTRIDGES SCREEN (WITH FILE EXPORT & IMPORT FOR SLOTS) -->
+<div id="screen-saves" class="screen hidden">
+  <div class="panel" style="width: 760px; text-align:center;">
+    <h2 style="font-size: 30px; margin-top:0;">Select Save Cartridge</h2>
+    <div id="save-slots" style="display: flex; flex-direction: column; gap: 15px; margin: 20px 0;"></div>
+    <button onclick="switchScreen('screen-menu')">Back to Menu</button>
+  </div>
+</div>
+
+<!-- NEW GAME CREATION SCREEN -->
+<div id="screen-newgame" class="screen hidden">
+  <div class="panel" style="width: 580px; text-align:center;">
+    <h2>Create New Game</h2>
+    <p>Give your garden a name & choose game mode:</p>
+    <input type="text" id="new-garden-name" placeholder="My Garden" style="font-size: 22px; padding: 10px; width: 85%; margin-bottom: 25px; border-radius: 8px; border: 3px solid var(--ui-border); text-align: center;"><br>
+    <div style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+      <button onclick="startGame('calm')" style="width: 85%; background: #c8e6c9;">Calm Mode (Relaxing, no raccoons/minigames)</button>
+      <button onclick="startGame('normal')" style="width: 85%; background: #fff9c4;">Normal Mode (recommended)</button>
+      <button onclick="startGame('hard')" style="width: 85%; background: #ffcdd2;">Hard Mode (Challenging, permadeath!)</button>
+    </div>
+    <br><button onclick="switchScreen('screen-saves')">Cancel</button>
+  </div>
+</div>
+
+<!-- OUTSIDE MINI-WIKI SCREEN -->
+<div id="screen-wiki" class="screen hidden">
+  <div class="panel" style="width: 850px; height: 85vh; display: flex; flex-direction: column;">
+    <h2 style="text-align: center; margin-top: 0;">Mini-Wiki (Complete Plant & Game Encyclopedia)</h2>
+    <p style="text-align: center; font-size: 14px; margin-top: -10px; color: #555;">(Outside-of-game version: Shows ALL content unlocked or not)</p>
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:12px;">
+      <button onclick="renderWikiCategory('plants')">PLANTS</button>
+      <button onclick="renderWikiCategory('seasonal')">SEASONAL</button>
+      <button onclick="renderWikiCategory('achievements')">ACHIEVEMENTS</button>
+      <button onclick="renderWikiCategory('mutations')">MUTATIONS</button>
+    </div>
+    <div id="wiki-content" style="flex-grow:1; overflow-y:auto; border: 3px solid var(--ui-border); border-radius: 8px; padding: 15px; background: #fffdf5;"></div>
+    <div style="text-align: center; margin-top: 12px;">
+      <button onclick="switchScreen('screen-menu')">Back to Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN GAMEPLAY SCREEN -->
+<div id="screen-game" class="screen hidden" style="justify-content: flex-start;">
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div class="tracker">Garden: <span id="ui-garden-name">My Garden</span> <span style="cursor:pointer; font-size: 18px;" onclick="renameGarden()" title="Rename Garden">✏️</span></div>
+    <div class="tracker"><img src="icon_doolers.png" alt="Doolers" class="item-icon"><span id="ui-doolers">0</span></div>
+    
+    <!-- STATS COUNTERS -->
+    <div style="display:flex; gap:10px; font-size:14px; font-weight:bold;">
+      <div class="tracker-pill" style="background:#e0f2f1; border:2px solid #009688; color:#00796b; padding:3px 10px;" id="ui-plants-discovered">Plants: 0/0</div>
+      <div class="tracker-pill" style="background:#fbe9e7; border:2px solid #ff5722; color:#d84315; padding:3px 10px;" id="ui-mutations-discovered">Mutations: 0/0</div>
+      <div class="tracker-pill" style="background:#fffde7; border:2px solid #fbc02d; color:#f57f17; padding:3px 10px;" id="ui-achievements-unlocked">Achievs: 0/0</div>
+    </div>
+    
+    <!-- EYE-CATCHING PILL TRACKERS -->
+    <div id="pill-season" class="tracker-pill pill-season">Season: <span id="ui-season">Spring</span></div>
+    <div id="pill-weather" class="tracker-pill pill-weather">Weather: <span id="ui-weather">Normal</span></div>
+    <div id="pill-time" class="tracker-pill pill-time">Time: <span id="ui-time">Day 1 - 06:00</span></div>
+    
+    <div id="ui-hardmode-dead" class="tracker hidden" style="color:#d32f2f; font-weight:bold;">Dead Plants: <span id="ui-dead-plants">0</span>/10</div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-gray" onclick="openTutorial(true)">📖 Tutorial</button>
+      <button class="btn-gray" onclick="openSettings()">⚙️ Pause & Settings</button>
+    </div>
+  </div>
+  
+  <!-- VIEWPORT LAYOUT -->
+  <div id="game-viewport">
+    <!-- LEFT SHOPS (ALL 4) -->
+    <div class="shops-column" style="display:flex; flex-direction:column; gap:12px; overflow-y:auto; max-height:calc(100vh - 240px); padding-right:8px; margin-top:40px; width:220px;">
+      <div class="shop-card" onclick="openShopDirect('bob')" style="padding: 10px;">
+        <img src="npc_bob.png" alt="Bob" style="width: 60px; height: 60px;">
+        <div class="shop-card-title" style="font-size:16px;">Seed Shack</div>
+        <div class="shop-card-func" style="font-size:11px; padding:2px 6px;">BUY SEEDS</div>
+        <div class="shop-card-npc" style="font-size:12px;">Owner: Bob</div>
+      </div>
+      <div class="shop-card" onclick="openShopDirect('mark')" style="padding: 10px;">
+        <img src="npc_mark.png" alt="Mark" style="width: 60px; height: 60px;">
+        <div class="shop-card-title" style="font-size:16px;">Harvestware</div>
+        <div class="shop-card-func" style="font-size:11px; padding:2px 6px;">BUY GEAR</div>
+        <div class="shop-card-npc" style="font-size:12px;">Owner: Mark</div>
+      </div>
+      <div class="shop-card" onclick="openShopDirect('bobjr')" style="padding: 10px;">
+        <img src="npc_bob_jr.png" alt="Bob Jr" style="width: 60px; height: 60px;">
+        <div class="shop-card-title" style="font-size:16px;">Root N Relic</div>
+        <div class="shop-card-func" style="font-size:11px; padding:2px 6px;">SELL & APPRAISE</div>
+        <div class="shop-card-npc" style="font-size:12px;">Owner: Bob Jr</div>
+      </div>
+      <div id="shop-card-peeb" class="shop-card" onclick="openShopDirect('peeb')" style="padding: 10px;">
+        <img src="npc_peeb.png" alt="Peeb" style="width: 60px; height: 60px;">
+        <div class="shop-card-title" id="peeb-card-title" style="font-size:16px;">Black Market</div>
+        <div class="shop-card-func" style="font-size:11px; padding:2px 6px;">MYSTERY DEALS</div>
+        <div class="shop-card-npc" id="peeb-card-desc" style="font-size:12px;">Owner: Peeb</div>
+      </div>
+    </div>
+
+    <!-- CENTER GARDEN PLOTS AREA -->
+    <div id="garden-container">
+      <div id="garden-area"></div>
+    </div>
+
+    <!-- RIGHT UTILITY COLUMN -->
+    <div class="utility-column" style="display:flex; flex-direction:column; gap:40px; align-items:center; justify-content:center; width:220px; z-index:20;">
+      <div class="right-btn" onclick="toggleBackpack()" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <img src="icon_backpack.png" alt="Backpack" style="width:130px; height:130px; object-fit:contain; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+        <span style="font-size:20px; font-weight:bold; color:#3e2723; text-shadow:1px 1px 0 #fff;">Backpack</span>
+      </div>
+      <div class="right-btn" onclick="openPokedex()" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <img src="icon_pokedex.png" alt="Pokedex" style="width:130px; height:130px; object-fit:contain; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+        <span style="font-size:20px; font-weight:bold; color:#3e2723; text-shadow:1px 1px 0 #fff;">Pokedex</span>
+      </div>
+    </div>
+  </div>
+  
+  <div id="entities-container"></div>
+  
+  <!-- HOTBAR & INVENTORY -->
+  <div id="inventory-container">
+    <div style="margin-bottom: 8px; width: 100%; text-align: center;">
+      <button class="btn-gray" onclick="autoSort()" style="padding: 8px 35px; font-size: 16px; border-radius: 8px; width: 100%; max-width: 480px;">Auto Sort</button>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <div class="slot-grid" id="hotbar-grid"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODALS -->
+
+<!-- BACKPACK MODAL -->
+<div id="modal-backpack" class="modal-wrapper hidden">
+  <div class="panel" style="width: 650px; max-height: 80vh; display:flex; flex-direction:column;">
+    <h2 style="text-align: center; margin-top: 0;">Backpack Storage</h2>
+    <p style="font-size: 14px; text-align: center; margin-top: -10px;">(Drag & drop items between Toolbar and Backpack! Right-click plant to Favourite)</p>
+    <div class="slot-grid" id="backpack-grid" style="flex-wrap: wrap; height: 340px; overflow-y: auto; background: rgba(0,0,0,0.15); align-content: flex-start;"></div>
+    <div style="text-align: center; margin-top: 15px;">
+      <button onclick="closeModals()">Close Backpack</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP MODAL -->
+<div id="modal-shop" class="modal-wrapper hidden">
+  <div class="panel" style="width: 820px; height: 580px; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--ui-border); padding-bottom: 10px; margin-bottom: 10px;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <img id="shop-npc-img" src="npc_bob.png" style="width: 75px; height: 75px; border-radius: 8px; border: 2px solid var(--ui-border); background: #fff;">
+        <div>
+          <h2 id="shop-title" style="margin: 0;">Shop Title</h2>
+          <div id="shop-npc-name" style="font-size: 15px; font-weight: bold; color: #664422;">Owner</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap: 15px;">
+        <div style="display:flex; align-items:center; gap:6px; font-weight:bold; font-size:20px; color:#2e7d32; background:#e8f5e9; padding:6px 14px; border-radius:8px; border:2px solid #a5d6a7;">
+          <img src="icon_doolers.png" style="width:28px; height:28px;" class="item-icon">
+          <span id="shop-doolers-count">0</span> Doolers
+        </div>
+        <button onclick="leaveShop()" style="background:#ffcdd2;">Leave Shop</button>
+      </div>
+    </div>
+    
+    <!-- SHOP TABS -->
+    <div id="shop-tabs" style="display:flex; gap:10px; margin-bottom:10px; border-bottom:2px solid var(--ui-border); padding-bottom:5px;"></div>
+    
+    <div id="shop-dialogue-branches" style="display:none;"></div>
+    <div id="shop-actions" style="display:flex; gap:10px; justify-content:center; margin-bottom:10px;"></div>
+    <div id="shop-inventory" style="flex-grow:1; overflow-y:auto; border:3px solid var(--ui-border); border-radius: 8px; padding:12px; display:flex; flex-wrap:wrap; gap:12px; background:#fffdf5; align-content: flex-start;"></div>
+  </div>
+</div>
+
+<!-- IN-GAME POKEDEX MODAL -->
+<div id="modal-pokedex" class="modal-wrapper hidden">
+  <div class="panel" style="width: 800px; height: 80vh; display: flex; flex-direction: column;">
+    <h2 style="text-align: center; margin-top: 0;">Pokedex (Discovered Records)</h2>
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:12px;">
+      <button onclick="renderPokedexCategory('plants')">PLANTS</button>
+      <button onclick="renderPokedexCategory('seasonal')">SEASONAL</button>
+      <button onclick="renderPokedexCategory('achievements')">ACHIEVEMENTS</button>
+      <button onclick="renderPokedexCategory('mutations')">MUTATIONS</button>
+    </div>
+    <div id="pokedex-content" style="flex-grow:1; overflow-y:auto; border: 3px solid var(--ui-border); border-radius: 8px; padding: 15px; background: #fffdf5;"></div>
+    <div style="text-align: center; margin-top: 12px;">
+      <button onclick="closeModals()">Close Pokedex</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIALOGUE MODAL -->
+<div id="modal-dialogue" class="modal-wrapper hidden" style="background:rgba(0,0,0,0.3);">
+  <div class="dialog-box">
+    <img id="dialog-img" class="dialog-portrait" src="npc_bud.png">
+    <div class="dialog-content">
+      <div>
+        <div id="dialog-name" style="font-weight:bold; font-size:24px; color:#3e2723; margin-bottom:6px;">Bud</div>
+        <div id="dialog-text" class="dialog-text"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 10px;">
+        <button id="btn-dialog-skip" onclick="skipDialogue()">▶▶ Fast Forward</button>
+        <button id="btn-dialog-continue" class="hidden" onclick="advanceDialogue()">Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL MANUAL MODAL -->
+<div id="modal-tutorial" class="modal-wrapper hidden">
+  <div class="panel" style="display:flex; width: 850px; height: 530px; padding:0; overflow:hidden;">
+    <div style="flex:1; padding:30px; display:flex; flex-direction:column; justify-content:space-between; background: #fffdf5;">
+      <div>
+        <h3 id="tutorial-page-header" style="margin-top: 0; color: #3e2723; font-size: 24px;">Garden Guide - Page 1/6</h3>
+        <div id="tutorial-text" style="font-size:18px; line-height: 1.5; color: #2c1a0e;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button onclick="changeTutorialPage(-1)">◀ Prev</button>
+        <button onclick="closeModals()">Close Manual</button>
+        <button onclick="changeTutorialPage(1)">Next ▶</button>
+      </div>
+    </div>
+    <div style="flex:1; background:#e0e0e0; border-left:5px solid var(--ui-border); display:flex; align-items:center; justify-content:center; padding:15px;">
+      <img id="tutorial-img" src="tutorial_page_1.png" class="tutorial-img" style="max-width:100%; max-height:100%; object-fit:contain;">
+    </div>
+  </div>
+</div>
+
+<!-- MINIGAMES MODAL -->
+<div id="modal-minigame" class="modal-wrapper hidden">
+  <div class="panel" style="text-align:center; min-width: 450px;">
+    <h2 id="mg-title" style="margin-top:0;">Minigame</h2>
+    <div id="mg-container"></div>
+    <p id="mg-inst" style="font-weight:bold; font-size: 18px; color: #3e2723;">Click at the right time!</p>
+  </div>
+</div>
+
+<!-- SETTINGS / PAUSE MODAL WITH FILE EXPORT & IMPORT -->
+<div id="modal-settings" class="modal-wrapper hidden">
+  <div class="panel" style="width: 540px;">
+    <h2 style="text-align: center; margin-top: 0; color: #3e2723;">Pause & Settings</h2>
+    
+    <div class="slider-group">
+      <label for="bgm-select">Background Music:</label>
+      <select id="bgm-select" onchange="changeBGMTrack(this.value)"></select>
+    </div>
+
+    <div class="slider-group">
+      <label for="slider-music">Music Volume:</label>
+      <input type="range" id="slider-music" min="0" max="100" value="50" oninput="updateVolumes()">
+    </div>
+    <div class="slider-group">
+      <label for="slider-sfx">SFX Volume:</label>
+      <input type="range" id="slider-sfx" min="0" max="100" value="70" oninput="updateVolumes()">
+    </div>
+    <div class="slider-group">
+      <label for="slider-dialog">Dialog Volume:</label>
+      <input type="range" id="slider-dialog" min="0" max="100" value="80" oninput="updateVolumes()">
+    </div>
+    <div class="slider-group">
+      <label for="toggle-autopause">Auto-Pause (Tab switch):</label>
+      <input type="checkbox" id="toggle-autopause" style="width: 24px; height: 24px;" onchange="updateAutoPauseSetting()">
+    </div>
+    
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top: 20px;">
+      <div style="display:flex; gap:10px;">
+        <button onclick="exportSaveToFile(C.slot)" style="flex:1; background:#e1f5fe; font-size:15px;">📤 Export Save to File</button>
+        <button onclick="importSaveFromFile(C.slot)" style="flex:1; background:#fff9c4; font-size:15px;">📥 Import Save from File</button>
+      </div>
+      <button onclick="saveGame(true)" style="background:#c8e6c9;">💾 Save Game</button>
+      <button onclick="exitToMainMenu()" style="background:#ffcdd2;">🚪 Exit to Main Menu</button>
+      <button onclick="closeModals()">▶ Resume Playing</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM IN-GAME UI POPUP MODALS -->
+<div id="modal-custom-alert" class="modal-wrapper hidden" style="z-index:900;">
+  <div class="panel" style="width: 440px; text-align: center;">
+    <h3 id="custom-alert-title" style="margin-top:0; color:#3e2723;">Notice</h3>
+    <p id="custom-alert-msg" style="font-size:18px; margin: 15px 0;"></p>
+    <button id="btn-custom-alert-ok" style="background:#c8e6c9;">OK</button>
+  </div>
+</div>
+
+<div id="modal-custom-confirm" class="modal-wrapper hidden" style="z-index:900;">
+  <div class="panel" style="width: 460px; text-align: center;">
+    <h3 id="custom-confirm-title" style="margin-top:0; color:#3e2723;">Confirm Action</h3>
+    <p id="custom-confirm-msg" style="font-size:18px; margin: 15px 0;"></p>
+    <div style="display:flex; justify-content:center; gap:15px;">
+      <button id="btn-custom-confirm-yes" style="background:#c8e6c9;">Yes</button>
+      <button id="btn-custom-confirm-no" style="background:#ffcdd2;">No</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-custom-prompt" class="modal-wrapper hidden" style="z-index:900;">
+  <div class="panel" style="width: 460px; text-align: center;">
+    <h3 id="custom-prompt-title" style="margin-top:0; color:#3e2723;">Input Required</h3>
+    <p id="custom-prompt-msg" style="font-size:18px; margin: 10px 0;"></p>
+    <input type="text" id="custom-prompt-input" style="font-size: 20px; padding: 8px; width: 85%; margin-bottom: 20px; border-radius: 8px; border: 3px solid var(--ui-border); text-align: center;"><br>
+    <div style="display:flex; justify-content:center; gap:15px;">
+      <button id="btn-custom-prompt-ok" style="background:#c8e6c9;">Confirm</button>
+      <button id="btn-custom-prompt-cancel" style="background:#ffcdd2;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP OVERLAY -->
+<div id="tooltip" class="tooltip"></div>
+
+<!-- GLOBAL OVERLAYS -->
+<div id="flash-overlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; background:transparent;"></div>
+<div id="transition-banner" class="hidden" style="position:fixed; top:85px; left:50%; transform:translateX(-50%); background:#4db6ac; border:5px solid #004d40; border-radius:12px; padding:12px 30px; font-size:26px; font-weight:bold; z-index:9000; box-shadow:0 8px 20px rgba(0,0,0,0.4); color:white; text-align:center;">DAY 1, SEASON: Spring</div>
+<div id="notif-container"></div>
+
+<script>
+/* ==========================================================================
+   CONFIGURABLE BACKGROUND MUSIC TRACKS LIST
+   ========================================================================== */
+const BGM_TRACKS = [
+  { name: "Main Garden Theme", file: "music.mp3" },
+  { name: "LuigiSpin's Theme", file: "music_luigi.mp3" },
+  { name: "ReepSmail's Theme", file: "music_reepsmail.mp3" },
+  { name: "Hamisus's Theme", file: "music_hamisus.mp3" }
+];
+
+/* ==========================================================================
+   GAME DATA DEFINITIONS
+   ========================================================================== */
+const DATA = {
+  plants: {
+    polyester: { id:'polyester', name: 'Polyester plant', desc: 'Why does it look like spiderman?', img: 'plant_polyester.png', rarity: 1, val: 10 },
+    carrot: { id:'carrot', name: 'Carrot', desc: 'Yea. Carrot.', img: 'plant_carrot.png', rarity: 1, val: 12 },
+    flowerhead: { id:'flowerhead', name: 'Flowerhead', desc: 'Hi', img: 'plant_flowerhead.png', rarity: 1, val: 14, sfx: 'sfx_harvest_flowerhead.mp3' },
+    teeny_tree: { id:'teeny_tree', name: 'Teeny Tree', desc: "It's a tree. A teeny tree.", img: 'plant_teeny_tree.png', rarity: 2, val: 18 },
+    pinapl: { id:'pinapl', name: 'Pinapl plant', desc: 'Seems to have a child?', img: 'plant_pinapl.png', rarity: 2, val: 22 },
+    luigi: { id:'luigi', name: 'Luigi plant', desc: 'It spins', img: 'plant_luigi.png', rarity: 2, val: 25 },
+    moss: { id:'moss', name: 'Moss?', desc: 'Perpetuate.', img: 'plant_moss.png', rarity: 3, val: 30 },
+    punch: { id:'punch', name: 'Punch plant', desc: 'ish', img: 'plant_punch.png', rarity: 3, val: 35 },
+    pinapl_jr: { id:'pinapl_jr', name: 'Pinapl JR Plant', desc: 'Woah look its the child', img: 'plant_pinapl_jr.png', rarity: 3, val: 40 },
+    cookiehead: { id:'cookiehead', name: 'Cookiehead flower', desc: 'It spins horses', img: 'plant_cookiehead.png', rarity: 4, val: 65, sfx: 'sfx_harvest_cookie.mp3' },
+    sugary_candy_cotton: { id:'sugary_candy_cotton', name: 'Sugary Candy Cotton Plant', desc: 'Should be in a museum', img: 'plant_sugary_candy_cotton.png', rarity: 4, val: 75 },
+    beepplant: { id:'beepplant', name: 'the beepplant', desc: 'self insert?', img: 'plant_beepplant.png', rarity: 5, val: 120 },
+    cactus: { id:'cactus', name: 'Cactus', desc: 'Spikey', img: 'plant_cactus.png', rarity: 5, val: 130 },
+    venus_flytrap: { id:'venus_flytrap', name: 'Venus Flytrap', desc: 'Im gonna eatchu', img: 'plant_venus_flytrap.png', rarity: 6, val: 220 },
+    discoplant: { id:'discoplant', name: 'Discoplant', desc: 'Plays music for some reason', img: 'plant_discoplant.png', rarity: 6, val: 280 },
+    flowery: { id:'flowery', name: 'Flowery Flower', desc: 'Jarona!', img: 'plant_flowery.png', rarity: 7, val: 550, sfx: 'sfx_harvest_flowery.mp3' },
+    
+    // Seasonal Plants
+    winter_cold: { id:'winter_cold', name: 'Cold plant', desc: 'its cold', img: 'plant_winter_cold.png', rarity: 2, val: 25, season: 'Winter' },
+    winter_colder: { id:'winter_colder', name: 'Colder plant', desc: 'its colder', img: 'plant_winter_colder.png', rarity: 4, val: 60, season: 'Winter' },
+    winter_coldest: { id:'winter_coldest', name: 'Coldest plant', desc: 'its the coldest one', img: 'plant_winter_coldest.png', rarity: 6, val: 180, season: 'Winter' },
+    
+    summer_hot: { id:'summer_hot', name: 'Hot plant', desc: 'its hot', img: 'plant_summer_hot.png', rarity: 2, val: 25, season: 'Summer' },
+    summer_hotter: { id:'summer_hotter', name: 'Hotter plant', desc: 'its hotter', img: 'plant_summer_hotter.png', rarity: 4, val: 60, season: 'Summer' },
+    summer_hottest: { id:'summer_hottest', name: 'Hottest plant', desc: 'its the coldest plant', img: 'plant_summer_hottest.png', rarity: 6, val: 180, season: 'Summer' },
+    
+    spring_spring: { id:'spring_spring', name: 'Spring plant', desc: 'no it doesnt jump', img: 'plant_spring_spring.png', rarity: 2, val: 25, season: 'Spring' },
+    spring_springer: { id:'spring_springer', name: 'Springer plant', desc: 'yeah', img: 'plant_spring_springer.png', rarity: 4, val: 60, season: 'Spring' },
+    spring_springest: { id:'spring_springest', name: 'Springest plant', desc: 'it.. is something', img: 'plant_spring_springest.png', rarity: 6, val: 180, season: 'Spring' },
+    
+    autumn_exotic_butters: { id:'autumn_exotic_butters', name: 'Exotic butters', desc: 'what the', img: 'plant_autumn_exotic_butters.png', rarity: 3, val: 35, season: 'Autumn' },
+    autumn_pumpkin: { id:'autumn_pumpkin', name: 'Pumpkin', desc: 'pie', img: 'plant_autumn_pumpkin.png', rarity: 4, val: 70, season: 'Autumn' },
+    autumn_pumpking: { id:'autumn_pumpking', name: 'pumpKING', desc: 'its TAKING TOO LONG. to do smth', img: 'plant_autumn_pumpking.png', rarity: 6, val: 220, season: 'Autumn', sfx: 'sfx_harvest_pumpking.mp3' },
+
+    // Special: pulled weed (not in pokedex, sellable at shops)
+    _weed: { id:'_weed', name: 'Pulled Weed', desc: 'DONT smell it.', img: 'plant_moss.png', rarity: 1, val: 7, _isWeed: true }
+  },
+
+  items: {
+    seed_standard: { id:'seed_standard', name:'Standard Seedpack', img:'item_seedpack_standard.png', type:'seed', rarity:1, price: 10, pool: [1,2], desc: 'Contains common and uncommon seeds suited for beginner gardeners.' },
+    seed_uncommon: { id:'seed_uncommon', name:'Uncommon Seedpack', img:'item_seedpack_uncommon.png', type:'seed', rarity:2, price: 25, pool: [2,3], desc: 'Contains uncommon and rare seeds to add some color to your garden.' },
+    seed_rare: { id:'seed_rare', name:'Rare Seedpack', img:'item_seedpack_rare.png', type:'seed', rarity:3, price: 60, pool: [3,4,5], desc: 'Contains rare and very rare seeds that require patience and skill.' },
+    seed_ultra: { id:'seed_ultra', name:'Ultra Rare Seedpack', img:'item_seedpack_ultra_rare.png', type:'seed', rarity:4, price: 150, pool: [5,6,7], desc: 'Contains ultra-rare seeds of legendary plants.' },
+    
+    seed_winter: { id:'seed_winter', name:'Winter Seedpack', img:'item_seedpack_seasonal_winter.png', type:'seed', rarity:2, price: 40, pool_season:'Winter', isSeasonal:true, desc: 'Contains seeds of plants that thrive in the cold of winter.' },
+    seed_summer: { id:'seed_summer', name:'Summer Seedpack', img:'item_seedpack_seasonal_summer.png', type:'seed', rarity:2, price: 40, pool_season:'Summer', isSeasonal:true, desc: 'Contains seeds of plants that bloom under the hot summer sun.' },
+    seed_spring: { id:'seed_spring', name:'Spring Seedpack', img:'item_seedpack_seasonal_spring.png', type:'seed', rarity:2, price: 40, pool_season:'Spring', isSeasonal:true, desc: 'Contains seeds of beautiful plants that flourish in the spring.' },
+    seed_autumn: { id:'seed_autumn', name:'Autumn Seedpack', img:'item_seedpack_seasonal_autumn.png', type:'seed', rarity:2, price: 40, pool_season:'Autumn', isSeasonal:true, desc: 'Contains seeds of warm-toned plants that blossom in the autumn.' },
+    
+    seed_black: { id:'seed_black', name:'Black Market Seedpack', img:'item_seedpack_blackmarket.png', type:'seed', rarity:5, price: 200, pool:'all', desc: 'A shady package containing random seeds from all over the world.' },
+    
+    can_t1: { id:'can_t1', name:'Watering Can T1', img:'item_wateringcan_t1.png', type:'tool', val:1, price: 100, desc: 'Speeds up growth by 30 seconds. Cooldown: 45s. (Reusable)' },
+    can_t2: { id:'can_t2', name:'Watering Can T2', img:'item_wateringcan_t2.png', type:'tool', val:2, price: 300, desc: 'Speeds up growth by 2 minutes. Cooldown: 180s. (Reusable)' },
+    can_t3: { id:'can_t3', name:'Watering Can T3', img:'item_wateringcan_t3.png', type:'tool', val:3, price: 800, desc: 'Speeds up growth by 5 minutes. Cooldown: 450s. (Reusable)' },
+    
+    repel_t1: { id:'repel_t1', name:'Raccoon Repellent T1', img:'item_repellent_t1.png', type:'tool', val:1, price: 30, desc: 'Sprays a light scent that repels raccoons for 2 minutes.' },
+    repel_t2: { id:'repel_t2', name:'Raccoon Repellent T2', img:'item_repellent_t2.png', type:'tool', val:2, price: 80, desc: 'Sprays a strong scent that repels raccoons for 4 minutes.' },
+    repel_t3: { id:'repel_t3', name:'Raccoon Repellent T3', img:'item_repellent_t3.png', type:'tool', val:3, price: 200, desc: 'Sprays an extreme scent that repels raccoons for 6 minutes.' },
+    
+    mutator: { id:'mutator', name:'Mutation Giver', img:'item_mutation_giver.png', type:'tool', price: 500, desc: 'A rare elixir that immediately triggers a random mutation on a plant.' }
+  },
+
+  mutations: {
+    Burnt: { mult: 1.2, cond: 'summer', trigger: 'Gained during Summer season' },
+    Frozen: { mult: 1.2, cond: 'winter', trigger: 'Gained during Winter season' },
+    Vibrant: { mult: 1.2, cond: 'spring', trigger: 'Gained during Spring season' },
+    Cozy: { mult: 1.2, cond: 'autumn', trigger: 'Gained during Autumn season' },
+    Wet: { mult: 1.5, cond: 'wet', trigger: 'Gained during Raining weather' },
+    Breezy: { mult: 1.1, cond: 'breezy', trigger: 'Gained during Windy weather' },
+    Shocked: { mult: 2.0, cond: 'shocked', trigger: 'Gained during Thunderstorm' },
+    Windswept: { mult: 2.5, cond: 'windswept', trigger: 'Gained during Tornado/Hurricane' },
+    Nocturnal: { mult: 1.3, cond: 'night', trigger: 'Gained at Night time' },
+    Blessing: { mult: 3.0, cond: 'blessing', trigger: "Gained during Gods' Blessing event" },
+    Beep: { mult: 1.5, cond: 'beep', trigger: 'Gained during Beeps event' },
+    DarkNER: { mult: 1.5, cond: 'darkner', trigger: 'Gained during The Roaring event' },
+    Glitch: { mult: 2.0, cond: 'glitch', trigger: 'Gained during Glitch event' }
+  },
+
+  dialogues: {
+    bob: { id:'bob', name: 'Bob', img:'npc_bob.png', enterAudio: 'dialog_bob_enter.mp3', exitAudio: 'dialog_bob_exit.mp3', branches: [
+      { id: 'hi', label: 'Hi!', audio: 'dialog_bob_hi.mp3', text: "Ah! A customer! Look, buy three seed packets and I’ll throw in… something. (I won’t. Buy my crap anyways though)" },
+      { id: 'tmay', label: 'Tell me about yourself', audio: 'dialog_bob_tmay.mp3', text: "I’m Bob. Serial seed-preneur, visionary, and the only man brave enough to monetize topsoil. (do those big words make me look smart)" },
+      { id: 'mention', label: 'Who’s Bob Jr?', audio: 'dialog_bob_mention.mp3', text: "Off-brand me. He made his own booth a few (virtual) feet away and insisted we are family. I’m absolutely sure he has no blood relation to myself, but the kid does look a lot like me…" }
+    ]},
+    bobjr: { id:'bobjr', name: 'Bob Jr.', img:'npc_bob_jr.png', enterAudio: 'dialog_bobjr_enter.mp3', exitAudio: 'dialog_bobjr_exit.mp3', branches: [
+      { id: 'hi', label: 'Hi!', audio: 'dialog_bobjr_hi.mp3', text: "HELLO!!! Bring me your leafy friend’sh! I will sh’mell em and tell ya how many dooler’sh they are!" },
+      { id: 'tmay', label: 'Tell me about yourself', audio: 'dialog_bobjr_tmay.mp3', text: "I’m Bob Jr.! Brainy boy of plant’sh! I ‘apprai’sh’ the ma’shive asset’sh! (were tho’she the right big word’sh?)" },
+      { id: 'mention', label: 'Who’s Bob?', audio: 'dialog_bobjr_mention.mp3', text: "That’sh me daddy! He pretend’sh he aint know me whenever I call him \"Dada\" but that’sh just his sh’uper duper ‘shecret bu’shiness tactic to be all profe’shional! We share the exact same bu’shines’sh man ‘shpeakingsh’!" }
+    ]},
+    mark: { id:'mark', name: 'Mark', img:'npc_mark.png', enterAudio: 'dialog_mark_enter.mp3', exitAudio: 'dialog_mark_exit.mp3', branches: [
+      { id: 'hi', label: 'Hi!', audio: 'dialog_mark_hi.mp3', text: "Hey there! Ya ‘ere for the ‘eavy-duty spouts or the raccoon spray? 'Cause the raccoons around ‘ere are gettin' bold, I tell ya." },
+      { id: 'tmay', label: 'Tell me about yourself', audio: 'dialog_mark_tmay.mp3', text: "I’m Mark. Spend my days pouring concrete and welding steel, just to manufacture the finest garden defense gear this side of the garden." },
+      { id: 'mention', label: 'Who’s Bob Jr?', audio: 'dialog_mark_mention.mp3', text: "Man, that kid’s hilarious. He keeps telling Bob they’re running a shared business. Bob Jr looks like he’s struggling with his business, but kid’s actually got decent smarts for a toddler!" }
+    ]},
+    peeb: { id:'peeb', name: 'Peeb', img:'npc_peeb.png', isBeep: true, branches: [
+      { id: 'hi', label: 'Hi', text: "No." },
+      { id: 'tmay', label: 'Tell me about yourself', text: "No." },
+      { id: 'mention_bob', label: 'Who’s Bob?', text: "I dunno" },
+      { id: 'mention_bobjr', label: 'Who’s Bob JR?', text: "No idea??" },
+      { id: 'mention_mark', label: 'Who’s Mark?', text: "I DONT KNOW???" }
+    ]}
+  },
+
+  achievements: {
+    welcome: { name: "Welcome!", desc: "Join the game", reward: 25 },
+    plant: { name: "Professional Garnd-iner", desc: "Plant a plant", reward: 30 },
+    water: { name: "Thirsty", desc: "Use a watering can", reward: 30 },
+    spray: { name: "Bugspray", desc: "Use a racoon repellent", reward: 40 },
+    fend: { name: "Pest Control", desc: "Fend off a raccoon", reward: 75 },
+    why: { name: "Why…", desc: "Use a gear on an empty plot", reward: 20 },
+    scam: { name: "Get scammed", desc: "Get downgraded from appraisals", reward: 50 },
+    jackpot: { name: "JACKPOT", desc: "Gain a mutation from appraisal", reward: 100 },
+    robbed: { name: "Burglary", desc: "Get robbed by a raccoon", reward: 50 },
+    buy: { name: "Come again!", desc: "Buy something in a shop", reward: 25 },
+    all: { name: "Gotta plant em all!", desc: "Discover everything in the pokedex", reward: 300 },
+    low_attn: { name: "Low attention span", desc: "Ask bud for the tutorial again", reward: 15 },
+    glow_up: { name: "Glow up", desc: "Get your first mutated plant", reward: 80 }
+  }
+};
+
+/* ==========================================================================
+   GAME STATE & ENGINE
+   ========================================================================== */
+let C = {
+  slot: 1,
+  mode: 'normal',
+  name: 'My Garden',
+  doolers: 100,
+  timeTick: 0,
+  dayCount: 1,
+  seasonIdx: 2,
+  weather: 'Normal',
+  event: 'None',
+  plots: [],
+  inventory: [],
+  unlocked: { plants:[], achievements:['welcome'], mutations:[] },
+  claimedAchievements: [],
+  stats: { deadPlants: 0 },
+  plantWeights: {}
+};
+
+let settings = { music: 0.5, sfx: 0.7, dialog: 0.8, bgmTrack: 'music.mp3', autoTabPause: true };
+let gameInterval = null;
+let currentMinigame = null;
+let currentDialog = null;
+let currentNpcShop = null;
+let selectedHotbarIdx = null;
+let draggedInvIndex = null;
+let soundPool = {};
+let currentBGM = null;
+let tutPage = 1;
+let activeRaccoon = null;
+let isPaused = false;
+let haggleCount = 0; // Tracks how many times you've haggled this visit
+
+const SEASONS = ['Winter', 'Summer', 'Spring', 'Autumn'];
+const WEATHERS = ['Normal', 'Normal', 'Wet', 'Breezy', 'Shocked', 'Windswept'];
+const EVENTS = ['None', 'None', 'None', 'Blessing', 'Beep', 'DarkNER', 'Glitch'];
+
+// UTILS & AUDIO ENGINE
+const $ = id => document.getElementById(id);
+
+function playSFX(file, category='sfx') {
+  if(!file) return;
+  try {
+    let vol = category === 'music' ? settings.music : (category === 'dialog' ? settings.dialog : settings.sfx);
+    let audio = soundPool[file];
+    if(!audio) {
+      audio = new Audio(file);
+      soundPool[file] = audio;
+    }
+    if(category === 'music') {
+      audio.loop = true;
+      currentBGM = audio;
+    }
+    audio.volume = vol;
+    audio.currentTime = 0;
+    audio.play().catch(e=>{});
+  } catch(e){}
+}
+
+function stopBGM() {
+  if(currentBGM) {
+    currentBGM.pause();
+    currentBGM.currentTime = 0;
+    currentBGM = null;
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem('garndin_settings', JSON.stringify(settings));
+}
+
+function loadSettings() {
+  let savedSets = localStorage.getItem('garndin_settings');
+  if(savedSets) {
+    try { settings = JSON.parse(savedSets); } catch(e){}
+  }
+  if(settings.autoTabPause === undefined) settings.autoTabPause = true;
+}
+
+function updateVolumes() {
+  settings.music = parseInt($('slider-music').value) / 100;
+  settings.sfx = parseInt($('slider-sfx').value) / 100;
+  settings.dialog = parseInt($('slider-dialog').value) / 100;
+  if(currentBGM) currentBGM.volume = settings.music;
+  saveSettings();
+}
+
+function updateAutoPauseSetting() {
+  settings.autoTabPause = $('toggle-autopause').checked;
+  saveSettings();
+}
+
+function changeBGMTrack(file) {
+  settings.bgmTrack = file;
+  saveSettings();
+  stopBGM();
+  playSFX(file, 'music');
+}
+
+function notify(text) {
+  playSFX('sfx_notif.mp3', 'sfx');
+  const c = $('notif-container');
+  const d = document.createElement('div');
+  d.className = 'notif';
+  d.innerHTML = `<img src="icon_notification_bell.png" width="22" class="item-icon" onerror="this.style.display='none'"> <span>${text}</span>`;
+  c.appendChild(d);
+  setTimeout(()=> { d.style.opacity = '0'; setTimeout(()=>d.remove(), 300); }, 3000);
+}
+
+function switchScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  $(id).classList.remove('hidden');
+  playSFX('sfx_ui_click.mp3');
+}
+
+function closeModals() {
+  document.querySelectorAll('.modal-wrapper').forEach(m => m.classList.add('hidden'));
+  playSFX('sfx_ui_click.mp3');
+  if(currentDialog && currentDialog.audio) { currentDialog.audio.pause(); }
+  currentDialog = null;
+  if(isPaused) { isPaused = false; }
+}
+
+function leaveShop() {
+  if(currentNpcShop === 'peeb') {
+    // Clear locked-in peebMult prices and reset haggle status
+    if(C && C.inventory) {
+      C.inventory.forEach(item => { delete item.peebMult; delete item.peebPrice; });
+    }
+    haggleCount = 0; // Reset counter for next visit
+    window.haggleDiscount = 1.0; // Reset discount
+  }
+  if(currentNpcShop && DATA.dialogues[currentNpcShop] && DATA.dialogues[currentNpcShop].exitAudio) {
+    playSFX(DATA.dialogues[currentNpcShop].exitAudio, 'dialog');
+  }
+  currentNpcShop = null;
+  closeModals();
+}
+
+function showTooltip(e, text) {
+  const t = $('tooltip');
+  t.innerText = text;
+  t.style.left = (e.pageX + 15) + 'px';
+  t.style.top = (e.pageY + 15) + 'px';
+  t.style.opacity = '1';
+}
+function hideTooltip() { $('tooltip').style.opacity = '0'; }
+document.addEventListener('mousemove', e => {
+  if($('tooltip').style.opacity === '1') {
+    $('tooltip').style.left = (e.pageX + 15) + 'px';
+    $('tooltip').style.top = (e.pageY + 15) + 'px';
+  }
+});
+
+// AUTO-PAUSE WHEN TAB SWAPS OR VISIBILITY CHANGES
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && settings.autoTabPause !== false) {
+    if (!$('screen-game').classList.contains('hidden') && !isPaused) {
+      openSettings();
+      notify("Game auto-paused (Tab switched)");
+    }
+  }
+});
+
+// GLOBAL UI HOVER SFX LISTENER
+document.addEventListener('mouseover', (e) => {
+  const target = e.target.closest('button, .slot, .plot, .shop-card');
+  if(target && !target.dataset.hovered) {
+    target.dataset.hovered = 'true';
+    playSFX('sfx_ui_hover.mp3', 'sfx');
+    setTimeout(() => { delete target.dataset.hovered; }, 150);
+  }
+});
+
+/* ==========================================================================
+   CUSTOM IN-GAME POPUP SYSTEM
+   ========================================================================== */
+function showCustomAlert(msg, onOk) {
+  $('custom-alert-msg').innerText = msg;
+  $('modal-custom-alert').classList.remove('hidden');
+  playSFX('sfx_ui_click.mp3');
+  $('btn-custom-alert-ok').onclick = () => {
+    $('modal-custom-alert').classList.add('hidden');
+    playSFX('sfx_ui_click.mp3');
+    if(onOk) onOk();
+  };
+}
+
+function showCustomConfirm(msg, onYes, onNo) {
+  $('custom-confirm-msg').innerText = msg;
+  $('modal-custom-confirm').classList.remove('hidden');
+  playSFX('sfx_ui_click.mp3');
+  $('btn-custom-confirm-yes').onclick = () => {
+    $('modal-custom-confirm').classList.add('hidden');
+    playSFX('sfx_ui_click.mp3');
+    if(onYes) onYes();
+  };
+  $('btn-custom-confirm-no').onclick = () => {
+    $('modal-custom-confirm').classList.add('hidden');
+    playSFX('sfx_ui_click.mp3');
+    if(onNo) onNo();
+  };
+}
+
+function showCustomPrompt(msg, defaultVal, onConfirm) {
+  $('custom-prompt-msg').innerText = msg;
+  $('custom-prompt-input').value = defaultVal || '';
+  $('modal-custom-prompt').classList.remove('hidden');
+  playSFX('sfx_ui_click.mp3');
+  $('btn-custom-prompt-ok').onclick = () => {
+    let val = $('custom-prompt-input').value.trim();
+    $('modal-custom-prompt').classList.add('hidden');
+    playSFX('sfx_ui_click.mp3');
+    if(onConfirm) onConfirm(val);
+  };
+  $('btn-custom-prompt-cancel').onclick = () => {
+    $('modal-custom-prompt').classList.add('hidden');
+    playSFX('sfx_ui_click.mp3');
+  };
+}
+
+/* ==========================================================================
+   INITIALIZATION, SAVES, FILE EXPORT & IMPORT
+   ========================================================================== */
+function initGame() {
+  loadSettings();
+  renderSaveSlots();
+  populateBGMDropdown();
+}
+
+function populateBGMDropdown() {
+  const select = $('bgm-select');
+  if(!select) return;
+  select.innerHTML = '';
+  BGM_TRACKS.forEach(track => {
+    const opt = document.createElement('option');
+    opt.value = track.file;
+    opt.innerText = track.name;
+    if(track.file === settings.bgmTrack) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+function exportSaveToFile(slot) {
+  let saveData = localStorage.getItem('garndin_save_' + slot);
+  if(!saveData) {
+    if(C && C.slot === slot) saveData = JSON.stringify(C);
+    else { notify("No save data in this slot to export!"); return; }
+  }
+  
+  let parsed = JSON.parse(saveData);
+  let fileName = `garndin_save_slot${slot}_${(parsed.name||'Garden').replace(/[^a-z0-9]/gi, '_')}.json`;
+  
+  let blob = new Blob([JSON.stringify(parsed, null, 2)], { type: 'application/json' });
+  let a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  playSFX('sfx_buy.mp3');
+  notify(`Exported Cartridge ${slot} save to file!`);
+}
+
+function importSaveFromFile(targetSlot) {
+  let input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    let file = e.target.files[0];
+    if(!file) return;
+    let reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        let data = JSON.parse(event.target.result);
+        if(!data.name || !data.plots) {
+          notify("Invalid save file structure!");
+          return;
+        }
+        data.slot = targetSlot;
+        localStorage.setItem('garndin_save_' + targetSlot, JSON.stringify(data));
+        renderSaveSlots();
+        playSFX('sfx_skillcheck_pass.mp3');
+        notify(`Successfully imported save into Cartridge ${targetSlot}!`);
+      } catch(err) {
+        notify("Failed to parse save file!");
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function renderSaveSlots() {
+  const container = $('save-slots');
+  container.innerHTML = '';
+  for(let i=1; i<=3; i++) {
+    const save = localStorage.getItem('garndin_save_'+i);
+    const div = document.createElement('div');
+    div.className = 'panel'; div.style.padding = '15px'; div.style.textAlign = 'left';
+    if(save) {
+      const data = JSON.parse(save);
+      let modeTitle = data.mode === 'calm' ? 'Calm Mode' : (data.mode === 'hard' ? 'Hard Mode' : 'Normal Mode');
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="margin:0; font-size:22px; color:#3e2723;">Cartridge ${i}: ${data.name}</h3>
+            <p style="margin:5px 0 0 0; font-size:16px;">Mode: <b style="color:#d84315;">${modeTitle}</b> | Doolers: <b>${Math.floor(data.doolers)}</b> | Day: <b>${data.dayCount}</b></p>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button onclick="loadSave(${i})" style="background:#c8e6c9; font-size:15px; padding:8px 14px;">Load</button>
+            <button onclick="exportSaveToFile(${i})" style="background:#e1f5fe; font-size:15px; padding:8px 14px;">Export</button>
+            <button onclick="importSaveFromFile(${i})" style="background:#fff9c4; font-size:15px; padding:8px 14px;">Import</button>
+            <button onclick="clearSaveStep1(${i})" style="background:#ffcdd2; font-size:15px; padding:8px 14px;">Clear</button>
+          </div>
+        </div>`;
+    } else {
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
+          <div>
+            <h3 style="margin:0; font-size:22px; color:#777;">Cartridge ${i}: Empty Slot</h3>
+            <p style="margin:4px 0 0 0; font-size:14px; color:#999; font-style:italic;">No save data yet.</p>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+            <button onclick="C.slot=${i}; switchScreen('screen-newgame')"
+              style="background: linear-gradient(135deg, #43a047, #1b5e20); color:#fff; border-color:#1b5e20; font-size:20px; padding:14px 28px; border-radius:12px; box-shadow: 0 6px 14px rgba(0,100,0,0.4); letter-spacing:0.5px;">
+              🌱 New Game
+            </button>
+            <button onclick="importSaveFromFile(${i})"
+              style="background:transparent; border:2px dashed #aaa; color:#888; font-size:13px; padding:5px 14px; border-radius:8px; box-shadow:none;">
+              📥 Import Save File
+            </button>
+          </div>
+        </div>`;
+    }
+    container.appendChild(div);
+  }
+}
+
+function startGame(mode) {
+  let initDoolers = mode === 'calm' ? 150 : (mode === 'hard' ? 50 : 100);
+  C = {
+    slot: C.slot,
+    mode: mode,
+    name: $('new-garden-name').value.trim() || 'My Garden',
+    doolers: initDoolers,
+    timeTick: 0,
+    dayCount: 1,
+    seasonIdx: 2,
+    weather: 'Normal',
+    event: 'None',
+    plots: Array(8).fill(null),
+    inventory: [{id:'seed_standard', qty:5, type:'seed'}, {id:'can_t1', qty:1, type:'tool'}],
+    unlocked: { plants:[], achievements:['welcome'], mutations:[] },
+    claimedAchievements: [],
+    stats: { deadPlants: 0 },
+    plantWeights: {}
+  };
+  generateDailyBonus();
+  saveGame(true);
+  startEngine();
+  openTutorial(false);
+}
+
+function sanitizeAndRepairSaveData() {
+  if(!C) return;
+  if(!C.plots) C.plots = Array(8).fill(null);
+  if(!C.claimedAchievements) C.claimedAchievements = [];
+  if(!C.plantWeights) C.plantWeights = {};
+  if(typeof C.timeTick !== 'number' || isNaN(C.timeTick)) C.timeTick = 0;
+  if(typeof C.dayCount !== 'number' || isNaN(C.dayCount) || C.dayCount <= 0) C.dayCount = 1;
+  if(typeof C.seasonIdx !== 'number' || isNaN(C.seasonIdx) || C.seasonIdx < 0 || C.seasonIdx >= 4) C.seasonIdx = 0;
+  if(typeof C.doolers !== 'number' || isNaN(C.doolers)) C.doolers = 100;
+  if(!C.weather) C.weather = 'Normal';
+  if(!C.event) C.event = 'None';
+  if(!C.inventory) C.inventory = [];
+  if(!C.unlocked) C.unlocked = { plants:[], achievements:[], mutations:[] };
+  if(!C.unlocked.plants) C.unlocked.plants = [];
+  if(!C.unlocked.achievements) C.unlocked.achievements = [];
+  if(!C.unlocked.mutations) C.unlocked.mutations = [];
+  if(!C.dailyBonus) generateDailyBonus();
+
+  C.plots.forEach((p, idx) => {
+    if(p) {
+      if(p.state === 'growing') {
+        let plData = DATA.plants[p.id];
+        let rarity = (plData && plData.rarity) ? plData.rarity : 1;
+        if(typeof p.maxTime !== 'number' || isNaN(p.maxTime) || p.maxTime <= 0) {
+          p.maxTime = 60 * rarity;
+        }
+        if(typeof p.growTime !== 'number' || isNaN(p.growTime)) {
+          p.growTime = p.maxTime;
+        }
+      }
+      if(!p.mutations) p.mutations = [];
+    }
+  });
+}
+
+function loadSave(slot) {
+  C = JSON.parse(localStorage.getItem('garndin_save_'+slot));
+  sanitizeAndRepairSaveData();
+  startEngine();
+}
+
+function clearSaveStep1(slot) {
+  showCustomConfirm(`Are you sure you want to clear Cartridge ${slot}?`, () => {
+    showCustomConfirm(`REALLY SURE? All garden progress in Cartridge ${slot} will be lost permanently!`, () => {
+      localStorage.removeItem('garndin_save_'+slot);
+      renderSaveSlots();
+      notify("Save cleared successfully.");
+    });
+  });
+}
+
+function saveGame(isManual = false) {
+  localStorage.setItem('garndin_save_'+C.slot, JSON.stringify(C));
+  saveSettings();
+  if(isManual) {
+    notify("Game saved to file!");
+  } else {
+    notify("Autosaving...");
+  }
+}
+
+function exitToMainMenu() {
+  saveGame(true);
+  if(gameInterval) clearInterval(gameInterval);
+  isPaused = false;
+  stopBGM();
+  
+  if (window.raccoonStealTimer) {
+    clearTimeout(window.raccoonStealTimer);
+    window.raccoonStealTimer = null;
+  }
+  if (activeRaccoon) {
+    activeRaccoon.remove();
+    activeRaccoon = null;
+  }
+  
+  let wo = $('weather-overlay');
+  if(wo) wo.className = '';
+  $('event-banner').classList.add('hidden');
+  document.body.classList.remove('flash-red', 'flash-yellow');
+  
+  closeModals();
+  switchScreen('screen-menu');
+}
+
+function startEngine() {
+  isPaused = false;
+  switchScreen('screen-game');
+  updateUI();
+  renderPlots();
+  renderInventory();
+  if(gameInterval) clearInterval(gameInterval);
+  gameInterval = setInterval(gameTick, 1000);
+  playSFX(settings.bgmTrack || 'music.mp3', 'music');
+}
+
+function renameGarden() {
+  showCustomPrompt("Enter new garden name:", C.name, (n) => {
+    if(n && n.trim()) { C.name = n.trim(); updateUI(); saveGame(true); }
+  });
+}
+
+/* ==========================================================================
+   DAILY PRICE MULTIPLIER (DAILY BONUS)
+   ========================================================================== */
+function generateDailyBonus() {
+  if (!C) return;
+  let isMutation = Math.random() < 0.5;
+  let mult = parseFloat((2.0 + Math.random() * 1.0).toFixed(1)); // 2.0 to 3.0
+  if (isMutation) {
+    let mutKeys = Object.keys(DATA.mutations);
+    let chosenMut = mutKeys[Math.floor(Math.random() * mutKeys.length)];
+    C.dailyBonus = {
+      type: 'mutation',
+      target: chosenMut,
+      mult: mult,
+      label: `Plants with the "${chosenMut}" mutation sell for ${mult}x more today!`
+    };
+  } else {
+    let plantKeys = Object.keys(DATA.plants).filter(k => k !== '_weed');
+    let chosenPlant = plantKeys[Math.floor(Math.random() * plantKeys.length)];
+    let plantName = DATA.plants[chosenPlant].name;
+    C.dailyBonus = {
+      type: 'plant',
+      target: chosenPlant,
+      mult: mult,
+      label: `"${plantName}" sells for ${mult}x more today!`
+    };
+  }
+}
+
+/* ==========================================================================
+   CORE ENGINE TICK & SOFTLOCK DETECTION
+   ========================================================================== */
+function gameTick() {
+  if(!C || isPaused) return;
+  
+  C.timeTick++;
+  
+  // Decrement watering can cooldowns in inventory
+  if(C.inventory) {
+    C.inventory.forEach(item => {
+      if(item.cooldown && item.cooldown > 0) {
+        item.cooldown--;
+      }
+    });
+  }
+  
+  let m = C.timeTick % 180;
+  let isNight = m >= 120;
+  let isNewDay = m === 0;
+  
+  if(isNewDay) {
+    C.dayCount++;
+    C.weather = WEATHERS[Math.floor(Math.random()*WEATHERS.length)];
+    if(Math.random() < 0.04) C.event = EVENTS[Math.floor(Math.random()*EVENTS.length)]; else C.event = 'None';
+    if(C.dayCount % 10 === 0) C.seasonIdx = (C.seasonIdx + 1) % 4;
+    generateDailyBonus();
+    saveGame(false);
+    
+    // Show transition banner
+    const banner = $('transition-banner');
+    if (banner) {
+      banner.innerHTML = `☀️ DAY ${C.dayCount}<br><span style="font-size:20px; font-weight:normal;">SEASON: ${SEASONS[C.seasonIdx].toUpperCase()}</span>`;
+      banner.classList.remove('hidden');
+      banner.style.animation = 'none';
+      setTimeout(() => { banner.style.animation = 'bannerSlideYellow 1s 1'; }, 10);
+      setTimeout(() => { banner.classList.add('hidden'); }, 4000);
+    }
+    
+    if(C.event !== 'None') {
+      $('event-banner').innerText = `EVENT: ${C.event.toUpperCase()}`;
+      $('event-banner').classList.remove('hidden');
+      document.body.classList.add('flash-yellow');
+      setTimeout(()=>{ $('event-banner').classList.add('hidden'); document.body.classList.remove('flash-yellow'); }, 5000);
+    }
+  }
+
+  let wo = $('weather-overlay');
+  if (wo) {
+    wo.className = '';
+    if(isNight) wo.classList.add('weather-night');
+    if(C.weather === 'Wet' || C.weather === 'Shocked') wo.classList.add('weather-rain');
+    if(C.event === 'Blessing') wo.classList.add('weather-blessing');
+    if(C.event === 'DarkNER') wo.classList.add('weather-roaring');
+    if(C.event === 'Glitch') wo.classList.add('weather-glitch');
+  }
+
+  let growthMult = C.mode === 'hard' ? 0.7 : (C.mode === 'calm' ? 1.5 : 1.0);
+  if(C.weather === 'Wet') growthMult *= 1.2;
+  
+  C.plots.forEach((p, i) => {
+    if(p && p.state === 'growing') {
+      let plData = DATA.plants[p.id];
+      let rarity = (plData && plData.rarity) ? plData.rarity : 1;
+      
+      if(typeof p.maxTime !== 'number' || isNaN(p.maxTime) || p.maxTime <= 0) p.maxTime = 60 * rarity;
+      if(typeof p.growTime !== 'number' || isNaN(p.growTime)) p.growTime = p.maxTime;
+      
+      p.growTime -= growthMult;
+      if(p.growTime <= 0) {
+        p.growTime = 0;
+        p.state = 'grown';
+        notify("A plant in your garden has fully grown!");
+        checkRarePassiveMutation(p, isNight);
+      }
+    } else if(p && p.state === 'grown') {
+      if(Math.random() < 0.015) checkRarePassiveMutation(p, isNight);
+    }
+    if(p && p.repel > 0) p.repel--;
+  });
+  
+  if(!currentMinigame && !activeRaccoon && C.mode !== 'calm' && !isNight) {
+    let spawnChance = C.mode === 'hard' ? 0.03 : 0.015;
+    if(Math.random() < spawnChance) spawnRaccoon();
+  }
+
+  // Random weed spawning in empty plots
+  let emptyPlots = C.plots.map((p,i) => p === null ? i : -1).filter(i => i >= 0);
+  if(emptyPlots.length > 0) {
+    let weedChance = C.mode === 'hard' ? 0.002 : 0.0008;
+    if(Math.random() < weedChance) {
+      let targetIdx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
+      C.plots[targetIdx] = { state: 'weed', weedAge: 0 };
+      notify('A weed sprouted in your garden! Click the plot to pull it.');
+    }
+  }
+
+  checkSoftlock();
+
+  updateUI();
+  renderPlots();
+  renderInventory();
+}
+
+function checkSoftlock() {
+  let hasNoMoney = C.doolers < 10;
+  let hasNoSeeds = !C.inventory.some(i => i.type === 'seed');
+  let hasNoPlantsInInv = !C.inventory.some(i => i.type === 'plant');
+  let hasNoPlantsInPlots = !C.plots.some(p => p !== null);
+
+  if(hasNoMoney && hasNoSeeds && hasNoPlantsInInv && hasNoPlantsInPlots) {
+    addToInv({ id: 'seed_standard', qty: 1, type: 'seed' });
+    notify("Softlock Protection: Granted 1 Free Standard Seedpack!");
+  }
+}
+
+// Seasonal background palette
+const SEASON_BG = { Spring: '#6abf4b', Summer: '#3d7a2e', Winter: '#dde8ec', Autumn: '#c07820' };
+
+function updateUI() {
+  $('ui-garden-name').innerText = C.name;
+  $('ui-doolers').innerText = Math.floor(C.doolers);
+  $('ui-season').innerText = SEASONS[C.seasonIdx];
+  $('ui-weather').innerText = C.weather;
+
+  // Seasonal body background with image and fallback color
+  let sName = SEASONS[C.seasonIdx].toLowerCase();
+  let fallbackColor = SEASON_BG[SEASONS[C.seasonIdx]] || '#7ba659';
+  document.body.style.background = `${fallbackColor} url('background_${sName}.png') no-repeat center center fixed`;
+  document.body.style.backgroundSize = 'cover';
+  
+  let seasonPill = $('pill-season');
+  const seasonColors = { Winter: '#e0f7fa', Summer: '#fff3e0', Spring: '#e8f5e9', Autumn: '#efebe9' };
+  seasonPill.style.background = seasonColors[SEASONS[C.seasonIdx]];
+  
+  let m = C.timeTick % 180;
+  let hrs = Math.floor((m / 180) * 24) + 6;
+  if(hrs >= 24) hrs -= 24;
+  let mins = Math.floor((m % (180/24)) * (60/(180/24)));
+  $('ui-time').innerText = `Day ${C.dayCount} - ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+  
+  if(C.mode === 'hard') {
+    $('ui-hardmode-dead').classList.remove('hidden');
+    $('ui-dead-plants').innerText = C.stats.deadPlants;
+  } else {
+    $('ui-hardmode-dead').classList.add('hidden');
+  }
+
+  let isNight = (C.timeTick % 180) >= 120;
+  let peebActive = isNight && (C.dayCount % 3 === 0);
+  const peebCard = $('shop-card-peeb');
+  if(peebActive) {
+    peebCard.classList.remove('closed');
+    $('peeb-card-title').innerText = "Black Market";
+    $('peeb-card-desc').innerText = "Owner: Peeb (OPEN!)";
+  } else {
+    peebCard.classList.add('closed');
+    $('peeb-card-title').innerText = "Black Market";
+    $('peeb-card-desc').innerText = "Closed (Appears every 3rd night)";
+  }
+  // Discovery trackers
+  const totalPlants = Object.keys(DATA.plants).length;
+  const totalMutations = Object.keys(DATA.mutations).length;
+  const totalAchievements = Object.keys(DATA.achievements).length;
+  const discoveredPlants = C.unlocked ? (C.unlocked.plants || []).length : 0;
+  const discoveredMutations = C.unlocked ? (C.unlocked.mutations || []).length : 0;
+  const discoveredAchievements = C.unlocked ? (C.unlocked.achievements || []).length : 0;
+  const plantsEl = $('ui-plants-discovered');
+  const mutationsEl = $('ui-mutations-discovered');
+  const achievsEl = $('ui-achievements-unlocked');
+  if(plantsEl) plantsEl.innerText = `Plants: ${discoveredPlants}/${totalPlants}`;
+  if(mutationsEl) mutationsEl.innerText = `Mutations: ${discoveredMutations}/${totalMutations}`;
+  if(achievsEl) achievsEl.innerText = `Achievs: ${discoveredAchievements}/${totalAchievements}`;
+}
+
+function unlockAchiev(id) {
+  if(!C.unlocked.achievements.includes(id) && DATA.achievements[id]) {
+    C.unlocked.achievements.push(id);
+    notify(`Achievement Unlocked: ${DATA.achievements[id].name}`);
+    if(C.unlocked.plants.length === Object.keys(DATA.plants).length) unlockAchiev('all');
+    saveGame(false);
+  }
+}
+
+function claimAchievementReward(id) {
+  if(!C.claimedAchievements) C.claimedAchievements = [];
+  if(C.unlocked.achievements.includes(id) && !C.claimedAchievements.includes(id)) {
+    let reward = DATA.achievements[id].reward || 50;
+    C.doolers += reward;
+    C.claimedAchievements.push(id);
+    playSFX('sfx_skillcheck_pass.mp3');
+    updateUI();
+    notify(`Claimed ${reward} Doolers reward for ${DATA.achievements[id].name}!`);
+    saveGame(false);
+    
+    if(!$('modal-pokedex').classList.contains('hidden')) renderPokedexCategory('achievements');
+    if(!$('screen-wiki').classList.contains('hidden')) renderWikiCategory('achievements');
+  }
+}
+
+/* ==========================================================================
+   GARDEN PLOTS & IN-PLACE DOM UPDATES
+   ========================================================================== */
+function renderPlots() {
+  const c = $('garden-area');
+  let totalCount = C.plots.length + (C.plots.length < 16 ? 1 : 0);
+  c.style.gridTemplateColumns = `repeat(${Math.min(totalCount, 4)}, 140px)`;
+  
+  if(c.children.length !== totalCount) {
+    c.innerHTML = '';
+    C.plots.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'plot';
+      div.dataset.plotIndex = i;
+      div.onclick = e => handlePlotClick(i);
+      div.oncontextmenu = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if(C.plots[i]) { C.plots[i].favourite = !C.plots[i].favourite; renderPlots(); }
+      };
+      c.appendChild(div);
+    });
+    
+    if(C.plots.length < 16) {
+      const div = document.createElement('div');
+      div.className = 'plot';
+      div.style.background = 'rgba(0,0,0,0.15)';
+      div.style.border = '5px dashed #3e2723';
+      div.style.display = 'flex';
+      div.style.flexDirection = 'column';
+      div.style.alignItems = 'center';
+      div.style.justifyContent = 'center';
+      div.style.color = '#3e2723';
+      div.style.fontWeight = 'bold';
+      div.style.fontSize = '14px';
+      div.style.textAlign = 'center';
+      div.style.cursor = 'pointer';
+      
+      let cost = Math.floor(100 * Math.pow(1.8, C.plots.length - 8));
+      div.innerHTML = `<span style="font-size:36px; line-height:1;">➕</span><div>Expand<br>${cost} D</div>`;
+      div.onclick = buyPlot;
+      div.onmouseenter = e => showTooltip(e, `Expand Garden\nClick to buy a new plot here for ${cost} Doolers.`);
+      div.onmouseleave = hideTooltip;
+      c.appendChild(div);
+    }
+  }
+  
+  C.plots.forEach((p, i) => {
+    const div = c.children[i];
+    if(!div) return;
+    
+    div.className = 'plot';
+    if(p && p.favourite) div.classList.add('favourited');
+    if(p && p.repel > 0) div.classList.add('repelled');
+
+    if(p) {
+      // Weed state
+      if(p.state === 'weed') {
+        div.classList.add('weedy');
+        div.innerHTML = `<img src="plant_moss.png" class="plant-img weed-img-recolored"><div class="grow-timer-badge" style="background:#2e7d32; border-color:#a5d6a7;">WEED! Click!</div>`;
+        div.onmouseenter = e => showTooltip(e, 'Invasive Weed!\nClick the plot to start pulling it out.\nYou can sell it afterwards for a few doolers.');
+        div.onmouseleave = hideTooltip;
+        return;
+      }
+
+      let imgSrc = 'growthstage_seed.png';
+      if(p.state === 'rotten') imgSrc = 'rotten_plant.png';
+      else if(p.state === 'grown') imgSrc = DATA.plants[p.id].img;
+      else {
+        let maxT = (p.maxTime && p.maxTime > 0) ? p.maxTime : 60;
+        let growT = (typeof p.growTime === 'number' && !isNaN(p.growTime)) ? p.growTime : maxT;
+        let elapsed = (maxT - growT) / maxT;
+        
+        if(elapsed < 0.25) imgSrc = 'growthstage_seed.png';
+        else if(elapsed < 0.50) imgSrc = 'growthstage_sprout.png';
+        else if(elapsed < 0.75) imgSrc = 'growthstage_leafs.png';
+        else imgSrc = 'growthstage_flowerbud.png';
+      }
+      
+      let html = `<img src="${imgSrc}" class="plant-img">`;
+      if(p.mutations && p.mutations.length > 0) html += `<div class="mutation-icon"></div>`;
+      if(p.repel > 0) html += `<div class="repel-timer-badge">🛡️ Repellent: ${p.repel}s</div>`;
+      
+      if(p.state === 'growing') {
+        let secLeft = Math.ceil(p.growTime || 0);
+        html += `<div class="grow-timer-badge">⏳ ${secLeft}s</div>`;
+      }
+      
+      div.innerHTML = html;
+      
+      let secLeft = Math.ceil(p.growTime || 0);
+      let tooltip = p.state === 'grown' ? `${DATA.plants[p.id].name}\n"${DATA.plants[p.id].desc}"` : (p.state==='rotten' ? "Rotten Plant" : `its... growing... (${secLeft}s left)`);
+      if(p.mutations && p.mutations.length > 0) tooltip += `\nMutations: ${p.mutations.join(', ')}`;
+      if(p.repel > 0) tooltip += `\nRepellent Active (${p.repel}s remaining)`;
+      if(p.favourite) tooltip += `\n★ Favourited`;
+      
+      div.onmouseenter = e => showTooltip(e, tooltip);
+      div.onmouseleave = hideTooltip;
+    } else {
+      div.innerHTML = '';
+      div.onmouseenter = e => showTooltip(e, "Empty Plot\nSelect seed or gear to use here!");
+      div.onmouseleave = hideTooltip;
+    }
+  });
+  
+  if(C.plots.length < 16) {
+    const div = c.children[C.plots.length];
+    if (div) {
+      let cost = Math.floor(100 * Math.pow(1.8, C.plots.length - 8));
+      div.innerHTML = `<span style="font-size:36px; line-height:1;">➕</span><div>Expand<br>${cost} D</div>`;
+    }
+  }
+}
+
+function buyPlot() {
+  if(C.plots.length >= 16) return;
+  let cost = Math.floor(100 * Math.pow(1.8, C.plots.length - 8));
+  showCustomConfirm(`Buy an additional garden plot for ${cost} Doolers?`, () => {
+    if(C.doolers >= cost) {
+      C.doolers -= cost;
+      C.plots.push(null);
+      playSFX('sfx_buy.mp3');
+      updateUI();
+      renderPlots();
+      notify("Garden expanded! New plot added.");
+    } else {
+      notify("Not enough doolers to buy plot!");
+    }
+  });
+}
+
+function handlePlotClick(i) {
+  const p = C.plots[i];
+  
+  if(selectedHotbarIdx !== null) {
+    const selectedItem = C.inventory[selectedHotbarIdx];
+    if(!selectedItem) { selectedHotbarIdx = null; renderInventory(); return; }
+    
+    if(selectedItem.type === 'seed') {
+      const itemData = DATA.items[selectedItem.id];
+      if(p) {
+        notify("Plot is already occupied!");
+        unlockAchiev('why');
+        return;
+      }
+      plantSeed(i, selectedItem, itemData);
+    } else if(selectedItem.type === 'tool') {
+      const toolData = DATA.items[selectedItem.id];
+      applyTool(i, selectedItem, toolData);
+    }
+    return;
+  }
+  
+  if(p) {
+    if(p.state === 'grown') harvestPlant(i);
+    else if(p.state === 'weed') startWeedMinigame(i);
+    else if(p.state === 'rotten') {
+      C.plots[i] = null;
+      C.doolers += 1;
+      notify("Cleared rotten plant. +1 Dooler");
+      playSFX('sfx_ui_click.mp3');
+      renderPlots();
+    }
+  }
+}
+
+
+function startWeedMinigame(pIdx) {
+  if(currentMinigame) return;
+  currentMinigame = { type: 'weed', pIdx };
+
+  const COLORS = [
+    { name: 'Red',    bg: '#e53935', active: '#ff6b6b' },
+    { name: 'Blue',   bg: '#1e88e5', active: '#64b5f6' },
+    { name: 'Green',  bg: '#43a047', active: '#81c784' },
+    { name: 'Yellow', bg: '#fdd835', active: '#fff176' },
+  ];
+  const PATTERN_LEN = 4;
+  let pattern = Array.from({ length: PATTERN_LEN }, () => Math.floor(Math.random() * 4));
+  let playerStep = 0;
+  let isShowingPattern = true;
+  let stepIdx = 0;
+
+  const m = $('modal-minigame');
+  $('mg-title').innerText = '🌿 Simon Says!';
+  $('mg-inst').innerText = 'The weed is challenging you! Watch the pattern and repeat it to yank it out.';
+
+  function buildGrid() {
+    return `<div id="ss-grid" style="display:grid; grid-template-columns:repeat(2,110px); gap:14px; justify-content:center; margin-top:14px;">
+      ${COLORS.map((c, i) => `<div id="ss-btn-${i}" style="width:110px;height:110px;border-radius:16px;background:${c.bg};border:4px solid rgba(0,0,0,0.25);cursor:not-allowed;transition:background 0.15s, transform 0.15s;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;color:rgba(255,255,255,0.8);user-select:none;">${c.name}</div>`).join('')}
+    </div>`;
+  }
+
+  $('mg-container').innerHTML = `
+    <div style="text-align:center; font-size:17px; font-weight:bold; color:#555; margin-bottom:4px;" id="ss-status">Memorize the pattern...</div>
+    ${buildGrid()}
+  `;
+  m.classList.remove('hidden');
+
+  function flashBtn(idx, callback) {
+    const btn = $('ss-btn-' + idx);
+    if(!btn) { if(callback) callback(); return; }
+    btn.style.background = COLORS[idx].active;
+    btn.style.transform = 'scale(1.12)';
+    setTimeout(() => {
+      btn.style.background = COLORS[idx].bg;
+      btn.style.transform = 'scale(1)';
+      if(callback) setTimeout(callback, 300);
+    }, 500);
+  }
+
+  function showPattern() {
+    if(stepIdx >= pattern.length) {
+      isShowingPattern = false;
+      playerStep = 0;
+      const statusEl = $('ss-status');
+      if(statusEl) statusEl.innerText = 'Your turn! Repeat the pattern.';
+      enableButtons();
+      return;
+    }
+    flashBtn(pattern[stepIdx], () => { stepIdx++; showPattern(); });
+  }
+
+  function enableButtons() {
+    COLORS.forEach((c, i) => {
+      const btn = $('ss-btn-' + i);
+      if(!btn) return;
+      btn.style.cursor = 'pointer';
+      btn.onclick = () => {
+        if(isShowingPattern) return;
+        flashBtn(i, null);
+        playSFX('sfx_ui_click.mp3');
+        if(i === pattern[playerStep]) {
+          playerStep++;
+          if(playerStep >= pattern.length) {
+            disableButtons();
+            endWeedMinigame(true);
+          }
+        } else {
+          disableButtons();
+          endWeedMinigame(false);
+        }
+      };
+    });
+  }
+
+  function disableButtons() {
+    COLORS.forEach((c, i) => {
+      const btn = $('ss-btn-' + i);
+      if(btn) { btn.style.cursor = 'not-allowed'; btn.onclick = null; }
+    });
+  }
+
+  setTimeout(showPattern, 600);
+}
+
+function endWeedMinigame(success) {
+  const pIdx = currentMinigame ? currentMinigame.pIdx : null;
+  currentMinigame = null;
+  $('modal-minigame').classList.add('hidden');
+  $('mg-container').innerHTML = '';
+
+  if(pIdx === null) return;
+  C.plots[pIdx] = null;
+
+  if(success) {
+    let weedVal = 3 + Math.floor(Math.random() * 10);
+    addToInv({ id: '_weed', type: 'plant', val: weedVal, mutations: [], favourite: false, qty: 1 });
+    notify(`Pattern matched! Yanked the weed out! Got a Weed (worth ${weedVal} Doolers).`);
+    playSFX('sfx_skillcheck_pass.mp3');
+  } else {
+    notify('Wrong pattern! The weed slipped away... plot is cleared.');
+    playSFX('sfx_skillcheck_fail.mp3');
+  }
+  renderPlots();
+  renderInventory();
+}
+
+function plantSeed(pIdx, invItem, seedData) {
+  if(C.mode === 'calm') {
+    completePlanting(pIdx, seedData, true);
+  } else {
+    currentMinigame = { type: 'plant', pIdx, seedData, progress: 50, diff: seedData.rarity };
+    startPlantingMinigame();
+  }
+}
+
+
+function applyTool(pIdx, invItem, toolData) {
+  const p = C.plots[pIdx];
+  if(!p) {
+    notify("Used tool on an empty plot!");
+    unlockAchiev('why');
+    return;
+  }
+  
+  if(toolData.id.startsWith('can_')) {
+    if(invItem.cooldown && invItem.cooldown > 0) {
+      notify(`${toolData.name} is on cooldown for ${invItem.cooldown} seconds!`);
+      return;
+    }
+    if(p.state !== 'growing') return;
+    
+    // Define the reduction (300s, 120s, or 30s)
+    let reduction = toolData.val === 3 ? 300 : (toolData.val === 2 ? 120 : 30);
+    p.growTime -= reduction;
+    if(p.growTime < 0) p.growTime = 0;
+    
+    // Automatically set cooldown to 1.5x the reduction
+    let cooldownTime = Math.floor(reduction * 1.5); 
+    invItem.cooldown = cooldownTime;
+    
+    unlockAchiev('water');
+    playSFX('sfx_skillcheck_pass.mp3');
+    
+    selectedHotbarIdx = null;
+    renderInventory();
+    renderPlots();
+    return; // Exit without removing from inventory!
+  } else if(toolData.id.startsWith('repel_')) {
+    p.repel = (p.repel || 0) + 120 * toolData.val;
+    unlockAchiev('spray');
+    playSFX('sfx_ui_click.mp3');
+  } else if(toolData.id === 'mutator') {
+    addRandomMutation(p);
+    playSFX('sfx_skillcheck_pass.mp3');
+  }
+  
+  removeFromInv(invItem.id, 1);
+  selectedHotbarIdx = null;
+  renderInventory();
+  renderPlots();
+}
+
+/* Plant Pity / Weight System */
+function getWeightedRandomPlant(seedData) {
+  if(!C.plantWeights) C.plantWeights = {};
+  
+  let candidates = [];
+  Object.values(DATA.plants).forEach(pl => {
+    if(seedData.pool === 'all') candidates.push(pl);
+    else if(seedData.pool_season) { if(pl.season === seedData.pool_season) candidates.push(pl); }
+    else if(seedData.pool && seedData.pool.includes(pl.rarity) && !pl.season) candidates.push(pl);
+  });
+  
+  if(candidates.length === 0) candidates = [DATA.plants.polyester];
+  
+  candidates.forEach(pl => {
+    if(!C.plantWeights[pl.id]) C.plantWeights[pl.id] = 1;
+  });
+  
+  let totalWeight = candidates.reduce((sum, pl) => sum + (C.plantWeights[pl.id] || 1), 0);
+  let randomVal = Math.random() * totalWeight;
+  let chosenId = candidates[0].id;
+  
+  let currentSum = 0;
+  for(let pl of candidates) {
+    currentSum += (C.plantWeights[pl.id] || 1);
+    if(randomVal <= currentSum) {
+      chosenId = pl.id;
+      break;
+    }
+  }
+  
+  candidates.forEach(pl => {
+    if(pl.id === chosenId) {
+      C.plantWeights[pl.id] = 1;
+    } else {
+      C.plantWeights[pl.id] = (C.plantWeights[pl.id] || 1) + 2;
+    }
+  });
+  
+  return chosenId;
+}
+
+function completePlanting(pIdx, seedData, success) {
+  removeFromInv(seedData.id, 1);
+  selectedHotbarIdx = null;
+  
+  if(!success) {
+    C.plots[pIdx] = { state: 'rotten' };
+    playSFX('sfx_skillcheck_fail.mp3');
+  } else {
+    unlockAchiev('plant');
+    playSFX('sfx_skillcheck_pass.mp3');
+    
+    let pid = getWeightedRandomPlant(seedData);
+    let plData = DATA.plants[pid];
+    let rarityVal = (plData && plData.rarity) ? plData.rarity : 1;
+    let timeVal = 60 * rarityVal;
+    
+    C.plots[pIdx] = {
+      id: pid,
+      state: 'growing',
+      maxTime: timeVal,
+      growTime: timeVal,
+      mutations: [],
+      repel: 0,
+      favourite: false
+    };
+    checkRarePassiveMutation(C.plots[pIdx], (C.timeTick % 180) >= 120);
+  }
+  renderPlots();
+  renderInventory();
+}
+
+function harvestPlant(pIdx) {
+  const p = C.plots[pIdx];
+  if(p.favourite) { notify("Plant is favourited! Right-click the plot to unfavourite before harvesting."); return; }
+  
+  const plData = DATA.plants[p.id];
+  playSFX(plData.sfx || 'sfx_harvest_general.mp3');
+  
+  let val = plData.val;
+  if(C.mode === 'calm') val = Math.floor(val * 1.5);
+  p.mutations.forEach(m => { if(DATA.mutations[m]) val *= DATA.mutations[m].mult; });
+  
+  addToInv({ id: p.id, type: 'plant', val: Math.floor(val), mutations: p.mutations, favourite: false });
+  
+  if(!C.unlocked.plants.includes(p.id)) {
+    C.unlocked.plants.push(p.id);
+    notify(`New Plant Discovered: ${plData.name}!`);
+  }
+  if(p.mutations.length > 0) unlockAchiev('glow_up');
+  
+  // Gold screen flash for rare plants (Rarity >= 4)
+  if(plData.rarity >= 4) {
+    const overlay = $('flash-overlay');
+    if(overlay) {
+      overlay.style.background = 'radial-gradient(ellipse at center, rgba(255,215,0,0.65) 0%, transparent 75%)';
+      overlay.classList.remove('hidden');
+      overlay.style.animation = 'none';
+      setTimeout(() => { overlay.style.animation = 'flashGold 1.2s ease-out forwards'; }, 10);
+      setTimeout(() => { overlay.classList.add('hidden'); overlay.style.animation = 'none'; }, 1400);
+    }
+  }
+  
+  C.plots[pIdx] = null;
+  renderPlots();
+}
+
+/* ==========================================================================
+   MUTATIONS SYSTEM
+   ========================================================================== */
+function checkRarePassiveMutation(p, isNight) {
+  let baseChance = C.mode === 'hard' ? 0.01 : (C.mode === 'calm' ? 0.08 : 0.03);
+  if(Math.random() > baseChance) return;
+  
+  let eligibleMutations = [];
+  const curSeason = SEASONS[C.seasonIdx];
+  const curWeather = C.weather;
+  const curEvent = C.event;
+
+  if(curSeason === 'Summer') eligibleMutations.push('Burnt');
+  if(curSeason === 'Winter') eligibleMutations.push('Frozen');
+  if(curSeason === 'Spring') eligibleMutations.push('Vibrant');
+  if(curSeason === 'Autumn') eligibleMutations.push('Cozy');
+  
+  if(curWeather === 'Wet') eligibleMutations.push('Wet');
+  if(curWeather === 'Breezy') eligibleMutations.push('Breezy');
+  if(curWeather === 'Shocked') eligibleMutations.push('Shocked');
+  if(curWeather === 'Windswept') eligibleMutations.push('Windswept');
+
+  if(isNight) eligibleMutations.push('Nocturnal');
+
+  if(curEvent === 'Blessing') eligibleMutations.push('Blessing');
+  if(curEvent === 'Beep') eligibleMutations.push('Beep');
+  if(curEvent === 'DarkNER') eligibleMutations.push('DarkNER');
+  if(curEvent === 'Glitch') eligibleMutations.push('Glitch');
+
+  if(eligibleMutations.length > 0) {
+    let chosen = eligibleMutations[Math.floor(Math.random() * eligibleMutations.length)];
+    if(!p.mutations.includes(chosen)) {
+      p.mutations.push(chosen);
+      if(!C.unlocked.mutations.includes(chosen)) C.unlocked.mutations.push(chosen);
+      notify(`Mutation Gained: ${chosen}!`);
+    }
+  }
+}
+
+function addRandomMutation(p) {
+  let keys = Object.keys(DATA.mutations);
+  let chosen = keys[Math.floor(Math.random()*keys.length)];
+  if(!p.mutations.includes(chosen)) p.mutations.push(chosen);
+  if(!C.unlocked.mutations.includes(chosen)) C.unlocked.mutations.push(chosen);
+  notify(`Mutation Applied: ${chosen}!`);
+}
+
+/* ==========================================================================
+   INVENTORY & BACKPACK DRAG & DROP REORDERING
+   ========================================================================== */
+function toggleBackpack() {
+  const m = $('modal-backpack');
+  m.classList.toggle('hidden');
+  if(!m.classList.contains('hidden')) { playSFX('sfx_ui_click.mp3'); renderInventory(); }
+}
+
+function addToInv(itemObj) {
+  if(itemObj.type !== 'plant') {
+    let existing = C.inventory.find(i => i.id === itemObj.id);
+    if(existing) existing.qty += (itemObj.qty || 1);
+    else C.inventory.push({ ...itemObj, qty: itemObj.qty || 1 });
+  } else {
+    C.inventory.push({ ...itemObj, qty: 1 });
+  }
+  renderInventory();
+}
+
+function removeFromInv(id, qty) {
+  let idx = C.inventory.findIndex(i => i.id === id);
+  if(idx > -1) {
+    C.inventory[idx].qty -= qty;
+    if(C.inventory[idx].qty <= 0) {
+      if(selectedHotbarIdx === idx) selectedHotbarIdx = null;
+      C.inventory.splice(idx, 1);
+    }
+  }
+}
+
+function handleDragStart(e, invIdx) {
+  draggedInvIndex = invIdx;
+  e.dataTransfer.setData('text/plain', invIdx);
+}
+
+function handleDropOnSlot(e, targetType, targetSlotIdx) {
+  e.preventDefault();
+  if(draggedInvIndex === null || draggedInvIndex < 0 || draggedInvIndex >= C.inventory.length) return;
+  
+  const sourceItem = C.inventory[draggedInvIndex];
+  if(!sourceItem) return;
+  
+  if(targetType === 'hotbar' && sourceItem.type === 'plant') {
+    notify("Plants belong in the Backpack!");
+    playSFX('sfx_skillcheck_fail.mp3');
+    draggedInvIndex = null;
+    return;
+  }
+  
+  let targetInvIdx = targetType === 'hotbar' ? targetSlotIdx : (9 + targetSlotIdx);
+  if(targetInvIdx >= C.inventory.length) targetInvIdx = C.inventory.length - 1;
+  
+  let temp = C.inventory[draggedInvIndex];
+  C.inventory[draggedInvIndex] = C.inventory[targetInvIdx];
+  C.inventory[targetInvIdx] = temp;
+  
+  draggedInvIndex = null;
+  playSFX('sfx_ui_click.mp3');
+  renderInventory();
+}
+
+function renderInventory() {
+  const hotbar = $('hotbar-grid');
+  const backpack = $('backpack-grid');
+  hotbar.innerHTML = ''; if(backpack) backpack.innerHTML = '';
+  
+  let hotbarCount = 0;
+  C.inventory.forEach((item, idx) => {
+    const isPlant = item.type === 'plant';
+    const uiData = isPlant ? DATA.plants[item.id] : DATA.items[item.id];
+    
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.style.position = 'relative';
+    if(uiData && uiData.isSeasonal) slot.classList.add('seasonal-seed-bg');
+    if(selectedHotbarIdx === idx) slot.classList.add('selected-slot');
+    if(item.favourite) slot.classList.add('favourited');
+
+    const isHotbarSlot = !isPlant && hotbarCount < 9;
+    const currentType = isHotbarSlot ? 'hotbar' : 'backpack';
+    const currentSlotIdx = isHotbarSlot ? hotbarCount : (idx - hotbarCount);
+
+    slot.ondragover = e => e.preventDefault();
+    slot.ondrop = e => handleDropOnSlot(e, currentType, currentSlotIdx);
+
+    let innerHtml = `<img src="${uiData.img}" class="${isPlant?'plant-img':''}" draggable="true" ondragstart="handleDragStart(event, ${idx})">`;
+    if(item.qty > 1) {
+      innerHtml += `<div class="qty">${item.qty}</div>`;
+    }
+    if(item.cooldown && item.cooldown > 0) {
+      innerHtml += `<div class="cooldown-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; border-radius:10px; pointer-events:none;">${item.cooldown}s</div>`;
+    }
+    slot.innerHTML = innerHtml;
+    
+    let tt = `${uiData.name}\n"${uiData.desc || (uiData.type==='seed'?'Seed Pack':'Gear/Tool')}"\n${isPlant ? 'Value: ' + item.val + ' Doolers' : ''}`;
+    if(item.mutations && item.mutations.length > 0) tt += `\nMutations: ${item.mutations.join(', ')}`;
+    if(item.favourite) tt += `\n★ Favourited`;
+    if(item.cooldown && item.cooldown > 0) tt += `\n⏳ Cooldown: ${item.cooldown}s`;
+    
+    slot.onmouseenter = e => showTooltip(e, tt);
+    slot.onmouseleave = hideTooltip;
+    
+    slot.onclick = () => {
+      if(!isPlant) {
+        if(selectedHotbarIdx === idx) selectedHotbarIdx = null;
+        else selectedHotbarIdx = idx;
+        renderInventory();
+        playSFX('sfx_ui_click.mp3');
+      }
+    };
+
+    slot.oncontextmenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if(isPlant) { item.favourite = !item.favourite; renderInventory(); }
+    };
+    
+    if(!isPlant && hotbarCount < 9) {
+      hotbar.appendChild(slot);
+      hotbarCount++;
+    } else if(backpack) {
+      backpack.appendChild(slot);
+    }
+  });
+  
+  while(hotbarCount < 9) {
+    const slotIdx = hotbarCount;
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.style.position = 'relative';
+    slot.ondragover = e => e.preventDefault();
+    slot.ondrop = e => handleDropOnSlot(e, 'hotbar', slotIdx);
+    hotbar.appendChild(slot);
+    hotbarCount++;
+  }
+}
+
+function autoSort() {
+  playSFX('sfx_ui_click.mp3');
+  selectedHotbarIdx = null;
+  C.inventory.sort((a, b) => {
+    if(a.type === 'plant' && b.type !== 'plant') return 1;
+    if(a.type !== 'plant' && b.type === 'plant') return -1;
+    
+    if(a.type !== 'plant' && b.type !== 'plant') {
+      const itA = DATA.items[a.id];
+      const itB = DATA.items[b.id];
+      const typeRank = { seed: 1, tool: 2 };
+      if(typeRank[itA.type] !== typeRank[itB.type]) return typeRank[itA.type] - typeRank[itB.type];
+      return (itB.price || 0) - (itA.price || 0);
+    }
+    return (b.val || 0) - (a.val || 0);
+  });
+  renderInventory();
+  notify("Inventory sorted left-to-right!");
+}
+
+/* ==========================================================================
+   SHOPS & NPC DIALOGUE BRANCHES
+   ========================================================================== */
+let currentShopTab = 'shop';
+function openShopDirect(npcId, resetTab = true) {
+  let isNight = (C.timeTick % 180) >= 120;
+  if(npcId === 'peeb' && (!isNight || C.dayCount % 3 !== 0)) {
+    notify("Peeb's Black Market is closed! Appears every 3rd night.");
+    return;
+  }
+  
+  if(resetTab) {
+    if(npcId === 'bob' || npcId === 'mark') currentShopTab = 'shop';
+    else if(npcId === 'bobjr') currentShopTab = 'sell';
+    else if(npcId === 'peeb') currentShopTab = 'deals';
+  }
+  
+  // Lock in Peeb prices when first entering
+  if(npcId === 'peeb' && C.inventory) {
+    C.inventory.forEach(item => {
+      if(item.type === 'plant' && !item.favourite && item.peebMult === undefined) {
+        item.peebMult = parseFloat((0.1 + Math.random() * 3.4).toFixed(2));
+        item.peebPrice = Math.max(1, Math.floor(item.val * item.peebMult));
+      }
+    });
+  }
+  
+  currentNpcShop = npcId;
+  const dData = DATA.dialogues[npcId];
+  if(dData && dData.enterAudio && resetTab) playSFX(dData.enterAudio, 'dialog');
+  
+  $('modal-shop').classList.remove('hidden');
+  $('shop-title').innerText = npcId === 'bob' ? 'The Seed Shack' : (npcId === 'bobjr' ? 'Root N Relic' : (npcId === 'mark' ? 'Harvestware' : "Peeb's Black Market"));
+  $('shop-npc-name').innerText = `Shopkeeper: ${dData.name}`;
+  $('shop-npc-img').src = dData.img;
+  $('shop-doolers-count').innerText = Math.floor(C.doolers);
+  
+  // Render tabs
+  const tabsContainer = $('shop-tabs');
+  tabsContainer.innerHTML = '';
+  let tabs = [];
+  if(npcId === 'bob' || npcId === 'mark') {
+    tabs = [
+      { id: 'shop', label: '🛒 Buy Item' },
+      { id: 'chat', label: '💬 Chat' }
+    ];
+  } else if(npcId === 'bobjr') {
+    tabs = [
+      { id: 'sell', label: '💰 Sell Plants' },
+      { id: 'appraise', label: '🔍 Appraise' },
+      { id: 'chat', label: '💬 Chat' }
+    ];
+  } else if(npcId === 'peeb') {
+    tabs = [
+      { id: 'deals', label: '😈 Deals' },
+      { id: 'sell', label: '🤫 Sell Plant' },
+      { id: 'chat', label: '💬 Chat' }
+    ];
+  }
+  
+  tabs.forEach(t => {
+    const btn = document.createElement('button');
+    btn.innerText = t.label;
+    btn.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; border-radius: 8px 8px 0 0; border: 2px solid var(--ui-border); border-bottom: none; cursor: pointer;';
+    if(t.id === currentShopTab) {
+      btn.style.background = '#fffdf5';
+      btn.style.color = '#3e2723';
+      btn.style.marginTop = '0px';
+    } else {
+      btn.style.background = '#e0d4c3';
+      btn.style.color = '#795548';
+      btn.style.marginTop = '2px';
+    }
+    btn.onclick = () => {
+      currentShopTab = t.id;
+      openShopDirect(npcId, false);
+    };
+    tabsContainer.appendChild(btn);
+  });
+  
+  // Dialogue branches are shown only on 'chat' tab
+  const branchesContainer = $('shop-dialogue-branches');
+  if(currentShopTab === 'chat') {
+    branchesContainer.style.display = 'flex';
+    branchesContainer.innerHTML = '<b>Chat Options:</b> ';
+    dData.branches.forEach(b => {
+      const btn = document.createElement('button');
+      btn.style.fontSize = '13px'; btn.style.padding = '5px 12px';
+      btn.innerText = b.label;
+      btn.onclick = () => triggerNpcBranch(npcId, b);
+      branchesContainer.appendChild(btn);
+    });
+  } else {
+    branchesContainer.style.display = 'none';
+  }
+  
+  loadShopInventory(npcId);
+}
+
+function triggerNpcBranch(npcId, branch) {
+  if(branch.id === 'exit') {
+    leaveShop();
+    return;
+  }
+  startDialogue(npcId, branch);
+}
+
+function loadShopInventory(npcId) {
+  $('shop-doolers-count').innerText = Math.floor(C.doolers);
+  const inv = $('shop-inventory');
+  const acts = $('shop-actions');
+  inv.innerHTML = ''; acts.innerHTML = '';
+  
+  if(currentShopTab === 'chat') {
+    inv.style.display = 'flex';
+    acts.style.display = 'none';
+    // Render NPC chat branch buttons inside the inventory area
+    const dData = DATA.dialogues[npcId];
+    if(dData && dData.branches) {
+      const chatHeader = document.createElement('div');
+      chatHeader.style.cssText = 'width:100%; text-align:center; font-size:16px; color:#664422; font-weight:bold; margin-bottom:8px; padding-bottom:8px; border-bottom:2px solid var(--ui-border);';
+      chatHeader.innerHTML = `💬 What would you like to say to <b>${dData.name}</b>?`;
+      inv.appendChild(chatHeader);
+      dData.branches.forEach(b => {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'width:100%; text-align:left; padding:14px 20px; font-size:16px; font-weight:bold; border-radius:12px; border:3px solid var(--ui-border); background:#fffdf0; cursor:pointer; transition:background 0.15s, transform 0.1s; display:flex; align-items:center; gap:12px; margin:4px 0;';
+        btn.innerHTML = `<span style="font-size:22px;">🗨️</span> ${b.label}`;
+        btn.onmouseenter = () => btn.style.background = '#fff9e0';
+        btn.onmouseleave = () => btn.style.background = '#fffdf0';
+        btn.onclick = () => triggerNpcBranch(npcId, b);
+        inv.appendChild(btn);
+      });
+    }
+    return;
+  } else {
+    inv.style.display = 'flex';
+    acts.style.display = 'flex';
+  }
+  
+  if(npcId === 'bobjr') {
+    if(currentShopTab === 'sell') {
+      acts.innerHTML = `<button onclick="sellAllPlants()" style="background:#c8e6c9;">Sell All Unfavourited Plants</button>`;
+    }
+    
+    // Daily bonus banner
+    if(C.dailyBonus) {
+      const bonusBanner = document.createElement('div');
+      bonusBanner.style.cssText = 'width:100%; background: linear-gradient(90deg,#fffde7,#fff9c4); border:2px solid #f9a825; border-radius:10px; padding:10px; text-align:center; font-size:15px; font-weight:bold; color:#f57f17; margin-bottom:12px;';
+      bonusBanner.innerHTML = `⭐ Daily Bonus: ${C.dailyBonus.label}`;
+      inv.appendChild(bonusBanner);
+    }
+    
+    const plantsInInv = C.inventory.filter(i => i.type === 'plant');
+    if(plantsInInv.length === 0) {
+      inv.innerHTML += `<p style="width:100%; text-align:center; color:#777; font-size:18px;">No plants in inventory to sell or appraise!</p>`;
+    }
+    plantsInInv.forEach(p => {
+      const pl = DATA.plants[p.id];
+      
+      // Apply daily bonus to the displayed/sold value
+      let saleVal = p.val;
+      if(C.dailyBonus) {
+        if(C.dailyBonus.type === 'plant' && p.id === C.dailyBonus.target) {
+          saleVal = Math.floor(saleVal * C.dailyBonus.mult);
+        } else if(C.dailyBonus.type === 'mutation' && p.mutations && p.mutations.includes(C.dailyBonus.target)) {
+          saleVal = Math.floor(saleVal * C.dailyBonus.mult);
+        }
+      }
+      
+      const card = document.createElement('div');
+      card.className = 'shop-item-card';
+      card.innerHTML = `
+        <img src="${pl.img}" class="plant-img" style="width:70px; height:70px;">
+        <b style="font-size:15px; margin-top:4px;">${pl.name}</b>
+        <div style="font-size:14px; margin: 4px 0; color:#2e7d32;">Val: <b>${saleVal}</b> Doolers${saleVal !== p.val ? ` <span style="color:#f57f17; font-size:12px;">(⭐ Bonus!)</span>` : ''}</div>
+        ${p.mutations && p.mutations.length > 0 ? `<div style="font-size:11px; color:#aa6600;">Mutations: ${p.mutations.join(', ')}</div>` : ''}
+        ${p.favourite ? `<div style="font-size:12px; color:#ff9900;">★ Favourited</div>` : ''}
+      `;
+      
+      const btnRow = document.createElement('div');
+      btnRow.style.display = 'flex'; btnRow.style.gap = '5px'; btnRow.style.marginTop = '6px';
+      
+      if(currentShopTab === 'sell') {
+        const btnSell = document.createElement('button');
+        btnSell.innerText = "Sell"; btnSell.style.padding = '5px 12px'; btnSell.style.fontSize = '14px';
+        btnSell.disabled = p.favourite;
+        btnSell.onclick = () => {
+          C.doolers += saleVal;
+          C.inventory.splice(C.inventory.indexOf(p), 1);
+          playSFX('sfx_buy.mp3');
+          updateUI();
+          loadShopInventory('bobjr');
+        };
+        btnRow.appendChild(btnSell);
+      } else if(currentShopTab === 'appraise') {
+        const btnAppraise = document.createElement('button');
+        btnAppraise.innerText = "Appraise (50)"; btnAppraise.style.padding = '5px 8px'; btnAppraise.style.fontSize = '12px';
+        btnAppraise.disabled = p.favourite;
+        btnAppraise.title = 'If the plant has mutations: 50% to add a new mutation (+50% value). 50% to remove one (-30% value). No mutations = safe, adds one for free.';
+        btnAppraise.onclick = () => appraisePlant(p);
+        btnRow.appendChild(btnAppraise);
+      }
+      
+      card.appendChild(btnRow);
+      inv.appendChild(card);
+    });
+  } else {
+    // Buying Shops (Bob / Mark / Peeb Deals) or Peeb Selling
+    if(npcId === 'bob' || npcId === 'mark' || (npcId === 'peeb' && currentShopTab === 'deals')) {
+      let itemIds = [];
+      if(npcId === 'bob') itemIds = ['seed_standard', 'seed_uncommon', 'seed_rare', 'seed_ultra', 'seed_' + SEASONS[C.seasonIdx].toLowerCase()];
+      if(npcId === 'mark') {
+        itemIds = ['can_t1', 'can_t2', 'can_t3', 'repel_t1', 'repel_t2', 'repel_t3', 'mutator'];
+      }
+      if(npcId === 'peeb') {
+        itemIds = ['seed_black'];
+        let haggleBtnAttr = haggleCount >= 3 ? 'disabled style="background:#ccc; cursor:not-allowed;"' : 'style="background:#fff9c4;"';
+        acts.innerHTML = `<button onclick="tryHaggle()" ${haggleBtnAttr}>🤞 Try Luck with Peeb (Haggle: ${haggleCount}/3)</button>`;
+      }
+      
+      itemIds.forEach(id => {
+        const it = DATA.items[id];
+        if(!it) return;
+        let pMult = C.mode === 'hard' ? 1.5 : (C.mode === 'calm' ? 0.7 : 1.0);
+        if(npcId === 'peeb' && window.haggleDiscount) {
+          pMult *= window.haggleDiscount;
+        }
+        let price = Math.floor(it.price * pMult);
+        
+        const isWateringCan = id.startsWith('can_');
+        const isOwnedCan = isWateringCan && C.inventory.some(owned => owned.id === id);
+        
+        const card = document.createElement('div');
+        card.className = 'shop-item-card';
+        if(it.isSeasonal) card.classList.add('seasonal-seed-bg');
+        if(isOwnedCan) {
+          card.style.opacity = '0.55';
+          card.style.filter = 'grayscale(1)';
+        }
+        
+        card.innerHTML = `
+          <img src="${it.img}" class="shop-img">
+          <b style="font-size:15px; margin-top:4px;">${it.name}</b>
+          <div style="font-size:16px; font-weight:bold; color:#2e7d32; margin: 4px 0;">${price} Doolers</div>
+        `;
+        
+        card.onmouseenter = e => showTooltip(e, `${it.name}\n"${it.desc || ''}"`);
+        card.onmouseleave = hideTooltip;
+        
+        const btnsRow = document.createElement('div');
+        btnsRow.style.display = 'flex'; btnsRow.style.gap = '4px'; btnsRow.style.marginTop = '6px';
+        
+        if(isWateringCan) {
+          const btn = document.createElement('button');
+          if(isOwnedCan) {
+            btn.innerText = `Owned`;
+            btn.disabled = true;
+            btn.style.background = '#888';
+            btn.style.borderColor = '#888';
+          } else {
+            btn.innerText = `Buy 1x`;
+            btn.style.fontSize = '12px'; btn.style.padding = '5px 8px';
+            btn.onclick = () => confirmAndBuyItem(it, 1, price);
+          }
+          btnsRow.appendChild(btn);
+        } else {
+          [1, 2, 5].forEach(qty => {
+            const btn = document.createElement('button');
+            btn.innerText = `Buy ${qty}x`; btn.style.fontSize = '12px'; btn.style.padding = '5px 8px';
+            btn.onclick = () => confirmAndBuyItem(it, qty, price);
+            btnsRow.appendChild(btn);
+          });
+        }
+        
+        card.appendChild(btnsRow);
+        inv.appendChild(card);
+      });
+    } else if(npcId === 'peeb' && currentShopTab === 'sell') {
+      // ---- PEEB'S SECRET SELLING SECTION (uses locked-in peebPrice) ----
+      const plantsInInv = C.inventory.filter(i => i.type === 'plant' && !i.favourite);
+      if(plantsInInv.length === 0) {
+        inv.innerHTML = `<p style="width:100%; text-align:center; color:#777; font-size:18px;">No plants in inventory to sell to Peeb!</p>`;
+      } else {
+        const sellHeader = document.createElement('div');
+        sellHeader.style.cssText = 'width:100%; text-align:center; font-weight:bold; font-size:16px; color:#6a1b9a; background:#f3e5f5; padding:8px; border-radius:8px; border:2px dashed #ce93d8; margin-bottom:8px;';
+        sellHeader.innerHTML = '🤫 Peeb also buys plants — at his own <i>"fair"</i> prices...';
+        inv.appendChild(sellHeader);
+
+        plantsInInv.forEach(p => {
+          const pl = DATA.plants[p.id];
+          let peebMult = p.peebMult !== undefined ? p.peebMult : 1.0;
+          let peebPrice = p.peebPrice !== undefined ? p.peebPrice : Math.max(1, Math.floor(p.val * peebMult));
+          let dealColor = peebMult >= 1.5 ? '#2e7d32' : (peebMult >= 0.8 ? '#f57f17' : '#c62828');
+          let dealLabel = peebMult >= 1.5 ? '🤑 Hot Deal!' : (peebMult >= 0.8 ? '😐 Meh' : '💀 Ripoff!');
+
+          const card = document.createElement('div');
+          card.className = 'shop-item-card';
+          card.style.borderColor = dealColor;
+          card.innerHTML = `
+            <img src="${pl.img}" class="plant-img" style="width:60px;height:60px;">
+            <b style="font-size:14px; margin-top:3px;">${pl.name}</b>
+            <div style="font-size:12px; color:#666;">Base: ${p.val} Doolers</div>
+            <div style="font-size:16px; font-weight:bold; color:${dealColor}; margin:3px 0;">${peebPrice} Doolers</div>
+            <div style="font-size:13px; font-weight:bold; color:${dealColor};">${dealLabel}</div>
+            ${p.mutations && p.mutations.length > 0 ? `<div style="font-size:11px;color:#aa6600;">Mutations: ${p.mutations.join(', ')}</div>` : ''}
+          `;
+          const btnSell = document.createElement('button');
+          btnSell.innerText = 'Sell to Peeb';
+          btnSell.style.cssText = `background:${dealColor}; color:#fff; font-size:13px; padding:5px 10px; margin-top:5px; border-color:${dealColor};`;
+          btnSell.onclick = () => {
+            C.doolers += peebPrice;
+            C.inventory.splice(C.inventory.indexOf(p), 1);
+            playSFX('sfx_buy.mp3');
+            updateUI();
+            loadShopInventory('peeb');
+            notify(`Sold to Peeb for ${peebPrice} Doolers! ${dealLabel}`);
+          };
+          card.appendChild(btnSell);
+          inv.appendChild(card);
+        });
+      }
+    }
+  }
+}
+
+function confirmAndBuyItem(it, qty, unitPrice) {
+  let totalCost = unitPrice * qty;
+  showCustomConfirm(`Buy ${qty}x ${it.name} for ${totalCost} Doolers?`, () => {
+    if(C.doolers >= totalCost) {
+      C.doolers -= totalCost;
+      addToInv({ id: it.id, qty, type: it.type });
+      playSFX('sfx_buy.mp3');
+      unlockAchiev('buy');
+      updateUI();
+      loadShopInventory(it.id === 'seed_black' ? 'peeb' : (it.type === 'tool' ? 'mark' : 'bob'));
+      notify(`Bought ${qty}x ${it.name}!`);
+    } else {
+      notify("Not enough doolers!");
+    }
+  });
+}
+
+function sellAllPlants() {
+  let totalDoolers = 0;
+  C.inventory = C.inventory.filter(i => {
+    if(i.type === 'plant' && !i.favourite) {
+      totalDoolers += i.val;
+      return false;
+    }
+    return true;
+  });
+  if(totalDoolers > 0) {
+    C.doolers += totalDoolers;
+    playSFX('sfx_buy.mp3');
+    updateUI();
+    loadShopInventory('bobjr');
+    notify(`Sold all unfavourited plants for ${totalDoolers} Doolers!`);
+  } else {
+    notify("No unfavourited plants to sell!");
+  }
+}
+
+function appraisePlant(p) {
+  if(C.doolers < 50) { notify("Not enough doolers for appraisal (Costs 50)!"); return; }
+  C.doolers -= 50; updateUI();
+  
+  if(!p.mutations) p.mutations = [];
+  
+  if(p.mutations.length === 0) {
+    // No mutations – safe appraisal, always adds one mutation for free
+    playSFX('sfx_skillcheck_pass.mp3');
+    addRandomMutation(p);
+    p.val = Math.floor(p.val * 1.5);
+    notify("Appraisal: No mutations found — Bob Jr. enhanced the plant! Value increased!");
+    unlockAchiev('jackpot');
+  } else {
+    let luck = Math.random();
+    if(luck >= 0.5) {
+      // Success – add a new mutation
+      playSFX('sfx_skillcheck_pass.mp3');
+      addRandomMutation(p);
+      p.val = Math.floor(p.val * 1.5);
+      notify("Appraisal Success! New mutation added, value increased!");
+      unlockAchiev('jackpot');
+    } else {
+      // Failure – remove the last mutation and reduce value
+      playSFX('sfx_skillcheck_fail.mp3');
+      p.mutations.pop();
+      p.val = Math.max(1, Math.floor(p.val * 0.7));
+      notify("Appraisal Failed. A mutation was removed and value decreased.");
+      unlockAchiev('scam');
+    }
+  }
+  loadShopInventory('bobjr');
+}
+
+function tryHaggle() {
+  if (haggleCount >= 3) {
+    notify("Peeb is annoyed. No more haggling this visit!");
+    return;
+  }
+
+  haggleCount++; // Increment the attempt counter
+  
+  // Pure-luck haggle: 30% chance to reduce item prices
+  let luck = Math.random();
+  if(luck < 0.30) {
+    notify(`🤑 Success! Prices reduced! (Attempt ${haggleCount}/3)`);
+    playSFX('sfx_skillcheck_pass.mp3');
+    window.haggleDiscount = 0.85; // 15% off
+  } else {
+    notify(`😒 Peeb won't budge. (Attempt ${haggleCount}/3)`);
+    playSFX('sfx_skillcheck_fail.mp3');
+  }
+  
+  loadShopInventory('peeb'); // Refresh UI to update the counter and prices
+}
+
+/* ==========================================================================
+   MINIGAMES
+   ========================================================================== */
+function startPlantingMinigame() {
+  const m = $('modal-minigame');
+  $('mg-title').innerText = "Planting Skillcheck!";
+  $('mg-inst').innerText = "Click when the red cursor lines up with the green target area!";
+  
+  const c = $('mg-container');
+  c.innerHTML = `
+    <div id="mg-progress-bg"><div id="mg-progress-fill" style="width: 50%;"></div></div>
+    <div id="mg-planting">
+      <div id="mg-target" style="width: 30%; left: 35%;"></div>
+      <div id="mg-cursor" style="left: 0%;"></div>
+    </div>
+  `;
+  m.classList.remove('hidden');
+  
+  let mg = currentMinigame;
+  mg.cursorPos = 0; mg.cursorDir = 1;
+  mg.targetW = Math.max(22, 45 - mg.diff * 3);
+  mg.targetLeft = 35;
+  
+  $('mg-target').style.width = mg.targetW + '%';
+  $('mg-target').style.left = mg.targetLeft + '%';
+  
+  function mgLoop() {
+    if(!currentMinigame || currentMinigame.type !== 'plant') return;
+    
+    let speed = 1.0 + (mg.diff * 0.2);
+    mg.cursorPos += speed * mg.cursorDir;
+    if(mg.cursorPos >= 100) { mg.cursorPos = 100; mg.cursorDir = -1; }
+    if(mg.cursorPos <= 0) { mg.cursorPos = 0; mg.cursorDir = 1; }
+    $('mg-cursor').style.left = mg.cursorPos + '%';
+    
+    mg.progress -= 0.03;
+    $('mg-progress-fill').style.width = Math.max(0, mg.progress) + '%';
+    
+    if(mg.progress <= 0) { endMinigame(false); return; }
+    if(mg.progress >= 100) { endMinigame(true); return; }
+    
+    mg.anim = requestAnimationFrame(mgLoop);
+  }
+  mg.anim = requestAnimationFrame(mgLoop);
+  
+  m.onclick = (e) => {
+    if(e.target.tagName === 'BUTTON') return;
+    let hit = mg.cursorPos >= mg.targetLeft && mg.cursorPos <= mg.targetLeft + mg.targetW;
+    if(hit) {
+      mg.progress += 18;
+      playSFX('sfx_ui_click.mp3');
+      mg.targetLeft = Math.random() * (100 - mg.targetW);
+      $('mg-target').style.left = mg.targetLeft + '%';
+    } else {
+      mg.progress -= 10;
+      playSFX('sfx_skillcheck_fail.mp3');
+    }
+  };
+}
+
+
+function endMinigame(success) {
+  if(typeof haggleAnimId !== 'undefined' && haggleAnimId) { cancelAnimationFrame(haggleAnimId); haggleAnimId = null; }
+  let mg = currentMinigame;
+  currentMinigame = null;
+  $('modal-minigame').classList.add('hidden');
+  $('modal-minigame').onclick = null;
+  $('mg-container').onclick = null;
+  
+  if(mg && mg.type === 'plant') {
+    completePlanting(mg.pIdx, mg.seedData, success);
+  }
+}
+
+/* ==========================================================================
+   RACCOON ATTACK ANIMATION
+   ========================================================================== */
+function spawnRaccoon() {
+  if(activeRaccoon) return;
+  
+  let targetIdx = C.plots.findIndex(p => p && p.state === 'grown' && (p.repel || 0) <= 0);
+  if(targetIdx === -1) return;
+  
+  playSFX('sfx_racoon.mp3');
+  document.body.classList.add('flash-red');
+  notify("A Raccoon is targeting a plant! Click on it to start the Whack-a-Mole!");
+  
+  const rc = document.createElement('img');
+  rc.src = 'entity_racoon.png';
+  rc.className = 'raccoon-entity';
+  
+  let spawnFromLeft = Math.random() < 0.5;
+  let startX = spawnFromLeft ? -140 : (window.innerWidth + 20);
+  let startY = 150 + Math.random() * (window.innerHeight - 350);
+  
+  rc.style.left = startX + 'px';
+  rc.style.top = startY + 'px';
+  rc.style.transform = spawnFromLeft ? 'scaleX(-1)' : 'scaleX(1)';
+  
+  $('entities-container').appendChild(rc);
+  activeRaccoon = rc;
+
+  // Move raccoon to target plot position
+  let frozenX = startX, frozenY = startY;
+  const gardenGrid = $('garden-area');
+  if(gardenGrid && gardenGrid.children[targetIdx]) {
+    const targetElem = gardenGrid.children[targetIdx];
+    const rect = targetElem.getBoundingClientRect();
+    frozenX = rect.left + 15;
+    frozenY = rect.top + 15;
+    setTimeout(() => {
+      rc.style.left = frozenX + 'px';
+      rc.style.top = frozenY + 'px';
+    }, 100);
+  }
+
+  let stealResolved = false;
+
+  function doSteal() {
+    if(stealResolved) return;
+    stealResolved = true;
+    rc.onclick = null;
+    rc.style.left = spawnFromLeft ? '-150px' : '100vw';
+    setTimeout(() => { rc.remove(); activeRaccoon = null; document.body.classList.remove('flash-red'); }, 1500);
+    
+    // Guaranteed steal a non-repellented grown plant
+    let stealIdx = C.plots.findIndex(p => p && p.state === 'grown' && (p.repel || 0) <= 0);
+    if(stealIdx === -1) stealIdx = targetIdx; // fallback to original target
+    if(C.plots[stealIdx]) {
+      C.plots[stealIdx] = null;
+      renderPlots();
+      notify("The raccoon got away with a plant! 🦝");
+      unlockAchiev('robbed');
+      C.stats.deadPlants++;
+      updateUI();
+      if(C.mode === 'hard' && C.stats.deadPlants >= 10) {
+        showCustomAlert("GAME OVER! 10 plants have died in Hard Mode.", () => {
+          clearSaveStep1(C.slot);
+          location.reload();
+        });
+      }
+    }
+  }
+
+  // Auto-steal timer (if player never clicks)
+  window.raccoonStealTimer = setTimeout(() => {
+    if(!stealResolved) doSteal();
+  }, 10000);
+
+  rc.onclick = () => {
+    if(stealResolved) return;
+    clearTimeout(window.raccoonStealTimer);
+    window.raccoonStealTimer = null;
+    // Freeze raccoon in place during minigame
+    rc.style.transition = 'none';
+    rc.style.left = frozenX + 'px';
+    rc.style.top = frozenY + 'px';
+    rc.onclick = null;
+    initiateWhackMoleMinigame(rc, targetIdx, doSteal, spawnFromLeft);
+  };
+}
+
+function initiateWhackMoleMinigame(rc, targetIdx, doSteal, spawnFromLeft) {
+  const GRID_SIZE = 9;
+  let headsWhacked = 0;
+  let timeLeft = 12;
+  let wamTimers = [];
+  let active = true;
+
+  const m = $('modal-minigame');
+  $('mg-title').innerText = '🦝 Whack-a-Mole!';
+  $('mg-inst').innerText = 'Whack 5 raccoon heads before time runs out!';
+
+  $('mg-container').innerHTML = `
+    <div style="text-align:center; margin-bottom:10px;">
+      <span id="wam-score" style="font-size:20px; font-weight:bold; color:#5d4037;">0 / 5</span>
+      &nbsp;&nbsp;
+      <span id="wam-time" style="font-size:20px; font-weight:bold; color:#b71c1c;">${timeLeft}s</span>
+    </div>
+    <div id="wam-grid" style="display:grid; grid-template-columns:repeat(3,80px); gap:10px; justify-content:center;">
+      ${Array.from({length: GRID_SIZE}, (_, i) => `<div class="wam-cell" id="wam-cell-${i}" style="width:80px;height:80px;border-radius:50%;background:rgba(80,40,10,0.25);border:3px solid #8d6e63;display:flex;align-items:center;justify-content:center;font-size:36px;cursor:default;user-select:none;transition:background 0.1s;"></div>`).join('')}
+    </div>
+  `;
+  m.classList.remove('hidden');
+
+  function showHeadAt(idx) {
+    const cell = $('wam-cell-' + idx);
+    if(!cell || cell.dataset.active === '1') return;
+    cell.dataset.active = '1';
+    cell.style.cursor = 'pointer';
+    cell.innerHTML = `<img src="entity_racoon.png" style="width:56px;height:56px;pointer-events:none;border-radius:50%;">` ;
+    cell.onclick = () => {
+      if(!active || cell.dataset.active !== '1') return;
+      cell.dataset.active = '0';
+      cell.style.cursor = 'default';
+      cell.innerHTML = '💥';
+      setTimeout(() => { cell.innerHTML = ''; }, 300);
+      headsWhacked++;
+      playSFX('sfx_ui_click.mp3');
+      const scoreEl = $('wam-score');
+      if(scoreEl) scoreEl.innerText = `${headsWhacked} / 5`;
+      if(headsWhacked >= 5) {
+        active = false;
+        wamTimers.forEach(clearTimeout);
+        // Success — raccoon runs away
+        m.classList.add('hidden');
+        $('mg-container').innerHTML = '';
+        rc.style.transition = 'transform 0.35s ease, opacity 0.35s ease';
+        rc.style.transform = 'scale(1.6) rotate(20deg)';
+        rc.style.opacity = '0';
+        setTimeout(() => { rc.remove(); activeRaccoon = null; document.body.classList.remove('flash-red'); }, 350);
+        unlockAchiev('fend');
+        notify("WHACK! Fended off the raccoon!");
+        playSFX('sfx_skillcheck_pass.mp3');
+      }
+    };
+    const t = setTimeout(() => {
+      if(cell.dataset.active === '1') {
+        cell.dataset.active = '0';
+        cell.style.cursor = 'default';
+        cell.innerHTML = '';
+      }
+    }, 1800);
+    wamTimers.push(t);
+  }
+
+  function spawnNextHead() {
+    if(!active) return;
+    let idx = Math.floor(Math.random() * GRID_SIZE);
+    showHeadAt(idx);
+    const t = setTimeout(spawnNextHead, 500 + Math.random() * 800);
+    wamTimers.push(t);
+  }
+  spawnNextHead();
+
+  const countdownTimer = setInterval(() => {
+    if(!active) { clearInterval(countdownTimer); return; }
+    timeLeft--;
+    const timeEl = $('wam-time');
+    if(timeEl) timeEl.innerText = `${timeLeft}s`;
+    if(timeLeft <= 0) {
+      active = false;
+      clearInterval(countdownTimer);
+      wamTimers.forEach(clearTimeout);
+      // Failed — guaranteed steal
+      m.classList.add('hidden');
+      $('mg-container').innerHTML = '';
+      notify("Too slow! The raccoon grabbed a plant!");
+      playSFX('sfx_skillcheck_fail.mp3');
+      doSteal();
+    }
+  }, 1000);
+  wamTimers.push(countdownTimer);
+}
+
+/* ==========================================================================
+   DIALOGUE ENGINE
+   ========================================================================== */
+function startDialogue(npcId, branchObj) {
+  const m = $('modal-dialogue');
+  m.classList.remove('hidden');
+  
+  const dData = DATA.dialogues[npcId];
+  $('dialog-img').src = dData.img;
+  $('dialog-name').innerText = dData.name;
+  $('dialog-text').textContent = '';
+  $('btn-dialog-continue').classList.add('hidden');
+  $('btn-dialog-skip').classList.remove('hidden');
+  
+  if(currentDialog && currentDialog.audio) currentDialog.audio.pause();
+  
+  currentDialog = { fullText: branchObj.text, idx: 0, isBeep: dData.isBeep, audioFile: branchObj.audio };
+  if(branchObj.audio) {
+    currentDialog.audio = new Audio(branchObj.audio);
+    currentDialog.audio.volume = settings.dialog;
+    currentDialog.audio.play().catch(e=>{});
+  }
+  
+  typeWriterStep();
+}
+
+function typeWriterStep() {
+  if(!currentDialog) return;
+  if(currentDialog.idx < currentDialog.fullText.length) {
+    currentDialog.idx++;
+    $('dialog-text').textContent = currentDialog.fullText.substring(0, currentDialog.idx);
+    if(currentDialog.isBeep) playSFX('sfx_peeb_beep.mp3', 'dialog');
+    currentDialog.timer = setTimeout(typeWriterStep, 35);
+  } else {
+    finishDialogue();
+  }
+}
+
+function skipDialogue() {
+  if(currentDialog) {
+    clearTimeout(currentDialog.timer);
+    if(currentDialog.audio) currentDialog.audio.pause();
+    $('dialog-text').textContent = currentDialog.fullText;
+    finishDialogue();
+  }
+}
+
+function finishDialogue() {
+  $('btn-dialog-skip').classList.add('hidden');
+  $('btn-dialog-continue').classList.remove('hidden');
+}
+
+function advanceDialogue() {
+  closeModals();
+  if(currentNpcShop) {
+    currentShopTab = 'chat'; // stay on chat tab after dialogue
+    openShopDirect(currentNpcShop, false);
+  }
+}
+
+/* ==========================================================================
+   TUTORIAL BOOK MANUAL
+   ========================================================================== */
+function openTutorial(fromInGame=false) {
+  $('modal-tutorial').classList.remove('hidden');
+  tutPage = 1;
+  if(fromInGame) unlockAchiev('low_attn');
+  renderTutorialPage();
+}
+
+function renderTutorialPage() {
+  let pages = [];
+  
+  let page1 = "Howdy friend, welcome to your brand new garden! You'll start out with 8 empty plots. Just pop a seed pack into one of them to get started! While your plant is growing, you'll need to beat a quick skillcheck. The rarer the plant, the trickier the minigame! Be careful though—if you fail, the plant rots and will only sell for a single dooler!";
+  let page2 = "Want to make the big doolers? Be a BIG SHOT?? Keep an eye out for mutations! Plants can mutate based on the weather, the season, the time of day, or even special events. The best part is that these mutations can stack to boost your plant's value! A great pro-tip: if you leave a plant in the dirt after it's fully grown, it can keep gathering new mutations!";
+  let page3 = "Time flies when you're having fun! One daytime lasts about two minutes, and nights are a quick one minute. Keep an eye on the trackers at the top of your screen to see the current time, weather, and season. The weather changes almost every single day, the season shifts every 10 in-game days, and special events have a small chance to surprise you daily!";
+  let pageRaccoon = "Oh, I almost forgot—watch out for raccoons! Those little bandits are rare, but they can show up around about twice every 3 days to steal your precious plants. If one attacks, click directly on it to shoo it off! If you want to play it safe, you can always buy some Raccoon Repellent from Harvestware to completely protect a plant.";
+  let pageShops = "Time to go shopping! Bob runs The Seed Shack where you can gamble on random seed packs. Mark at Harvestware sells all your heavy-duty gears. To make money, visit Bob Jr. at Root N Relic—he buys plants and can even appraise them to give or take away mutations! Lastly, Peeb's Black Market pops up every 3 nights with rigged seeds… Good or bad? That’s on you to find out. Don't be afraid to haggle!";
+  let pageOrganized = "Let's get organized! You have a hotbar that always shows 9 items. You can open your backpack to drag and drop your gear around. Try hovering your mouse over your items to read what they do! Oh, and don't forget your trusty Pokedex! It tracks every plant you discover, gives you fun descriptions, and logs all your achievements and mutations. You should be all set now, have fun!";
+
+  if(C.mode === 'calm') {
+    pages = [page1, page2, page3, pageShops, pageOrganized, "CALM MODE EXCLUSIVE ADVANTAGES: Everything is cheaper, mutations are easier to get, raccoons don't spawn at all, plants sell for more, plants never die, and there are no skillchecks! Just sit back and relax."];
+  } else if(C.mode === 'hard') {
+    pages = [page1, page2, page3, pageRaccoon, pageShops, pageOrganized, "HARD MODE EXCLUSIVE CONSEQUENCES: Everything is more expensive, raccoons spawn more frequently, skillchecks are harder, plants take longer to grow, and if 10 plants die, your save file is permanently reset!"];
+  } else {
+    pages = [page1, page2, page3, pageRaccoon, pageShops, pageOrganized];
+  }
+  
+  let totalPages = pages.length;
+  $('tutorial-page-header').innerText = `Garden Guide - Page ${tutPage}/${totalPages}`;
+  $('tutorial-text').innerText = pages[tutPage - 1];
+  
+  let imgIdx = tutPage;
+  if(C.mode === 'calm' && tutPage >= 4) imgIdx = tutPage + 1;
+  if(imgIdx > 6) imgIdx = 6;
+  $('tutorial-img').src = `tutorial_page_${imgIdx}.png`;
+  
+  playSFX(`dialog_bud_${Math.min(imgIdx, 6)}.mp3`, 'dialog');
+}
+
+function changeTutorialPage(dir) {
+  tutPage += dir;
+  let totalPages = (C.mode==='hard'||C.mode==='calm') ? (C.mode==='calm'?6:7) : 6;
+  if(tutPage < 1) tutPage = 1;
+  if(tutPage > totalPages) tutPage = totalPages;
+  renderTutorialPage();
+}
+
+/* ==========================================================================
+   MINI-WIKI & POKEDEX
+   ========================================================================== */
+function hasCustomHarvestSFX(pl) {
+  return pl && pl.sfx && pl.sfx !== 'sfx_harvest_general.mp3';
+}
+
+function openMiniWiki() {
+  switchScreen('screen-wiki');
+  renderWikiCategory('plants');
+}
+
+function renderWikiCategory(cat) {
+  const c = $('wiki-content');
+  c.innerHTML = '';
+  
+  if(cat === 'plants' || cat === 'seasonal') {
+    let list = Object.values(DATA.plants).filter(pl => !pl._isWeed && (cat==='seasonal' ? pl.season : !pl.season));
+    c.innerHTML = `<h3 style="margin-top:0;">All ${cat.toUpperCase()} Plants (${list.length} Total)</h3>`;
+    list.forEach(pl => {
+      let soundBtn = hasCustomHarvestSFX(pl) ? `<button onclick="playSFX('${pl.sfx}', 'sfx')" style="font-size:12px; padding:3px 8px; margin-left:8px;">🔊 Hear Harvest Sound</button>` : '';
+      c.innerHTML += `
+        <div style="display:flex; align-items:center; gap:15px; border-bottom:2px solid #ddd; padding:10px 0;">
+          <img src="${pl.img}" class="plant-img" style="width:65px; height:65px;">
+          <div>
+            <b style="font-size:18px;">${pl.name}</b> ${pl.season ? `<span style="color:#777;">(${pl.season})</span>` : ''} ${soundBtn}<br>
+            <i>"${pl.desc}"</i><br>
+            <span style="font-size:13px; color:#555;">Rarity: Tier ${pl.rarity} | Base Value: ${pl.val} Doolers</span>
+          </div>
+        </div>`;
+    });
+  } else if(cat === 'achievements') {
+    let keys = Object.keys(DATA.achievements);
+    c.innerHTML = `<h3 style="margin-top:0;">All Achievements (${keys.length} Total)</h3>`;
+    keys.forEach(k => {
+      let a = DATA.achievements[k];
+      c.innerHTML += `
+        <div style="border-bottom:1px solid #ddd; padding:8px 0; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <b style="font-size:17px; color:#2e7d32;">${a.name}</b>: ${a.desc}<br>
+            <span style="font-size:13px; color:#888;">Reward: ${a.reward} Doolers</span>
+          </div>
+        </div>`;
+    });
+  } else if(cat === 'mutations') {
+    let keys = Object.keys(DATA.mutations);
+    c.innerHTML = `<h3 style="margin-top:0;">All Mutations (${keys.length} Total)</h3>`;
+    keys.forEach(k => {
+      let m = DATA.mutations[k];
+      c.innerHTML += `
+        <div style="border-bottom:1px solid #ddd; padding:8px 0;">
+          <b style="font-size:17px; color:#d84315;">${k}</b> (Multiplier: <b>${m.mult}x</b>)<br>
+          <span style="font-size:14px; color:#555;">Condition: ${m.trigger}</span>
+        </div>`;
+    });
+  }
+}
+
+function openPokedex() {
+  $('modal-pokedex').classList.remove('hidden');
+  playSFX('sfx_ui_click.mp3');
+  renderPokedexCategory('plants');
+}
+
+function renderPokedexCategory(cat) {
+  const c = $('pokedex-content');
+  c.innerHTML = '';
+  
+  if(!C.claimedAchievements) C.claimedAchievements = [];
+
+  if(cat === 'plants' || cat === 'seasonal') {
+    let list = Object.values(DATA.plants).filter(pl => !pl._isWeed && (cat==='seasonal' ? pl.season : !pl.season));
+    let unlockedCount = list.filter(pl => C.unlocked.plants.includes(pl.id)).length;
+    c.innerHTML = `<h3 style="margin-top:0;">${cat.toUpperCase()} Plants (Discovered: ${unlockedCount}/${list.length})</h3>`;
+    
+    list.forEach(pl => {
+      let isUnlocked = C.unlocked.plants.includes(pl.id);
+      let soundBtn = (isUnlocked && hasCustomHarvestSFX(pl)) ? `<button onclick="playSFX('${pl.sfx}', 'sfx')" style="font-size:12px; padding:3px 8px; margin-left:8px;">🔊 Hear Harvest Sound</button>` : '';
+      
+      c.innerHTML += `
+        <div style="display:flex; align-items:center; gap:15px; border-bottom:2px solid #ddd; padding:10px 0; opacity:${isUnlocked?1:0.65};">
+          <div style="width:65px; height:65px; background:${isUnlocked?'#fff':'#ccc'}; border:2px solid #999; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+            ${isUnlocked ? `<img src="${pl.img}" class="plant-img" style="width:55px; height:55px;">` : `<span style="font-size:24px; color:#666;">?</span>`}
+          </div>
+          <div>
+            <b style="font-size:18px;">${isUnlocked ? pl.name : '???'}</b> ${pl.season ? `<span style="color:#777;">(${pl.season})</span>` : ''} ${soundBtn}<br>
+            <i>${isUnlocked ? `"${pl.desc}"` : 'Keep growing seedpacks to discover this plant!'}</i><br>
+            <span style="font-size:13px; color:#555;">Rarity: Tier ${pl.rarity} ${isUnlocked ? `| Base Value: ${pl.val} Doolers` : ''}</span>
+          </div>
+        </div>`;
+    });
+  } else if(cat === 'achievements') {
+    let keys = Object.keys(DATA.achievements);
+    let unlockedCount = C.unlocked.achievements.length;
+    c.innerHTML = `<h3 style="margin-top:0;">Achievements (Unlocked: ${unlockedCount}/${keys.length})</h3>`;
+    keys.forEach(k => {
+      let isUnlocked = C.unlocked.achievements.includes(k);
+      let isClaimed = C.claimedAchievements.includes(k);
+      let a = DATA.achievements[k];
+      
+      let claimAction = '';
+      if(isUnlocked) {
+        if(isClaimed) {
+          claimAction = `<span style="color:#2e7d32; font-weight:bold; font-size:14px;">✓ Claimed (${a.reward} Doolers)</span>`;
+        } else {
+          claimAction = `<button onclick="claimAchievementReward('${k}')" style="background:#c8e6c9; font-size:13px; padding:6px 12px;">Claim Reward (${a.reward} Doolers)</button>`;
+        }
+      }
+      
+      c.innerHTML += `
+        <div style="border-bottom:1px solid #ddd; padding:10px 0; display:flex; justify-content:space-between; align-items:center; color:${isUnlocked?'#2e7d32':'#888'};">
+          <div>
+            <b style="font-size:17px;">${isUnlocked ? a.name : '???'}</b>: ${isUnlocked ? a.desc : 'Locked achievement'}<br>
+            <span style="font-size:13px; color:#777;">Reward: ${a.reward} Doolers</span>
+          </div>
+          <div>${claimAction}</div>
+        </div>`;
+    });
+  } else if(cat === 'mutations') {
+    let keys = Object.keys(DATA.mutations);
+    let unlockedCount = C.unlocked.mutations.length;
+    c.innerHTML = `<h3 style="margin-top:0;">Mutations (Discovered: ${unlockedCount}/${keys.length})</h3>`;
+    keys.forEach(k => {
+      let isUnlocked = C.unlocked.mutations.includes(k);
+      let m = DATA.mutations[k];
+      c.innerHTML += `
+        <div style="border-bottom:1px solid #ddd; padding:8px 0; color:${isUnlocked?'#d84315':'#888'};">
+          <b style="font-size:17px;">${isUnlocked ? k : '???'}</b> ${isUnlocked ? `(Multiplier: ${m.mult}x)` : ''}<br>
+          <span style="font-size:14px;">${isUnlocked ? `Condition: ${m.trigger}` : 'Discover by growing under special conditions!'}</span>
+        </div>`;
+    });
+  }
+}
+
+function openSettings() {
+  isPaused = true;
+  const toggle = $('toggle-autopause');
+  if (toggle) toggle.checked = settings.autoTabPause !== false;
+  $('modal-settings').classList.remove('hidden');
+  playSFX('sfx_ui_click.mp3');
+}
+
+// BOOT ENGINE
+window.onload = initGame;
+</script>
+</body>
+</html>
