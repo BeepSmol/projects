@@ -527,7 +527,7 @@
       </div>
     </div>
     <div style="flex:1; background:#e0e0e0; border-left:5px solid var(--ui-border); display:flex; align-items:center; justify-content:center; padding:15px;">
-      <img id="tutorial-img" src="tutorial_page_1.png" class="tutorial-img" style="max-width:100%; max-height:100%; object-fit:contain;">
+      <img id="tutorial-img" src="tutorial_page_1.png" class="tutorial-img" style="max-width:100%; max-height:100%; aspect-ratio:1/1.5; object-fit:contain; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.15);">
     </div>
   </div>
 </div>
@@ -734,22 +734,22 @@ const DATA = {
   },
 
   dialogues: {
-    bob: { id:'bob', name: 'Bob', img:'npc_bob.png', enterAudio: 'dialog_bob_enter.mp3', exitAudio: 'dialog_bob_exit.mp3', branches: [
+    bob: { id:'bob', name: 'Bob', img:'npc_bob.png', volMult: 1.4, enterAudio: 'dialog_bob_enter.mp3', exitAudio: 'dialog_bob_exit.mp3', branches: [
       { id: 'hi', label: 'Hi!', audio: 'dialog_bob_hi.mp3', text: "Ah! A customer! Look, buy three seed packets and I'll throw in… something. (I won't. Buy my crap anyways though)" },
       { id: 'tmay', label: 'Tell me about yourself', audio: 'dialog_bob_tmay.mp3', text: "I'm Bob. Serial seed-preneur, visionary, and the only man brave enough to monetize topsoil. (do those big words make me look smart)" },
       { id: 'mention', label: "Who's Bob Jr?", audio: 'dialog_bob_mention.mp3', text: "Oh that kid? Off-brand me. He made his own booth a few (virtual) feet away and insisted we are family. I'm absolutely sure he has no blood relation to myself, but the kid does look a lot like me…", trackDaddyBob: true }
     ]},
-    bobjr: { id:'bobjr', name: 'Bob Jr.', img:'npc_bob_jr.png', enterAudio: 'dialog_bobjr_enter.mp3', exitAudio: 'dialog_bobjr_exit.mp3', branches: [
+    bobjr: { id:'bobjr', name: 'Bob Jr.', img:'npc_bob_jr.png', volMult: 1.4, enterAudio: 'dialog_bobjr_enter.mp3', exitAudio: 'dialog_bobjr_exit.mp3', branches: [
       { id: 'hi', label: 'Hi!', audio: 'dialog_bobjr_hi.mp3', text: "HELLO!!! Bring me your leafy friend'sh! I will sh'mell em and tell ya how many dooler'sh they are!" },
       { id: 'tmay', label: 'Tell me about yourself', audio: 'dialog_bobjr_tmay.mp3', text: "I'm Bob Jr.! Brainy boy of plant'sh! I 'apprai'sh' the ma'shive asset'sh! (were tho'she the right big word'sh?)" },
       { id: 'mention', label: "Who's Bob?", audio: 'dialog_bobjr_mention.mp3', text: "That'sh me daddy! He pretend'sh he aint know me whenever I call him \"Dada\" but that'sh just his sh'uper duper 'shecret bu'shiness tactic to be all profe'shional! We share the exact same bu'shines'sh man 'shpeakingsh'!", trackDaddyJr: true }
     ]},
-    mark: { id:'mark', name: 'Mark', img:'npc_mark.png', enterAudio: 'dialog_mark_enter.mp3', exitAudio: 'dialog_mark_exit.mp3', branches: [
+    mark: { id:'mark', name: 'Mark', img:'npc_mark.png', volMult: 1.0, enterAudio: 'dialog_mark_enter.mp3', exitAudio: 'dialog_mark_exit.mp3', branches: [
       { id: 'hi', label: 'Hi!', audio: 'dialog_mark_hi.mp3', text: "Hey there! Ya 'ere for the 'eavy-duty spouts or the raccoon spray? 'Cause the raccoons around 'ere are gettin' bold, I tell ya." },
       { id: 'tmay', label: 'Tell me about yourself', audio: 'dialog_mark_tmay.mp3', text: "I'm Mark. Spend my days pouring concrete and welding steel, just to manufacture the finest garden defense gear this side of the garden." },
       { id: 'mention', label: "Who's Bob Jr?", audio: 'dialog_mark_mention.mp3', text: "Man, that kid's hilarious. He keeps telling Bob they're running a shared business. Bob Jr looks like he's struggling with his business, but kid's actually got decent smarts for a toddler!" }
     ]},
-    peeb: { id:'peeb', name: 'Peeb', img:'npc_peeb.png', isBeep: true, branches: [
+    peeb: { id:'peeb', name: 'Peeb', img:'npc_peeb.png', volMult: 1.4, isBeep: true, branches: [
       { id: 'hi', label: 'Hi', text: "No." },
       { id: 'tmay', label: 'Tell me about yourself', text: "No." },
       { id: 'mention_bob', label: "Who's Bob?", text: "I dunno" },
@@ -837,6 +837,7 @@ let customBGM = null; // override audio
 let tutPage = 1;
 let activeRaccoons = []; // array of raccoon objects
 let isPaused = false;
+let isEngineRunning = false;
 let haggleCount = 0;
 let peebSessionHaggles = 0; // per-visit haggle count
 let peebHaggleDiscount = 1.0; // per-visit discount
@@ -913,6 +914,51 @@ function crossfadeToSeason(season, force=false) {
     });
     activeBGMSeason = season;
   }
+}
+
+let isBGMDucked = false;
+let activeDialogAudios = new Set();
+
+function getActiveBGMAudio() {
+  if(customBGM && !customBGM.paused) return customBGM;
+  if(seasonBGMAudios && activeBGMSeason && seasonBGMAudios[activeBGMSeason] && !seasonBGMAudios[activeBGMSeason].paused) {
+    return seasonBGMAudios[activeBGMSeason];
+  }
+  return null;
+}
+
+function duckBGM(duration=400) {
+  isBGMDucked = true;
+  let bgm = getActiveBGMAudio();
+  if(bgm) {
+    let duckedVol = settings.music * 0.25;
+    fadeAudio(bgm, duckedVol, duration);
+  }
+}
+
+function unduckBGM(duration=600) {
+  isBGMDucked = false;
+  let bgm = getActiveBGMAudio();
+  if(bgm) {
+    fadeAudio(bgm, settings.music, duration);
+  }
+}
+
+function registerDialogAudio(audio) {
+  if(!audio) return;
+  activeDialogAudios.add(audio);
+  duckBGM(350);
+  
+  const cleanup = () => {
+    activeDialogAudios.delete(audio);
+    if(activeDialogAudios.size === 0) {
+      unduckBGM(600);
+    }
+  };
+  
+  audio.addEventListener('ended', cleanup, { once: true });
+  audio.addEventListener('pause', cleanup);
+  audio.addEventListener('error', cleanup, { once: true });
 }
 
 function fadeAudio(audio, targetVol, duration=1000, onDone) {
@@ -1086,9 +1132,15 @@ function playSFX(file, category='sfx') {
   if(!file) return;
   try {
     let vol = category === 'music' ? settings.music : (category === 'dialog' ? settings.dialog : settings.sfx);
+    if(category === 'dialog' && !file.includes('mark')) {
+      vol = Math.min(1.0, vol * 1.5); // Boost all dialogue except Mark
+    }
     if(vol <= 0) return;
     let audio = new Audio(file);
     audio.volume = Math.max(0, Math.min(1, vol));
+    if(category === 'dialog') {
+      registerDialogAudio(audio);
+    }
     audio.play().catch(e=>{});
   } catch(e){}
 }
@@ -1110,8 +1162,9 @@ function updateVolumes() {
   settings.music = parseInt($('slider-music').value) / 100;
   settings.sfx = parseInt($('slider-sfx').value) / 100;
   settings.dialog = parseInt($('slider-dialog').value) / 100;
-  Object.values(seasonBGMAudios).forEach(a => { if(!a.paused && a === seasonBGMAudios[activeBGMSeason]) a.volume = settings.music; });
-  if(customBGM) customBGM.volume = settings.music;
+  let targetMusicVol = isBGMDucked ? settings.music * 0.25 : settings.music;
+  Object.values(seasonBGMAudios).forEach(a => { if(!a.paused && a === seasonBGMAudios[activeBGMSeason]) a.volume = targetMusicVol; });
+  if(customBGM) customBGM.volume = targetMusicVol;
   saveSettings();
 }
 
@@ -1156,7 +1209,7 @@ function changeBGMTrack(file) {
       if(customBGM) { customBGM.pause(); }
       customBGM = new Audio(file);
       customBGM.loop = true;
-      customBGM.volume = settings.music;
+      customBGM.volume = isBGMDucked ? settings.music * 0.25 : settings.music;
       customBGM.play().catch(()=>{});
     }
   } else {
@@ -1198,6 +1251,8 @@ function closeModals() {
   let budImg = $('tutorial-bud-img');
   if(budImg) budImg.style.transform = 'translateY(0px) scale(1,1)';
   if(isPaused) { isPaused = false; }
+  activeDialogAudios.clear();
+  unduckBGM(600);
 }
 
 function closeTutorial() {
@@ -1455,7 +1510,7 @@ function renderSaveSlots() {
 function startGame(mode) {
   let initDoolers = mode === 'calm' ? 150 : (mode === 'hard' ? 50 : 100);
   C = {
-    slot: C.slot, mode: mode,
+    slot: C.slot || 1, mode: mode,
     name: $('new-garden-name').value.trim() || 'My Garden',
     doolers: initDoolers, timeTick: 0, dayCount: 1, seasonIdx: 0,
     weather: 'Normal', event: 'None',
@@ -1471,6 +1526,7 @@ function startGame(mode) {
     peebHaggles: 0,
     peebDiscount: 1.0
   };
+  isEngineRunning = true;
   generateDailyBonus();
   generateBobStock();
   saveGame(false);
@@ -1480,8 +1536,9 @@ function startGame(mode) {
 
 function sanitizeAndRepairSaveData() {
   if(!C) return;
-  if(!C.plots) C.plots = Array(8).fill(null);
-  if(!C.claimedAchievements) C.claimedAchievements = [];
+  if(!C.slot) C.slot = 1;
+  if(!Array.isArray(C.plots)) C.plots = Array(8).fill(null);
+  if(!Array.isArray(C.claimedAchievements)) C.claimedAchievements = [];
   if(!C.plantWeights) C.plantWeights = {};
   if(typeof C.timeTick !== 'number' || isNaN(C.timeTick)) C.timeTick = 0;
   if(typeof C.dayCount !== 'number' || isNaN(C.dayCount) || C.dayCount <= 0) C.dayCount = 1;
@@ -1489,11 +1546,11 @@ function sanitizeAndRepairSaveData() {
   if(typeof C.doolers !== 'number' || isNaN(C.doolers)) C.doolers = 100;
   if(!C.weather) C.weather = 'Normal';
   if(!C.event) C.event = 'None';
-  if(!C.inventory) C.inventory = [];
-  if(!C.unlocked) C.unlocked = { plants:[], achievements:[], mutations:[] };
-  if(!C.unlocked.plants) C.unlocked.plants = [];
-  if(!C.unlocked.achievements) C.unlocked.achievements = [];
-  if(!C.unlocked.mutations) C.unlocked.mutations = [];
+  if(!Array.isArray(C.inventory)) C.inventory = [];
+  if(!C.unlocked) C.unlocked = { plants:[], achievements:['welcome'], mutations:[] };
+  if(!Array.isArray(C.unlocked.plants)) C.unlocked.plants = [];
+  if(!Array.isArray(C.unlocked.achievements)) C.unlocked.achievements = ['welcome'];
+  if(!Array.isArray(C.unlocked.mutations)) C.unlocked.mutations = [];
   if(!C.stats) C.stats = {};
   if(C.stats.deadPlants === undefined) C.stats.deadPlants = 0;
   if(C.stats.raccoonRobberies === undefined) C.stats.raccoonRobberies = 0;
@@ -1521,14 +1578,18 @@ function sanitizeAndRepairSaveData() {
         if(typeof p.maxTime !== 'number' || isNaN(p.maxTime) || p.maxTime <= 0) p.maxTime = 60 * rarity;
         if(typeof p.growTime !== 'number' || isNaN(p.growTime)) p.growTime = p.maxTime;
       }
-      if(!p.mutations) p.mutations = [];
+      if(!Array.isArray(p.mutations)) p.mutations = [];
     }
   });
 }
 
 function loadSave(slot) {
-  C = JSON.parse(localStorage.getItem('garndin_save_'+slot));
+  let saved = localStorage.getItem('garndin_save_'+slot);
+  if(!saved) return;
+  C = JSON.parse(saved);
+  C.slot = slot;
   sanitizeAndRepairSaveData();
+  isEngineRunning = true;
   startEngine();
 }
 
@@ -1536,6 +1597,7 @@ function clearSaveStep1(slot) {
   showCustomConfirm(`Are you sure you want to clear Cartridge ${slot}?`, () => {
     showCustomConfirm(`REALLY SURE? All garden progress in Cartridge ${slot} will be lost permanently!`, () => {
       localStorage.removeItem('garndin_save_'+slot);
+      if(C && C.slot === slot) isEngineRunning = false;
       renderSaveSlots();
       notify("Save cleared successfully.");
     });
@@ -1543,15 +1605,16 @@ function clearSaveStep1(slot) {
 }
 
 function saveGame(isManual = false) {
+  if(!isEngineRunning || !C || !C.slot) return;
   localStorage.setItem('garndin_save_'+C.slot, JSON.stringify(C));
   saveSettings();
-  renderSaveSlots(); // Fix: update cartridge list immediately
+  renderSaveSlots();
   if(isManual) notify("Game saved!");
-  else notify("Autosaving...");
 }
 
 function exitToMainMenu() {
-  saveGame(false);
+  if(isEngineRunning) saveGame(false);
+  isEngineRunning = false;
   if(gameInterval) clearInterval(gameInterval);
   isPaused = false;
   stopAllBGM();
@@ -1909,6 +1972,7 @@ function updateUI() {
 }
 
 function unlockAchiev(id) {
+  if(!isEngineRunning || !C || !C.unlocked || !Array.isArray(C.unlocked.achievements)) return;
   if(!C.unlocked.achievements.includes(id) && DATA.achievements[id]) {
     C.unlocked.achievements.push(id);
     notify(`🏆 Achievement Unlocked: ${DATA.achievements[id].name}`);
@@ -1917,9 +1981,11 @@ function unlockAchiev(id) {
 }
 
 function claimAchievementReward(id) {
-  if(!C.claimedAchievements) C.claimedAchievements = [];
+  if(!C) return;
+  if(!Array.isArray(C.claimedAchievements)) C.claimedAchievements = [];
+  if(!C.unlocked || !Array.isArray(C.unlocked.achievements)) return;
   if(C.unlocked.achievements.includes(id) && !C.claimedAchievements.includes(id)) {
-    let reward = DATA.achievements[id].reward || 50;
+    let reward = (DATA.achievements[id] && DATA.achievements[id].reward) ? DATA.achievements[id].reward : 50;
     C.doolers += reward;
     C.claimedAchievements.push(id);
     playSFX('sfx_skillcheck_pass.mp3');
@@ -3123,11 +3189,15 @@ function startDialogue(npcId, branchObj) {
   $('btn-dialog-continue').classList.add('hidden');
   $('btn-dialog-skip').classList.remove('hidden');
   if(currentDialog && currentDialog.audio) currentDialog.audio.pause();
-  currentDialog = { fullText: branchObj.text, idx: 0, isBeep: dData.isBeep, audioFile: branchObj.audio };
+  currentDialog = { fullText: branchObj.text, idx: 0, isBeep: dData.isBeep, audioFile: branchObj.audio, npcId: npcId };
   if(branchObj.audio) {
     currentDialog.audio = new Audio(branchObj.audio);
-    currentDialog.audio.volume = settings.dialog;
+    let mult = (npcId === 'mark') ? 1.0 : 1.5; // Boost all dialogues except Mark
+    currentDialog.audio.volume = Math.max(0, Math.min(1.0, (settings.dialog || 1.0) * mult));
+    registerDialogAudio(currentDialog.audio);
     currentDialog.audio.play().catch(()=>{});
+  } else if(currentDialog.isBeep) {
+    duckBGM(350);
   }
   typeWriterStep();
 }
@@ -3143,10 +3213,21 @@ function typeWriterStep() {
 }
 
 function skipDialogue() {
-  if(currentDialog) { clearTimeout(currentDialog.timer); if(currentDialog.audio) currentDialog.audio.pause(); $('dialog-text').textContent = currentDialog.fullText; finishDialogue(); }
+  if(currentDialog) {
+    clearTimeout(currentDialog.timer);
+    if(currentDialog.audio) currentDialog.audio.pause();
+    $('dialog-text').textContent = currentDialog.fullText;
+    finishDialogue();
+  }
 }
 
-function finishDialogue() { $('btn-dialog-skip').classList.add('hidden'); $('btn-dialog-continue').classList.remove('hidden'); }
+function finishDialogue() {
+  $('btn-dialog-skip').classList.add('hidden');
+  $('btn-dialog-continue').classList.remove('hidden');
+  if(currentDialog && currentDialog.isBeep && activeDialogAudios.size === 0) {
+    unduckBGM(600);
+  }
+}
 
 function advanceDialogue() {
   closeModals();
@@ -3157,6 +3238,19 @@ function advanceDialogue() {
    TUTORIAL BOOK MANUAL - with Bud bouncer
    ========================================================================== */
 let budAnalyser = null;
+
+function getTutorialPages() {
+  let page1 = "Howdy friend, welcome to your brand new garden! You'll start out with 8 empty plots. Just pop a seed pack into one of them to get started! To get your plant to grow, you'll need to beat a quick skillcheck. The rarer the plant, the trickier the minigame! Be careful though—if you fail, the plant rots and is worthless! And remember, you can speed up your plant's growth with the watering cans!";
+  let page2 = "Want to make the big doolers? Be a BIG SHOT?? Keep an eye out for mutations! Plants can mutate based on the weather, the season, the time of day, or even special events. The best part is that these mutations can stack to boost your plant's value! Pro-tip: if you leave a plant in the dirt after it's fully grown, it can keep gathering new mutations!";
+  let page3 = "Time flies when you're having fun! One daytime lasts about two minutes, and nights are a quick one minute. Keep an eye on the trackers at the top of your screen to see the current time, weather, and season. The weather changes almost every single day, the season shifts every 10 in-game days, and special events have a small chance every day!";
+  let pageRaccoon = "Oh, I almost forgot—watch out for raccoons! Those little bandits can show up to steal your precious plants. If one attacks, you can fight it off with a minigame! If you want to play it safe, you can always buy some Raccoon Repellent from Harvestware to completely protect a plant.";
+  let pageShops = "Time to go shopping! Bob runs The Seed Shack where you can test your luck with random seed packs. Mark at Harvestware sells all your gears, watering cans, racoon repellent, and a special mutation \"salt\". To make money, visit Bob Jr. at Root N Relic—he buys plants and can even appraise them! Lastly, Peeb's Black Market pops up every 3 nights. Don't be afraid to haggle!";
+  let pageOrganized = "Let's get organized! You have a hotbar that shows all your utility items. You can open your backpack to see what plants you have! Try hovering your mouse over your items to read what they do! Oh, and don't forget your trusty Pokedex! It tracks every plant you discover, gives you fun descriptions, and logs all your achievements and mutations. You should be all set now, have fun!";
+
+  if(C.mode==='calm') return [page1,page2,page3,pageShops,pageOrganized,"CALM MODE EXCLUSIVE ADVANTAGES: Everything is cheaper, mutations are easier to get, raccoons don't spawn at all, plants sell for more, plants never die, and there are no skillchecks! Just sit back and relax."];
+  if(C.mode==='hard') return [page1,page2,page3,pageRaccoon,pageShops,pageOrganized,"HARD MODE EXCLUSIVE CONSEQUENCES: Everything is more expensive, raccoons spawn more frequently, skillchecks are harder, plants take longer to grow, and if 10 plants die, your save file is permanently reset!"];
+  return [page1,page2,page3,pageRaccoon,pageShops,pageOrganized];
+}
 
 function openTutorial(fromInGame=false) {
   $('modal-tutorial').classList.remove('hidden');
@@ -3174,29 +3268,22 @@ function renderTutorialPage() {
   if(tutorialAudio) { tutorialAudio.pause(); tutorialAudio.currentTime=0; tutorialAudio=null; }
   if(budAnalyser) { budAnalyser.disconnect(); budAnalyser=null; }
 
-  let page1 = "Howdy friend, welcome to your brand new garden! You'll start out with 8 empty plots. Just pop a seed pack into one of them to get started! To get your plant to grow, you'll need to beat a quick skillcheck. The rarer the plant, the trickier the minigame! Be careful though—if you fail, the plant rots and is worthless! And remember, you can speed up your plant's growth with the watering cans!";
-  let page2 = "Want to make the big doolers? Be a BIG SHOT?? Keep an eye out for mutations! Plants can mutate based on the weather, the season, the time of day, or even special events. The best part is that these mutations can stack to boost your plant's value! Pro-tip: if you leave a plant in the dirt after it's fully grown, it can keep gathering new mutations!";
-  let page3 = "Time flies when you're having fun! One daytime lasts about two minutes, and nights are a quick one minute. Keep an eye on the trackers at the top of your screen to see the current time, weather, and season. The weather changes almost every single day, the season shifts every 10 in-game days, and special events have a small chance every day!";
-  let pageRaccoon = "Oh, I almost forgot—watch out for raccoons! Those little bandits can show up to steal your precious plants. If one attacks, you can fight it off with a minigame! If you want to play it safe, you can always buy some Raccoon Repellent from Harvestware to completely protect a plant.";
-  let pageShops = "Time to go shopping! Bob runs The Seed Shack where you can test your luck with random seed packs. Mark at Harvestware sells all your gears, watering cans, racoon repellent, and a special mutation \"salt\". To make money, visit Bob Jr. at Root N Relic—he buys plants and can even appraise them! Lastly, Peeb's Black Market pops up every 3 nights. Don't be afraid to haggle!";
-  let pageOrganized = "Let's get organized! You have a hotbar that shows all your utility items. You can open your backpack to see what plants you have! Try hovering your mouse over your items to read what they do! Oh, and don't forget your trusty Pokedex! It tracks every plant you discover, gives you fun descriptions, and logs all your achievements and mutations. You should be all set now, have fun!";
-
-  let pages;
-  if(C.mode==='calm') pages=[page1,page2,page3,pageShops,pageOrganized,"CALM MODE EXCLUSIVE ADVANTAGES: Everything is cheaper, mutations are easier to get, raccoons don't spawn at all, plants sell for more, plants never die, and there are no skillchecks! Just sit back and relax."];
-  else if(C.mode==='hard') pages=[page1,page2,page3,pageRaccoon,pageShops,pageOrganized,"HARD MODE EXCLUSIVE CONSEQUENCES: Everything is more expensive, raccoons spawn more frequently, skillchecks are harder, plants take longer to grow, and if 10 plants die, your save file is permanently reset!"];
-  else pages=[page1,page2,page3,pageRaccoon,pageShops,pageOrganized];
-
+  let pages = getTutorialPages();
   let totalPages = pages.length;
+  if(tutPage < 1) tutPage = 1;
+  if(tutPage > totalPages) tutPage = totalPages;
+
   $('tutorial-page-header').innerText = `Garden Guide - Page ${tutPage}/${totalPages}`;
   $('tutorial-text').innerText = pages[tutPage-1];
 
-  let imgIdx = tutPage;
-  if(C.mode==='calm' && tutPage >= 4) imgIdx = tutPage+1;
-  if(imgIdx > 6) imgIdx = 6;
-  $('tutorial-img').src = `tutorial_page_${imgIdx}.png`;
+  let imgIdx = Math.min(Math.max(tutPage, 1), 6);
+  const tutImg = $('tutorial-img');
+  if(tutImg) {
+    tutImg.src = `tutorial_page_${imgIdx}.png`;
+  }
 
   // Play bud audio for this page, only one at a time
-  let audioFile = `dialog_bud_${Math.min(imgIdx,6)}.mp3`;
+  let audioFile = `dialog_bud_${imgIdx}.mp3`;
   startTutorialAudio(audioFile);
 }
 
@@ -3207,8 +3294,9 @@ function startTutorialAudio(file) {
   if(tutorialAnimFrame) { cancelAnimationFrame(tutorialAnimFrame); tutorialAnimFrame=null; }
 
   tutorialAudio = new Audio(file);
-  // Full volume output directly to speakers
-  tutorialAudio.volume = Math.min(1.0, (settings.dialog || 1.0));
+  // Full volume output directly to speakers, boosted for Bud
+  tutorialAudio.volume = Math.max(0, Math.min(1.0, (settings.dialog || 1.0) * 1.5));
+  registerDialogAudio(tutorialAudio);
 
   let budImg = $('tutorial-bud-img');
 
@@ -3257,8 +3345,10 @@ function startTutorialAudio(file) {
 
 function changeTutorialPage(dir) {
   tutPage += dir;
-  let totalPages = (C.mode==='hard'||C.mode==='calm') ? (C.mode==='calm'?6:7) : 6;
-  if(tutPage < 1) tutPage=1; if(tutPage > totalPages) tutPage=totalPages;
+  let pages = getTutorialPages();
+  let totalPages = pages.length;
+  if(tutPage < 1) tutPage=1;
+  if(tutPage > totalPages) tutPage=totalPages;
   renderTutorialPage();
 }
 
@@ -3369,6 +3459,12 @@ function openSettings() {
   $('modal-settings').classList.remove('hidden');
   playSFX('sfx_ui_click.mp3');
 }
+
+window.addEventListener('beforeunload', () => {
+  if(isEngineRunning && C && C.slot) {
+    localStorage.setItem('garndin_save_' + C.slot, JSON.stringify(C));
+  }
+});
 
 // BOOT ENGINE
 window.onload = initGame;
