@@ -56,13 +56,15 @@
   @keyframes glitchAnim { 0% { background: rgba(255,0,0,0.08); } 50% { background: rgba(0,255,0,0.08); } 100% { background: rgba(0,0,255,0.08); } }
   
   /* === CSS WEATHER PARTICLES === */
-  #weather-particles { position: fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:51; overflow:hidden; }
-  .rain-drop { position: absolute; width: 1px; height: 14px; background: rgba(100,160,255,0.45); border-radius: 2px; animation: rainFall linear infinite; }
-  @keyframes rainFall { from { transform: translateY(-20px) rotate(15deg); } to { transform: translateY(110vh) rotate(15deg); } }
+  #weather-particles { position: fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:55; overflow:hidden; }
+  .rain-drop { position: absolute; width: 2px; height: 22px; background: linear-gradient(to bottom, rgba(255,255,255,0.3), rgba(180,225,255,0.85), rgba(120,195,255,0.95)); border-radius: 2px; animation: rainFall linear infinite; filter: drop-shadow(0 0 2px rgba(150,210,255,0.6)); pointer-events: none; }
+  @keyframes rainFall { 0% { transform: translateY(-40px) rotate(12deg); } 100% { transform: translateY(115vh) rotate(12deg); } }
   .wind-dot { position: absolute; height: 2px; background: rgba(230, 245, 255, 0.7); border-radius: 2px; animation: windBlow linear infinite; pointer-events: none; }
   @keyframes windBlow { 0% { transform: translateX(-120px); opacity: 0; } 15% { opacity: 0.75; } 85% { opacity: 0.75; } 100% { transform: translateX(105vw); opacity: 0; } }
   .lightning-spark { position: absolute; width: 4px; height: 18px; background: rgba(255,255,100,0.9); border-radius: 3px; animation: sparkFlash 0.15s ease-out forwards; box-shadow: 0 0 8px rgba(255,255,0,0.8); }
   @keyframes sparkFlash { 0% { opacity:1; transform: scaleY(1); } 100% { opacity:0; transform: scaleY(0.2); } }
+
+  .raccoon-entity { user-select: none; -webkit-user-drag: none; -webkit-user-select: none; pointer-events: auto; }
 
   /* Targeting label on plots */
   .raccoon-targeting-badge { position: absolute; top:-20px; left:50%; transform:translateX(-50%); background:#c62828; color:#fff; font-size:11px; font-weight:bold; padding:2px 7px; border-radius:8px; border:2px solid #ff5252; z-index:12; white-space:nowrap; pointer-events:none; animation: targetPulse 0.7s ease-in-out infinite; }
@@ -1046,14 +1048,15 @@ function updateWeatherParticles(weather, event) {
   if(lightningTimer) { clearInterval(lightningTimer); lightningTimer = null; }
 
   if(weather === 'Wet' || weather === 'Shocked') {
-    // Rain drops
-    for(let i=0; i<35; i++) {
+    // Rain drops (visible, fluid, natural downward rain stream)
+    for(let i=0; i<80; i++) {
       let drop = document.createElement('div');
       drop.className = 'rain-drop';
       drop.style.left = Math.random()*100 + 'vw';
-      drop.style.animationDuration = (0.5 + Math.random()*0.7) + 's';
+      drop.style.height = (18 + Math.random()*16) + 'px';
+      drop.style.animationDuration = (0.4 + Math.random()*0.35) + 's';
       drop.style.animationDelay = (-Math.random()*2) + 's';
-      drop.style.opacity = 0.3 + Math.random()*0.25;
+      drop.style.opacity = (0.55 + Math.random()*0.4).toFixed(2);
       container.appendChild(drop);
     }
     if(weather === 'Shocked') {
@@ -1816,14 +1819,17 @@ function gameTick() {
     if(Math.random() < spawnChance) spawnRaccoon();
   }
 
-  // Weed spawning
-  let emptyPlots = C.plots.map((p,i) => p === null ? i : -1).filter(i => i >= 0);
+  // Weed spawning — strictly only in empty plots (never replace growing or grown plants)
+  let emptyPlots = [];
+  C.plots.forEach((p, i) => { if(p === null || p === undefined) emptyPlots.push(i); });
   if(emptyPlots.length > 0) {
     let weedChance = C.mode === 'hard' ? 0.002 : 0.0008;
     if(Math.random() < weedChance) {
       let targetIdx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
-      C.plots[targetIdx] = { state: 'weed', weedAge: 0 };
-      notify('A weed sprouted in your garden! Click the plot to pull it.');
+      if(C.plots[targetIdx] === null || C.plots[targetIdx] === undefined) {
+        C.plots[targetIdx] = { state: 'weed', weedAge: 0 };
+        notify('A weed sprouted in your garden! Click the plot to pull it.');
+      }
     }
   }
 
@@ -2277,20 +2283,38 @@ function applyTool(pIdx, invItem, toolData) {
 }
 
 /* Plant Pity / Weight System */
+const RARITY_BASE_WEIGHTS = { 1: 100, 2: 70, 3: 35, 4: 15, 5: 6, 6: 2, 7: 1 };
+
 function getWeightedRandomPlant(seedData) {
   if(!C.plantWeights) C.plantWeights = {};
   let candidates = [];
   Object.values(DATA.plants).forEach(pl => {
+    if(pl._isWeed || pl.id === '_weed' || pl.id.startsWith('_')) return; // Weeds are never growable from seedpacks
     if(seedData.pool === 'all') candidates.push(pl);
     else if(seedData.pool_season) { if(pl.season === seedData.pool_season) candidates.push(pl); }
     else if(seedData.pool && seedData.pool.includes(pl.rarity) && !pl.season) candidates.push(pl);
   });
   if(candidates.length === 0) candidates = [DATA.plants.polyester];
+
   candidates.forEach(pl => { if(!C.plantWeights[pl.id]) C.plantWeights[pl.id] = 1; });
-  let totalWeight = candidates.reduce((sum, pl) => sum + (C.plantWeights[pl.id] || 1), 0);
+
+  let totalWeight = candidates.reduce((sum, pl) => {
+    let baseW = RARITY_BASE_WEIGHTS[pl.rarity] || 10;
+    return sum + baseW * (C.plantWeights[pl.id] || 1);
+  }, 0);
+
   let randomVal = Math.random() * totalWeight, chosenId = candidates[0].id, currentSum = 0;
-  for(let pl of candidates) { currentSum += (C.plantWeights[pl.id] || 1); if(randomVal <= currentSum) { chosenId = pl.id; break; } }
-  candidates.forEach(pl => { if(pl.id === chosenId) C.plantWeights[pl.id] = 1; else C.plantWeights[pl.id] = (C.plantWeights[pl.id] || 1) + 2; });
+  for(let pl of candidates) {
+    let baseW = RARITY_BASE_WEIGHTS[pl.rarity] || 10;
+    currentSum += baseW * (C.plantWeights[pl.id] || 1);
+    if(randomVal <= currentSum) { chosenId = pl.id; break; }
+  }
+
+  candidates.forEach(pl => {
+    if(pl.id === chosenId) C.plantWeights[pl.id] = 1;
+    else C.plantWeights[pl.id] = (C.plantWeights[pl.id] || 1) + 1;
+  });
+
   return chosenId;
 }
 
@@ -3061,16 +3085,31 @@ function spawnRaccoon() {
   }
   raccoonObj.animFrame = requestAnimationFrame(moveAnim);
 
+  rc.draggable = false;
+  rc.setAttribute('draggable', 'false');
+  rc.addEventListener('dragstart', e => e.preventDefault());
   rc.style.cursor = 'pointer';
   rc.style.pointerEvents = 'auto';
-  rc.onclick = () => {
+  rc.style.userSelect = 'none';
+
+  const catchRaccoon = (e) => {
+    if(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if(raccoonObj.stealResolved) return;
     if(raccoonObj.animFrame) cancelAnimationFrame(raccoonObj.animFrame);
     clearTimeout(raccoonObj.stealTimer);
     rc.style.left = frozenX + 'px'; rc.style.top = frozenY + 'px';
     rc.onclick = null;
+    rc.onpointerdown = null;
+    rc.onmousedown = null;
     initiateWhackMoleMinigame(raccoonObj, frozenX, frozenY, targetIdx, doRaccoonSteal);
   };
+
+  rc.onclick = catchRaccoon;
+  rc.onpointerdown = catchRaccoon;
+  rc.onmousedown = catchRaccoon;
 
   renderPlots();
 }
